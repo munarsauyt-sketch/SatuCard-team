@@ -4,14 +4,20 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SatuCard — ваш товар в лучшем свете</title>
   <meta name="description" content="Оформите фотографию товара в красивую карточку: выберите стиль, добавьте название и цену в тенге. Локальный учебный прототип для продавцов Казахстана.">
-  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml"><script src="theme.js"></script>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="theme.css">
 </head>
 <body class="home-page">
 <a class="skip-link" href="#main">К содержимому</a>
 <header class="site-header"><div class="container header-inner">
   <a class="brand" href="index.html" aria-label="SatuCard — главная"><img class="brand-logo-icon" src="assets/Снимок экрана 2026-10-01 133024.png" onerror="this.onerror=null;this.src='assets/favicon.svg'" alt="">SatuCard<span class="brand-dot">.</span></a>
   <nav aria-label="Основная навигация"><a href="index.html" aria-current="page">Главная</a><a href="editor.html">Редактор</a><a href="examples.html">Примеры и о проекте</a></nav>
-  <a class="button button-dark header-cta" href="editor.html">Создать карточку</a>
+  <button class="theme-toggle" type="button" data-theme-toggle
+        aria-label="Тёмная тема" aria-pressed="false">
+  <span aria-hidden="true">◐</span>
+  <span class="theme-toggle-text">Тема</span>
+</button>
 </div></header>
 <main id="main">
   <section class="hero container">
