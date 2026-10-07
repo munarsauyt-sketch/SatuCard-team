@@ -1,0 +1,107 @@
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 42px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--soft);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.theme-toggle[aria-pressed="true"] { border-color: var(--orange); }
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #f2f3ed;
+  --muted: #b8c2b6;
+  --paper: #171d19;
+  --line: #3c483e;
+  --soft: #28332b;
+  --orange: #ff855c;
+}
+html[data-theme="dark"] nav a { color: #b4beb3; }
+html[data-theme="dark"] .button-dark { background: #e8ede4; color: #1b251d; }
+html[data-theme="dark"] .button-dark:hover { background: #d0d9cc; }
+html[data-theme="dark"] .button-light { background: #29332b; }
+html[data-theme="dark"] .skip-link { background: #e8ede4; color: #1b251d; }
+html[data-theme="dark"] .hero-description,
+html[data-theme="dark"] .benefit-grid p,
+html[data-theme="dark"] .result-copy>p:not(.eyebrow),
+html[data-theme="dark"] .about-grid>div>p:not(.eyebrow),
+html[data-theme="dark"] .audience-list p,
+html[data-theme="dark"] .workflow-grid p,
+html[data-theme="dark"] .prototype-note p { color: var(--muted); }
+html[data-theme="dark"] .hero-showcase { background: #28342b; }
+html[data-theme="dark"] .hero-showcase:before {
+  background: repeating-radial-gradient(ellipse at center, transparent 0 69px, #a1baa022 70px 71px);
+}
+html[data-theme="dark"] .floating-tag,
+html[data-theme="dark"] .original-mini { background: #354137; color: var(--ink); }
+html[data-theme="dark"] .showcase-bottom,
+html[data-theme="dark"] .before-after figcaption,
+html[data-theme="dark"] .honest-note p { color: var(--muted); }
+html[data-theme="dark"] .benefit-grid article { background: #273229; border-color: var(--line); }
+html[data-theme="dark"] .feature-icon { border-color: var(--line); }
+html[data-theme="dark"] .result-section,
+html[data-theme="dark"] .about-section { background: #202a23; }
+html[data-theme="dark"] .closing-section { background: #614737; }
+html[data-theme="dark"] .closing-spark { color: #8a5c44; }
+html[data-theme="dark"] .editor-panel,
+html[data-theme="dark"] .preview-panel { background: #222c25; }
+html[data-theme="dark"] .upload-zone,
+html[data-theme="dark"] .sample-button,
+html[data-theme="dark"] .choice-row label,
+html[data-theme="dark"] .style-option,
+html[data-theme="dark"] .prototype-note { background: #2b382e; border-color: var(--line); }
+html[data-theme="dark"] .upload-zone:hover,
+html[data-theme="dark"] .upload-zone.drag-over,
+html[data-theme="dark"] .choice-row label:has(input:checked),
+html[data-theme="dark"] .style-options input:checked+.style-option {
+  background: #3c342e;
+  border-color: var(--orange);
+}
+html[data-theme="dark"] input[type="text"] {
+  background: #1a241d;
+  border-color: var(--line);
+  color: var(--ink);
+}
+html[data-theme="dark"] input[type="text"]:hover { border-color: #91a58f; }
+html[data-theme="dark"] .price-input>span,
+html[data-theme="dark"] .preview-live,
+html[data-theme="dark"] .reset-button,
+html[data-theme="dark"] .editor-disclaimer { color: var(--muted); }
+html[data-theme="dark"] .upload-zone .upload-action { color: var(--ink) !important; }
+html[data-theme="dark"] .preview-workspace {
+  background-image: radial-gradient(#a8b8a344 1px, transparent 1px);
+}
+html[data-theme="dark"] .download-status { color: #a9dd9c; }
+html[data-theme="dark"] .field-note.error,
+html[data-theme="dark"] .field-error { color: #ff9d8e; }
+html[data-theme="dark"] .project-label { color: var(--ink); border-color: var(--line); }
+html[data-theme="dark"] .notice {
+  background: #503b2f;
+  color: var(--ink);
+  border-color: #9f6649;
+}
+
+/* Оформление самих товарных карточек остаётся светлым в обеих темах. */
+html[data-theme="dark"] .product-card,
+html[data-theme="dark"] .mini-product {
+  --ink: #242522;
+  --orange: #e74d24;
+  color: #242522;
+}
+
+@media (max-width: 800px) {
+  .theme-toggle { padding: 8px 10px; }
+  .theme-toggle-text { display: none; }
+}
+@media (max-width: 520px) {
+  .header-inner .header-cta { display: none; }
+  .header-inner .theme-toggle { margin-left: auto; }
+}
