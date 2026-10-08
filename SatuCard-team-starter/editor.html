@@ -1,4 +1,5 @@
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Редактор карточки — SatuCard</title><meta name="description" content="Загрузите фото, добавьте название и цену в тенге, выберите оформление и сохраните карточку товара."><link rel="icon" href="assets/favicon.svg" type="image/svg+xml"><script src="theme.js"></script><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="theme.css"><script src="assets/demo-images.js" defer></script><script src="editor.js" defer></script></head>
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Редактор карточки — SatuCard</title><meta name="description" content="Загрузите фото, добавьте название и цену в тенге, выберите оформление и сохраните карточку товара."><link rel="icon" href="assets/favicon.svg" type="image/svg+xml"><script src="theme.js"></script><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="theme.css"><script src="assets/demo-images.js" defer></script><script src="brand-kit.js" defer></script>
+<script src="editor.js" defer></script></head>
 <body><a class="skip-link" href="#main">К содержимому</a>
 <header class="site-header"><div class="container header-inner"><a class="brand" href="index.html" aria-label="SatuCard — главная"><span class="brand-icon" aria-hidden="true"><i></i><i></i></span>SatuCard<span class="brand-dot">.</span></a><nav aria-label="Основная навигация"><a href="index.html">Главная</a><a href="editor.html" aria-current="page">Редактор</a><a href="examples.html">Примеры и о проекте</a></nav><button class="theme-toggle" type="button" data-theme-toggle aria-label="Тёмная тема" aria-pressed="false"><span aria-hidden="true">◐</span><span class="theme-toggle-text">Тема</span></button><a class="button button-dark header-cta" href="examples.html">Найти вдохновение</a></div></header>
 <main class="container editor-main" id="main">
@@ -15,7 +16,37 @@
       <section class="editor-step"><h2><span>02</span> Детали решают</h2><div class="label-row"><label for="product-name">Название товара</label><span id="name-count">24 / 60</span></div><input type="text" id="product-name" maxlength="60" value="Беспроводные наушники" placeholder="Например, керамическая чашка" autocomplete="off"><label for="product-price" class="price-label">Цена</label><div class="price-input"><input type="text" id="product-price" inputmode="decimal" value="24990" placeholder="24 990" maxlength="14" aria-describedby="price-error" autocomplete="off"><span>₸</span></div><p id="price-error" class="field-error" role="status"></p><label for="old-price" class="price-label">Старая цена <span class="optional">необязательно</span></label><div class="price-input"><input type="text" id="old-price" inputmode="decimal" placeholder="Например, 29 990" maxlength="14" aria-describedby="old-price-error" autocomplete="off"><span>₸</span></div><p id="old-price-error" class="field-error" role="status"></p></section>
       <fieldset class="editor-step style-fieldset"><legend><span>03</span> Найдите свой стиль</legend><div class="style-options"><label><input type="radio" name="style" value="studio" checked><span class="style-option"><span class="swatch swatch-studio"><i></i><b></b></span><strong>Студия</strong><small>Спокойный</small></span></label><label><input type="radio" name="style" value="accent"><span class="style-option"><span class="swatch swatch-accent"><i></i><b></b></span><strong>Акцент</strong><small>Выразительный</small></span></label><label><input type="radio" name="style" value="minimal"><span class="style-option"><span class="swatch swatch-minimal"><i></i><b></b></span><strong>Минимал</strong><small>Чистый</small></span></label></div></fieldset>
       <fieldset class="editor-step format-fieldset"><legend><span>04</span> Выберите формат</legend><div class="choice-row"><label><input type="radio" name="card-format" value="portrait" checked> Вертикальная 4:5</label><label><input type="radio" name="card-format" value="square"> Квадратная 1:1</label></div></fieldset>
-      <a class="mobile-preview-link text-link" href="#preview">Посмотреть карточку</a>
+      <fieldset class="editor-step brand-fieldset">
+  <legend><span>05</span> Фирменный стиль магазина</legend>
+
+  <label class="brand-label" for="brand-name">Название магазина</label>
+  <input type="text" id="brand-name" maxlength="28"
+         placeholder="Например, Aru Store" autocomplete="off">
+  <p class="field-note">Если оставить пустым, на карточке будет SatuCard.</p>
+
+  <label class="brand-label" for="brand-logo">Логотип</label>
+  <input type="file" id="brand-logo"
+         accept="image/png,image/jpeg,image/webp"
+         aria-describedby="brand-logo-status">
+  <div class="brand-logo-row">
+    <p id="brand-logo-status" class="field-note" role="status">
+      Необязательно · PNG, JPG или WebP до 2 МБ.
+    </p>
+    <button type="button" id="brand-logo-remove"
+            class="brand-logo-remove" disabled>
+      Убрать логотип
+    </button>
+  </div>
+
+  <div class="brand-color-row">
+    <label class="brand-color-choice">
+      <input type="checkbox" id="brand-color-enabled">
+      Свой цвет ценника
+    </label>
+    <label for="brand-color">Цвет</label>
+    <input type="color" id="brand-color" value="#e74d24" disabled>
+  </div>
+</fieldset> text-link" href="#preview">Посмотреть карточку</a>
     </form>
     <section class="preview-panel" id="preview" aria-labelledby="preview-heading"><div class="preview-heading"><h2 id="preview-heading">Предварительный просмотр</h2><span id="format-description">4:5 · 900 × 1125</span></div><div class="preview-workspace"><figure class="canvas-figure"><canvas id="product-canvas" width="900" height="1125" role="img" aria-label="Карточка товара: беспроводные наушники, 24 990 тенге">Предварительный просмотр карточки товара</canvas><figcaption id="preview-caption" class="sr-only" aria-live="polite"></figcaption></figure><p class="preview-live"><span aria-hidden="true">✦</span> Меняйте детали. Смотрите, как меняется впечатление.</p></div><div class="preview-actions"><button type="button" id="reset-button" class="reset-button">Сбросить изменения</button><a id="download-button" class="button button-dark" aria-disabled="true" download="satucard-4x5.png">Скачать PNG</a></div><p id="download-status" class="download-status" role="status"></p><div class="editor-disclaimer"><span aria-hidden="true">i</span><p>Фото остаётся на вашем устройстве. Здесь работает оформление по шаблону: без ИИ, удаления фона и отправки на сервер. После обновления страницы изменения сбросятся.</p></div></section>
   </div>
