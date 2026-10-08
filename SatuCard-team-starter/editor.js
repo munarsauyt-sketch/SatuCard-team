@@ -19,7 +19,6 @@
   const positionY = document.querySelector('#photo-position-y');
   const formatDescription = document.querySelector('#format-description');
   const brand = window.SATUCARD_BRAND;
-  const brand = window.SATUCARD_BRAND;
   const samples = {
     headphones: { name: 'Беспроводные наушники', price: '24990' },
     sneaker: { name: 'Кроссовки Daily', price: '32500' },
@@ -105,7 +104,7 @@
     ctx.clearRect(0, 0, 900, layout.height);
     ctx.fillStyle = theme.background; ctx.fillRect(0, 0, 900, layout.height);
     ctx.fillStyle = theme.ink; ctx.textBaseline = 'top'; 
-    ctx.font = '750 23px Manrope, Arial, sans-serif'; if (brand) {
+    if (brand) {
   brand.draw(ctx, theme.ink);
 } else {
   ctx.font = '750 23px Manrope, Arial, sans-serif';
