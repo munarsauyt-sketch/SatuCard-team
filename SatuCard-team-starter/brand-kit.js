@@ -125,7 +125,7 @@
 
         logo = image;
         removeButton.disabled = false;
-        logoStatus.textContent = Загружен логотип: ${file.name};
+        logoStatus.textContent = `Загружен логотип: ${file.name}`;
         notifyEditor();
       };
       image.onerror = () => {
