@@ -18,6 +18,8 @@
   const positionX = document.querySelector('#photo-position-x');
   const positionY = document.querySelector('#photo-position-y');
   const formatDescription = document.querySelector('#format-description');
+  const brand = window.SATUCARD_BRAND;
+  const brand = window.SATUCARD_BRAND;
   const samples = {
     headphones: { name: 'Беспроводные наушники', price: '24990' },
     sneaker: { name: 'Кроссовки Daily', price: '32500' },
@@ -102,8 +104,13 @@
     formatDescription.textContent = layout.label;
     ctx.clearRect(0, 0, 900, layout.height);
     ctx.fillStyle = theme.background; ctx.fillRect(0, 0, 900, layout.height);
-    ctx.fillStyle = theme.ink; ctx.textBaseline = 'top';
-    ctx.font = '750 23px Manrope, Arial, sans-serif'; ctx.fillText('SatuCard.', 60, 48);
+    ctx.fillStyle = theme.ink; ctx.textBaseline = 'top'; 
+    ctx.font = '750 23px Manrope, Arial, sans-serif'; if (brand) {
+  brand.draw(ctx, theme.ink);
+} else {
+  ctx.font = '750 23px Manrope, Arial, sans-serif';
+  ctx.fillText('SatuCard.', 60, 48);
+}
     ctx.textAlign = 'right'; ctx.font = '500 16px Manrope, Arial, sans-serif'; ctx.fillText(theme.label, 840, 54); ctx.textAlign = 'left';
     let fontSize = layout.titleSize, lines = wrappedLines(title, 780, fontSize);
     while (lines.length > 3 && fontSize > 36) { fontSize -= 2; lines = wrappedLines(title, 780, fontSize); }
@@ -198,6 +205,10 @@
     reader.onerror = () => { if (version === loadingVersion) { fileStatus.textContent = 'Не удалось открыть файл. Попробуйте ещё раз.'; fileStatus.classList.add('error'); } };
     reader.readAsDataURL(file);
   }
+  document.addEventListener('satucard:brand-change', () => {
+  downloadStatus.textContent = '';
+  render();
+});
   form.addEventListener('submit', event => event.preventDefault());
   [nameInput, priceInput, oldPriceInput].forEach(input => input.addEventListener('input', () => { downloadStatus.textContent = ''; render(); }));
   document.querySelectorAll('input[name="style"]').forEach(input => input.addEventListener('change', () => { style = input.value; downloadStatus.textContent = ''; render(); }));
@@ -225,6 +236,7 @@
   window.addEventListener('drop', event => event.preventDefault());
   document.querySelector('#reset-button').addEventListener('click', () => {
     form.reset(); style = 'studio'; format = 'portrait'; resetPhotoControls();
+    if (brand) brand.reset();
     downloadStatus.textContent = ''; selectSample('headphones');
   });
   downloadButton.addEventListener('click', event => {
