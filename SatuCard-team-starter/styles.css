@@ -87,3 +87,102 @@
   .home-page .hero h1 { font-size: clamp(40px, 12.5vw, 58px); }
   .home-page .brand-logo-icon { width: 32px; height: 32px; }
 }
+
+.brand-fieldset {
+  margin-top: 26px;
+  margin-bottom: 0;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+}
+
+.brand-label {
+  display: block;
+  margin: 14px 0 7px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+#brand-logo {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 11px;
+}
+
+#brand-logo::file-selector-button {
+  margin-right: 10px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--soft);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.brand-logo-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.brand-logo-remove {
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-size: 11px;
+  text-decoration: underline;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.brand-logo-remove:disabled {
+  opacity: .45;
+  cursor: default;
+}
+
+.brand-color-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+  font-size: 11px;
+}
+
+.brand-color-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-right: auto;
+}
+
+.brand-color-choice input {
+  accent-color: var(--orange);
+}
+
+#brand-color {
+  width: 48px;
+  height: 42px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--paper);
+  cursor: pointer;
+}
+
+#brand-color:disabled {
+  opacity: .5;
+  cursor: default;
+}
+
+@media (max-width: 520px) {
+  .brand-logo-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
