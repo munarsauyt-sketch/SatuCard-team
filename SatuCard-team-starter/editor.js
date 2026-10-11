@@ -1,6 +1,7 @@
 'use strict';
 
-// Всё выполняется локально. Пользовательские фотографии никуда не отправляются.
+// Редактирование и скачивание PNG выполняются в браузере.
+// Готовая карточка отправляется на сервер только после явной публикации.
 (() => {
   const form = document.querySelector('#editor-form');
   const nameInput = document.querySelector('#product-name');
@@ -12,6 +13,12 @@
   const priceError = document.querySelector('#price-error');
   const downloadStatus = document.querySelector('#download-status');
   const downloadButton = document.querySelector('#download-button');
+  const publishButton = document.querySelector('#publish-button');
+  const publishStatus = document.querySelector('#publish-status');
+  const publishResult = document.querySelector('#publish-result');
+  const publishedUrl = document.querySelector('#published-url');
+  const publishedCardLink = document.querySelector('#published-card-link');
+  const copyLinkButton = document.querySelector('#copy-link-button');
   const canvas = document.querySelector('#product-canvas');
   const ctx = canvas.getContext('2d');
   const positionControls = document.querySelector('#photo-position-controls');
@@ -42,6 +49,14 @@
   let photoFit = 'contain';
   let exportVersion = 0;
   let exportUrl = '';
+  let publishing = false;
+
+  function clearPublishedLink() {
+    publishResult.hidden = true;
+    publishedUrl.value = '';
+    publishedCardLink.removeAttribute('href');
+    publishStatus.textContent = '';
+  }
 
   function setDownloadDisabled(disabled) {
     downloadButton.setAttribute('aria-disabled', String(disabled));
@@ -93,7 +108,9 @@
     return lines;
   }
   function render() {
+    clearPublishedLink();
     const theme = themes[style];
+    const tag = brand ? brand.tagColors(theme) : { fill: theme.tag, text: theme.tagText };
     const layout = layouts[format];
     const title = nameInput.value.trim() || 'Название вашего товара';
     const price = readPrice();
@@ -132,8 +149,8 @@
     if (oldPrice.value !== null) {
       ctx.font = '700 17px Manrope, Arial, sans-serif';
       const discountWidth = ctx.measureText(oldPrice.discount).width + 32;
-      roundRect(60, layout.priceTop - 42, discountWidth, 30, 6, theme.tag);
-      ctx.fillStyle = theme.tagText; ctx.textBaseline = 'middle';
+      roundRect(60, layout.priceTop - 42, discountWidth, 30, 6, tag.fill);
+      ctx.fillStyle = tag.text; ctx.textBaseline = 'middle';
       ctx.fillText(oldPrice.discount, 76, layout.priceTop - 27); ctx.textBaseline = 'top';
       ctx.fillStyle = theme.ink; ctx.textAlign = 'right'; ctx.font = '500 24px Manrope, Arial, sans-serif';
       ctx.fillText(oldPrice.text, 840, layout.priceTop - 38);
@@ -146,13 +163,14 @@
     ctx.font = `700 ${priceSize}px Manrope, Arial, sans-serif`;
     while (ctx.measureText(price.text).width > 390 && priceSize > 25) { priceSize--; ctx.font = `700 ${priceSize}px Manrope, Arial, sans-serif`; }
     const badgeWidth = ctx.measureText(price.text).width + 48;
-    roundRect(840 - badgeWidth, layout.priceTop, badgeWidth, 78, 11, theme.tag);
-    ctx.fillStyle = theme.tagText; ctx.textBaseline = 'middle'; ctx.fillText(price.text, 864 - badgeWidth, layout.priceTop + 39); ctx.textBaseline = 'top';
+    roundRect(840 - badgeWidth, layout.priceTop, badgeWidth, 78, 11, tag.fill);
+    ctx.fillStyle = tag.text; ctx.textBaseline = 'middle'; ctx.fillText(price.text, 864 - badgeWidth, layout.priceTop + 39); ctx.textBaseline = 'top';
     canvas.setAttribute('aria-label', `Карточка товара: ${title}. ${price.text}.${oldPrice.value !== null ? ` Старая цена ${oldPrice.text}, ${oldPrice.discount}.` : ''} Стиль: ${style === 'studio' ? 'Студия' : style === 'accent' ? 'Акцент' : 'Минимал'}. Формат ${layout.label}.`);
     clearTimeout(captionTimer);
     captionTimer = setTimeout(() => { document.querySelector('#preview-caption').textContent = canvas.getAttribute('aria-label'); }, 400);
     const version = ++exportVersion;
     setDownloadDisabled(true);
+    publishButton.disabled = true;
     if (!photo || !price.valid || !oldPrice.valid || !nameInput.value.trim() || !priceInput.value.trim()) return;
     canvas.toBlob(blob => {
       if (version !== exportVersion || !blob) return;
@@ -161,6 +179,7 @@
       downloadButton.href = exportUrl;
       downloadButton.download = `satucard-${style}-${layout.file}.png`;
       setDownloadDisabled(false);
+      publishButton.disabled = publishing;
     }, 'image/png');
   }
   function loadPhoto(source, successText, selectedSample = '') {
@@ -241,6 +260,67 @@
   downloadButton.addEventListener('click', event => {
     if (downloadButton.getAttribute('aria-disabled') === 'true') { event.preventDefault(); return; }
     downloadStatus.textContent = 'Карточка PNG подготовлена. Проверьте загрузки браузера.';
+  });
+  publishButton.addEventListener('click', async () => {
+    if (publishing || downloadButton.getAttribute('aria-disabled') === 'true') return;
+    if (location.protocol === 'file:') {
+      publishStatus.textContent = 'Публикация доступна на сайте по интернет-ссылке.';
+      return;
+    }
+
+    publishing = true;
+    publishButton.disabled = true;
+    publishStatus.textContent = 'Публикуем карточку…';
+    publishResult.hidden = true;
+    const version = exportVersion;
+    const snapshot = document.createElement('canvas');
+    snapshot.width = canvas.width;
+    snapshot.height = canvas.height;
+    snapshot.getContext('2d').drawImage(canvas, 0, 0);
+    const data = new FormData();
+    data.set('title', nameInput.value.trim());
+    data.set('price', priceInput.value.replace(/\s/g, '').replace(',', '.'));
+    data.set('oldPrice', oldPriceInput.value.replace(/\s/g, '').replace(',', '.'));
+    data.set('style', style);
+    data.set('format', format);
+    data.set('brandName', document.querySelector('#brand-name').value.trim());
+
+    try {
+      let image = null;
+      for (const quality of [0.86, 0.72, 0.6]) {
+        image = await new Promise(resolve => snapshot.toBlob(resolve, 'image/jpeg', quality));
+        if (image && image.size <= 2 * 1024 * 1024) break;
+      }
+      if (!image || image.size > 2 * 1024 * 1024) {
+        throw new Error('Карточка слишком большая для публикации. Выберите другое фото.');
+      }
+      data.set('image', image, 'satucard.jpg');
+      const response = await fetch('api/cards', { method: 'POST', body: data });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'Не удалось опубликовать карточку.');
+
+      publishedUrl.value = result.url;
+      publishedCardLink.href = result.url;
+      publishResult.hidden = false;
+      publishStatus.textContent = version === exportVersion
+        ? 'Карточка опубликована. Скопируйте ссылку.'
+        : 'Карточка опубликована. После начала публикации вы изменили макет; ссылка ведёт на предыдущую версию.';
+    } catch (error) {
+      publishStatus.textContent = error.message || 'Сервер недоступен. Попробуйте позже.';
+    } finally {
+      publishing = false;
+      publishButton.disabled = downloadButton.getAttribute('aria-disabled') === 'true';
+    }
+  });
+
+  copyLinkButton.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(publishedUrl.value);
+      publishStatus.textContent = 'Ссылка скопирована.';
+    } catch {
+      publishedUrl.select();
+      publishStatus.textContent = 'Скопируйте выделенную ссылку.';
+    }
   });
   const params = new URLSearchParams(window.location.search);
   if (Object.hasOwn(themes, params.get('style'))) style = params.get('style');

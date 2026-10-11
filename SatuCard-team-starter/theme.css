@@ -96,6 +96,11 @@ html[data-theme="dark"] .mini-product {
   --orange: #e74d24;
   color: #242522;
 }
+html[data-theme="dark"] .publish-box,
+html[data-theme="dark"] .shared-card-image,
+html[data-theme="dark"] .shared-card-details { background:#273229; border-color:var(--line); }
+html[data-theme="dark"] .publish-result { background:#1a241d; border-color:var(--line); }
+html[data-theme="dark"] .publish-status { color:var(--ink); }
 
 @media (max-width: 800px) {
   .theme-toggle { padding: 8px 10px; }
