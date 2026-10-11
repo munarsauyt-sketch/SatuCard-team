@@ -2,8 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { configuration, verifiedUser } from '../lib/supabase.js';
 
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
-const STYLES = new Set(['studio', 'accent', 'minimal']);
-const FORMATS = new Set(['portrait', 'square']);
+const STYLES = new Set(['studio', 'accent', 'minimal', 'noir', 'neon', 'editorial', 'bloom', 'bold']);
+const FORMATS = new Set(['portrait', 'square', 'story']);
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {

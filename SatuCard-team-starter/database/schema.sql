@@ -4,12 +4,20 @@ create table if not exists public.cards (
   title varchar(60) not null check (length(trim(title)) > 0),
   price_kzt numeric(11, 2) not null check (price_kzt >= 0 and price_kzt <= 999999999.99),
   old_price_kzt numeric(11, 2) check (old_price_kzt is null or old_price_kzt > price_kzt),
-  style text not null check (style in ('studio', 'accent', 'minimal')),
-  format text not null check (format in ('portrait', 'square')),
+  style text not null constraint cards_style_check check (style in ('studio', 'accent', 'minimal', 'noir', 'neon', 'editorial', 'bloom', 'bold')),
+  format text not null constraint cards_format_check check (format in ('portrait', 'square', 'story')),
   brand_name varchar(28) not null default '',
   image_path text not null,
   created_at timestamptz not null default now()
 );
+
+-- Also upgrade an existing installation without changing cards or access policies.
+-- PostgreSQL gives these names to the original unnamed column checks as well.
+alter table public.cards
+  drop constraint if exists cards_style_check,
+  drop constraint if exists cards_format_check,
+  add constraint cards_style_check check (style in ('studio', 'accent', 'minimal', 'noir', 'neon', 'editorial', 'bloom', 'bold')),
+  add constraint cards_format_check check (format in ('portrait', 'square', 'story'));
 
 create index if not exists cards_created_at_idx on public.cards (created_at desc);
 alter table public.cards enable row level security;

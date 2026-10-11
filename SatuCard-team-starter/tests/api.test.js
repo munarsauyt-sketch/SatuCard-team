@@ -78,6 +78,38 @@ test('uploads the JPEG and stores card metadata with a secret key', async () => 
   assert.equal(record.image_path, `${result.id}.jpg`);
 });
 
+test('publishes a neon story card and keeps its verified owner', async () => {
+  configure();
+  let stored;
+  globalThis.fetch = async (url, options) => {
+    if (String(url).endsWith('/auth/v1/user')) return Response.json({ id: 'aaac8be7-1386-45b8-8d49-3f9d7f5c9fb6' });
+    if (String(url).endsWith('/rest/v1/cards')) stored = JSON.parse(options.body);
+    return new Response(null, { status: 201 });
+  };
+
+  const response = await POST(uploadRequest({ style: 'neon', format: 'story' }));
+  assert.equal(response.status, 201);
+  assert.equal(stored.style, 'neon');
+  assert.equal(stored.format, 'story');
+  assert.equal(stored.user_id, 'aaac8be7-1386-45b8-8d49-3f9d7f5c9fb6');
+});
+
+test('rejects unknown templates and formats before uploading any image', async () => {
+  configure();
+  let backendCalls = 0;
+  globalThis.fetch = async url => {
+    if (String(url).endsWith('/auth/v1/user')) return Response.json({ id: 'aaac8be7-1386-45b8-8d49-3f9d7f5c9fb6' });
+    backendCalls += 1;
+    throw new Error('Invalid metadata must not reach Storage or Postgres');
+  };
+
+  for (const overrides of [{ style: 'unknown' }, { format: 'unknown' }]) {
+    const response = await POST(uploadRequest(overrides));
+    assert.equal(response.status, 400);
+  }
+  assert.equal(backendCalls, 0);
+});
+
 test('removes the uploaded image if saving metadata fails', async () => {
   configure();
   const methods = [];

@@ -25,6 +25,8 @@
       const pageDirectory = new URL('.', location.href).href;
 
       document.querySelectorAll('a[href]').forEach((link) => {
+        // In-page navigation must not reload the editor and discard unsaved input.
+        if (link.getAttribute('href')?.startsWith('#')) return;
         try {
           const target = new URL(link.href);
           const targetDirectory = new URL('.', target.href).href;

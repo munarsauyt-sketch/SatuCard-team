@@ -1,70 +1,121 @@
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Редактор карточки — SatuCard</title><meta name="description" content="Загрузите фото, добавьте название и цену в тенге, выберите оформление и сохраните карточку товара."><link rel="icon" href="assets/favicon.svg" type="image/svg+xml"><script src="theme.js"></script><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="app.css"><script src="auth-client.js" defer></script><script src="site.js" defer></script><script src="assets/demo-images.js" defer></script><script src="brand-kit.js" defer></script>
-<script src="editor.js" defer></script></head>
-<body><a class="skip-link" href="#main">К содержимому</a>
-<header class="site-header"><div class="container header-inner"><a class="brand" href="index.html" aria-label="SatuCard — главная"><span class="brand-icon" aria-hidden="true"><i></i><i></i></span>SatuCard<span class="brand-dot">.</span></a><button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="main-nav" aria-label="Открыть меню">☰</button><nav id="main-nav" aria-label="Основная навигация"><a href="index.html">Главная</a><a href="editor.html" aria-current="page">Редактор</a><a href="examples.html">Примеры и о проекте</a></nav><button class="theme-toggle" type="button" data-theme-toggle aria-label="Тёмная тема" aria-pressed="false"><span aria-hidden="true">◐</span><span class="theme-toggle-text">Тема</span></button><a class="header-account" data-account-link href="auth.html">Войти</a></div></header>
-<main class="container editor-main" id="main">
-  <div class="editor-heading"><div><p class="eyebrow">ВАША МАЛЕНЬКАЯ ДИЗАЙН-СТУДИЯ</p><h1>Товар ваш. Характер тоже.</h1></div><p>Создайте карточку для вашего магазина.</p></div>
-  <noscript><p class="notice">Для загрузки фотографии и живого просмотра включите JavaScript в браузере.</p></noscript>
-  <div class="editor-layout">
-    <form class="editor-panel" id="editor-form" novalidate>
-      <section class="editor-step"><h2><span>01</span> Фото товара</h2>
-        <label class="upload-zone" id="drop-zone" for="photo-input"><input type="file" id="photo-input" accept="image/jpeg,image/png,image/webp" aria-describedby="upload-help file-status"><span class="upload-icon" aria-hidden="true">＋</span><strong>Выберите или перетащите фото</strong><span id="upload-help">JPG, PNG или WebP · до 10 МБ</span><span class="upload-action">Выбрать фотографию</span></label>
-        <p id="file-status" class="field-note" role="status">Сейчас используется фото из примера.</p>
-        <div class="sample-row"><span>Или попробуйте:</span><button type="button" class="sample-button" data-sample="headphones" aria-label="Использовать фото наушников" aria-pressed="true"><img src="assets/images/headphones.jpg" alt=""></button><button type="button" class="sample-button" data-sample="sneaker" aria-label="Использовать фото кроссовка" aria-pressed="false"><img src="assets/images/sneaker.jpg" alt=""></button><button type="button" class="sample-button" data-sample="skincare" aria-label="Использовать фото косметики" aria-pressed="false"><img src="assets/images/skincare.jpg" alt=""></button></div>
-        <fieldset class="photo-controls"><legend>Расположение фото</legend><div class="choice-row"><label><input type="radio" name="photo-fit" value="contain" checked> Вписать целиком</label><label><input type="radio" name="photo-fit" value="cover"> Заполнить область</label></div><div id="photo-position-controls" class="position-controls" hidden><p class="field-note">Двигайте фото по направлению обрезки.</p><label for="photo-position-x">По горизонтали <output id="photo-position-x-value" for="photo-position-x">50%</output></label><input type="range" id="photo-position-x" min="0" max="100" value="50"><label for="photo-position-y">По вертикали <output id="photo-position-y-value" for="photo-position-y">50%</output></label><input type="range" id="photo-position-y" min="0" max="100" value="50"></div></fieldset>
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Дизайн-студия — SatuCard</title>
+  <meta name="description" content="Создайте выразительную карточку товара: оформление, тексты, фирменные цвета, настройка фотографии и экспорт для вашего магазина.">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <script src="theme.js?v=studio-20261011"></script>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="app.css">
+  <link rel="stylesheet" href="studio.css?v=studio-20261011">
+  <script src="auth-client.js" defer></script>
+  <script src="site.js" defer></script>
+  <script src="assets/demo-images.js" defer></script>
+  <script src="studio-renderer.js" defer></script>
+  <script src="studio-project.js" defer></script>
+  <script src="editor.js?v=studio-20261011" defer></script>
+</head>
+<body class="studio-page">
+  <a class="skip-link" href="#main">К редактору</a>
+  <svg class="studio-icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 5-5 4 4 4-6 5 7"/></symbol>
+    <symbol id="i-text" viewBox="0 0 24 24"><path d="M4 6V3h16v3M12 3v18m-4 0h8"/></symbol>
+    <symbol id="i-design" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><path d="M17.5 14v7M14 17.5h7"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V3m-5 5 5-5 5 5M4 16v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v13m-5-5 5 5 5-5M4 16v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 4 4 9l5 5M4 9h9a7 7 0 0 1 0 14"/></symbol>
+    <symbol id="i-redo" viewBox="0 0 24 24"><path d="m15 4 5 5-5 5m5-5h-9a7 7 0 0 0 0 14"/></symbol>
+    <symbol id="i-reset" viewBox="0 0 24 24"><path d="M3 11a9 9 0 1 1 2.7 7M3 4v7h7"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></symbol>
+    <symbol id="i-fit" viewBox="0 0 24 24"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/><rect x="7" y="7" width="10" height="10" rx="1"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 16V3m-4 4 4-4 4 4M7 10H4v11h16V10h-3"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 2 2.7 7.3L22 12l-7.3 2.7L12 22l-2.7-7.3L2 12l7.3-2.7Z"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h5l3 4h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></symbol>
+  </svg>
+
+  <header class="site-header studio-header"><div class="container header-inner">
+    <a class="brand" href="index.html" aria-label="SatuCard — главная"><span class="brand-icon" aria-hidden="true"><i></i><i></i></span>SatuCard<span class="brand-dot">.</span></a><span class="studio-label">Дизайн-студия</span>
+    <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="main-nav" aria-label="Открыть меню">☰</button>
+    <nav id="main-nav" aria-label="Основная навигация"><a href="index.html">Главная</a><a href="editor.html" aria-current="page">Редактор</a><a href="examples.html">Примеры</a></nav>
+    <div class="studio-header-actions"><button class="theme-toggle" type="button" data-theme-toggle aria-label="Тёмная тема" aria-pressed="false"><span aria-hidden="true">◐</span><span class="theme-toggle-text">Тема</span></button><a class="header-account" data-account-link href="auth.html">Войти</a></div>
+  </div></header>
+
+  <main id="main" class="studio-main">
+    <div class="studio-project-bar">
+      <div class="studio-project-title"><span class="project-symbol" aria-hidden="true"><svg class="studio-icon"><use href="#i-spark"/></svg></span><div><p class="studio-overline">ВАШ СЛЕДУЮЩИЙ БЕСТСЕЛЛЕР</p><h1>Карточка с характером<span>.</span></h1></div><span id="draft-status" class="draft-status" role="status">Новый проект</span></div>
+      <div class="studio-project-tools"><div class="history-tools" aria-label="История изменений"><button id="undo-button" class="studio-icon-button" type="button" title="Отменить · Ctrl+Z" aria-label="Отменить изменение" disabled><svg class="studio-icon"><use href="#i-undo"/></svg></button><button id="redo-button" class="studio-icon-button" type="button" title="Повторить · Ctrl+Shift+Z" aria-label="Повторить изменение" disabled><svg class="studio-icon"><use href="#i-redo"/></svg></button></div><button id="reset-button" class="studio-icon-button reset-project" type="button" title="Начать заново" aria-label="Сбросить проект"><svg class="studio-icon"><use href="#i-reset"/></svg></button><div class="studio-project-files"><label for="load-project-input" class="studio-quiet-button"><svg class="studio-icon"><use href="#i-folder"/></svg><span>Открыть</span></label><input id="load-project-input" class="studio-file-input" type="file" accept="application/json,.json"><button id="save-project-button" class="studio-quiet-button" type="button"><svg class="studio-icon"><use href="#i-download"/></svg><span>Сохранить проект</span></button></div></div>
+    </div>
+    <p id="project-status" class="project-status" role="status" aria-live="polite"></p>
+    <div id="draft-restore-banner" class="draft-banner" hidden><div><strong>Ваш черновик на месте</strong><p>Продолжите с сохранёнными настройками и фотографией.</p></div><div><button id="restore-draft-button" class="studio-small-button" type="button">Восстановить</button><button id="discard-draft-button" class="studio-text-button" type="button">Начать заново</button></div></div>
+    <noscript><p class="notice">Включите JavaScript, чтобы редактировать карточку и сохранить изображение.</p></noscript>
+
+    <div class="studio-layout">
+      <aside class="studio-sidebar" aria-label="Настройки карточки">
+        <div class="studio-tabs" role="tablist" aria-label="Разделы редактора"><button id="tab-photo" type="button" role="tab" data-editor-tab="photo" aria-controls="panel-photo" aria-selected="true"><svg class="studio-icon"><use href="#i-image"/></svg>Фото</button><button id="tab-content" type="button" role="tab" data-editor-tab="content" aria-controls="panel-content" aria-selected="false" tabindex="-1"><svg class="studio-icon"><use href="#i-text"/></svg>Тексты</button><button id="tab-design" type="button" role="tab" data-editor-tab="design" aria-controls="panel-design" aria-selected="false" tabindex="-1"><svg class="studio-icon"><use href="#i-design"/></svg>Дизайн</button></div>
+        <form id="editor-form" class="studio-form" novalidate>
+          <section id="panel-photo" data-editor-panel="photo" role="tabpanel" aria-labelledby="tab-photo" tabindex="0">
+            <div class="panel-intro"><span class="studio-overline">01 / ИСХОДНИК</span><h2>Главный герой — товар</h2><p>Загрузите фото и найдите лучший ракурс.</p></div>
+            <div id="drop-zone" class="studio-upload"><input type="file" id="photo-input" accept="image/jpeg,image/png,image/webp" aria-describedby="upload-help file-status"><label for="photo-input"><span class="upload-symbol"><svg class="studio-icon"><use href="#i-upload"/></svg></span><strong>Перетащите фотографию</strong><span>или <b>выберите файл</b></span><small id="upload-help">JPG, PNG, WebP · до 10 МБ</small></label></div>
+            <p id="file-status" class="studio-help" role="status">Сейчас используется фото из примера.</p>
+            <div class="studio-samples"><span>Попробуйте с примером</span><div><button type="button" data-sample="headphones" aria-label="Фото наушников" aria-pressed="true"><img src="assets/images/headphones.jpg" alt=""><span>Наушники</span></button><button type="button" data-sample="sneaker" aria-label="Фото кроссовка" aria-pressed="false"><img src="assets/images/sneaker.jpg" alt=""><span>Кроссовок</span></button><button type="button" data-sample="skincare" aria-label="Фото косметики" aria-pressed="false"><img src="assets/images/skincare.jpg" alt=""><span>Косметика</span></button></div></div>
+            <div class="studio-control-section"><div class="control-section-heading"><h3>Композиция</h3><button id="reset-photo-button" type="button" class="studio-text-button">Сбросить фото</button></div><fieldset class="studio-fieldset"><legend class="sr-only">Размещение фотографии</legend><div class="studio-segmented"><label><input type="radio" name="photo-fit" value="contain" checked><span>Вписать</span></label><label><input type="radio" name="photo-fit" value="cover"><span>Заполнить</span></label></div></fieldset>
+              <div class="studio-range"><label for="photo-zoom">Масштаб <output id="photo-zoom-value" for="photo-zoom">100%</output></label><input id="photo-zoom" type="range" min="70" max="250" value="100"></div>
+              <div class="studio-range"><label for="photo-position-x">По горизонтали <output id="photo-position-x-value" for="photo-position-x">50%</output></label><input id="photo-position-x" type="range" min="0" max="100" value="50"></div>
+              <div class="studio-range"><label for="photo-position-y">По вертикали <output id="photo-position-y-value" for="photo-position-y">50%</output></label><input id="photo-position-y" type="range" min="0" max="100" value="50"></div>
+              <div class="studio-range"><label for="photo-rotation">Поворот <output id="photo-rotation-value" for="photo-rotation">0°</output></label><input id="photo-rotation" type="range" min="-180" max="180" value="0"></div>
+              <label class="studio-switch"><input id="photo-flip" type="checkbox"><span>Отразить по горизонтали</span><i aria-hidden="true"></i></label>
+            </div>
+            <details class="studio-accordion" open><summary>Свет и цвет<svg class="studio-icon"><use href="#i-chevron"/></svg></summary><div class="accordion-content"><div class="studio-filters" aria-label="Готовые фильтры"><button type="button" data-photo-filter="original" aria-pressed="true">Оригинал</button><button type="button" data-photo-filter="mono" aria-pressed="false">Ч/Б</button><button type="button" data-photo-filter="vivid" aria-pressed="false">Яркий</button><button type="button" data-photo-filter="soft" aria-pressed="false">Мягкий</button></div>
+              <div class="studio-range"><label for="photo-brightness">Яркость <output id="photo-brightness-value" for="photo-brightness">100%</output></label><input id="photo-brightness" type="range" min="50" max="150" value="100"></div>
+              <div class="studio-range"><label for="photo-contrast">Контраст <output id="photo-contrast-value" for="photo-contrast">100%</output></label><input id="photo-contrast" type="range" min="50" max="150" value="100"></div>
+              <div class="studio-range"><label for="photo-saturation">Насыщенность <output id="photo-saturation-value" for="photo-saturation">100%</output></label><input id="photo-saturation" type="range" min="0" max="180" value="100"></div>
+              <div class="studio-range"><label for="photo-radius">Скругление фото <output id="photo-radius-value" for="photo-radius">24</output></label><input id="photo-radius" type="range" min="0" max="50" value="24"></div>
+            </div></details>
+          </section>
+
+          <section id="panel-content" data-editor-panel="content" role="tabpanel" aria-labelledby="tab-content" tabindex="0" hidden>
+            <div class="panel-intro"><span class="studio-overline">02 / СМЫСЛ</span><h2>Детали продают</h2><p>Расскажите, почему этот товар стоит выбрать.</p></div>
+            <div class="studio-field"><div class="studio-field-label"><label for="product-name">Название товара</label><span id="name-count">21 / 60</span></div><input type="text" id="product-name" maxlength="60" value="Беспроводные наушники" placeholder="Название вашего товара" autocomplete="off"></div>
+            <div class="studio-field"><label for="product-subtitle">Подзаголовок <span>необязательно</span></label><input type="text" id="product-subtitle" maxlength="90" placeholder="Например, музыка без лишних проводов" autocomplete="off"></div>
+            <div class="studio-field"><label for="product-description">Описание <span>до 180 символов</span></label><textarea id="product-description" maxlength="180" rows="3" placeholder="Материалы, особенности, преимущества — своими словами"></textarea></div>
+            <div class="studio-price-grid"><div class="studio-field"><label for="product-price">Цена</label><div class="studio-price-input"><input type="text" id="product-price" inputmode="decimal" value="24990" placeholder="24 990" maxlength="14" aria-describedby="price-error" autocomplete="off"><span>₸</span></div><p id="price-error" class="field-error" role="status"></p></div><div class="studio-field"><label for="old-price">До скидки</label><div class="studio-price-input"><input type="text" id="old-price" inputmode="decimal" placeholder="29 990" maxlength="14" aria-describedby="old-price-error" autocomplete="off"><span>₸</span></div><p id="old-price-error" class="field-error" role="status"></p></div></div>
+            <label class="studio-switch"><input id="show-price" type="checkbox" checked><span>Показывать цену</span><i aria-hidden="true"></i></label>
+            <div class="studio-field"><label for="product-badge">Акцентная плашка <span>необязательно</span></label><input type="text" id="product-badge" maxlength="24" placeholder="Новинка / Хит продаж / −20%" autocomplete="off"></div>
+            <details class="studio-accordion" open><summary>Преимущества товара<svg class="studio-icon"><use href="#i-chevron"/></svg></summary><div class="accordion-content feature-inputs"><div class="studio-field"><label for="feature-1"><span class="feature-dot">01</span>Первое преимущество</label><input type="text" id="feature-1" maxlength="38" placeholder="Например, до 30 часов работы" autocomplete="off"></div><div class="studio-field"><label for="feature-2"><span class="feature-dot">02</span>Второе преимущество</label><input type="text" id="feature-2" maxlength="38" placeholder="Мягкие амбушюры" autocomplete="off"></div><div class="studio-field"><label for="feature-3"><span class="feature-dot">03</span>Третье преимущество</label><input type="text" id="feature-3" maxlength="38" placeholder="Лёгкая складная конструкция" autocomplete="off"></div><p class="studio-help">Заполняйте только характеристики, которые есть у товара.</p></div></details>
+            <details class="studio-accordion"><summary>Бренд вашего магазина<svg class="studio-icon"><use href="#i-chevron"/></svg></summary><div class="accordion-content"><div class="studio-field"><label for="brand-name">Название магазина</label><input type="text" id="brand-name" maxlength="28" placeholder="Например, Aru Store" autocomplete="off"><p class="studio-help">Пустое поле — подпись SatuCard.</p></div><div class="studio-field"><label for="brand-logo">Логотип</label><input type="file" id="brand-logo" accept="image/png,image/jpeg,image/webp" aria-describedby="brand-logo-status"><p id="brand-logo-status" class="studio-help" role="status">PNG, JPG, WebP · до 2 МБ</p><button id="brand-logo-remove" class="studio-text-button" type="button" disabled>Убрать логотип</button></div><label class="studio-switch"><input id="show-brand" type="checkbox" checked><span>Показывать бренд</span><i aria-hidden="true"></i></label></div></details>
+          </section>
+
+          <section id="panel-design" data-editor-panel="design" role="tabpanel" aria-labelledby="tab-design" tabindex="0" hidden>
+            <div class="panel-intro"><span class="studio-overline">03 / ХАРАКТЕР</span><h2>Найдите свой визуал</h2><p>Готовая композиция. Ваши цвета и детали.</p></div>
+            <div class="control-section-heading"><h3>Коллекция шаблонов</h3><span class="studio-mini-label">8 стилей</span></div><div id="template-grid" class="studio-template-grid" aria-label="Шаблоны карточки"></div>
+            <div class="studio-control-section"><div class="studio-field"><label for="card-format">Формат карточки</label><select id="card-format"><option value="portrait">Лента · 4:5</option><option value="square">Квадрат · 1:1</option><option value="story">История · 9:16</option></select></div><div class="studio-two-columns"><div class="studio-field"><label for="font-family">Шрифт</label><select id="font-family"><option value="manrope">Manrope</option><option value="dejavu">DejaVu Sans</option></select></div><div class="studio-field"><label for="text-align">Выравнивание</label><select id="text-align"><option value="left">По левому краю</option><option value="center">По центру</option></select></div></div><div class="studio-range"><label for="text-scale">Размер текста <output id="text-scale-value" for="text-scale">100%</output></label><input id="text-scale" type="range" min="80" max="120" value="100"></div></div>
+            <div class="studio-control-section"><div class="control-section-heading"><h3>Палитра</h3><span class="studio-mini-label">одним нажатием</span></div><div class="studio-palettes" aria-label="Готовые палитры"><button type="button" data-palette="forest" title="Шалфей" aria-label="Палитра Шалфей"><i style="--palette-a:#e4e8db;--palette-b:#3c5143;--palette-c:#232b24"></i><span>Шалфей</span></button><button type="button" data-palette="orange" title="Терракота" aria-label="Палитра Терракота"><i style="--palette-a:#fbe3d3;--palette-b:#e85d35;--palette-c:#3c2820"></i><span>Терракота</span></button><button type="button" data-palette="ocean" title="Океан" aria-label="Палитра Океан"><i style="--palette-a:#daeafa;--palette-b:#2879cb;--palette-c:#152f4b"></i><span>Океан</span></button><button type="button" data-palette="violet" title="Лаванда" aria-label="Палитра Лаванда"><i style="--palette-a:#ece3fa;--palette-b:#8661cc;--palette-c:#302042"></i><span>Лаванда</span></button><button type="button" data-palette="rose" title="Роза" aria-label="Палитра Роза"><i style="--palette-a:#f8dfe8;--palette-b:#ce668b;--palette-c:#442635"></i><span>Роза</span></button></div><label class="studio-switch"><input id="custom-colors" type="checkbox"><span>Настроить свои цвета</span><i aria-hidden="true"></i></label><div class="studio-color-row"><label for="background-color"><input id="background-color" type="color" value="#e4e8db"><span>Фон</span></label><label for="accent-color"><input id="accent-color" type="color" value="#e85d35"><span>Акцент</span></label><label for="text-color"><input id="text-color" type="color" value="#242522"><span>Текст</span></label></div></div>
+          </section>
+        </form>
+        <div class="sidebar-bottom"><span class="local-status-dot" aria-hidden="true"></span>Изменения видны сразу<a href="#preview">К карточке ↗</a></div>
+      </aside>
+
+      <section id="preview" class="studio-workspace" aria-labelledby="preview-heading">
+        <div class="workspace-heading"><div><span class="workspace-live-dot" aria-hidden="true"></span><h2 id="preview-heading">Холст</h2><span class="workspace-divider">/</span><span id="format-description">4:5 · 900 × 1125</span></div><button id="fullscreen-button" class="studio-icon-button" type="button" title="Открыть крупно" aria-label="Развернуть предварительный просмотр"><svg class="studio-icon"><use href="#i-expand"/></svg></button></div>
+        <div id="preview-stage" class="studio-stage"><div class="stage-corner stage-corner-top" aria-hidden="true"></div><div class="stage-corner stage-corner-bottom" aria-hidden="true"></div><figure id="canvas-frame" class="studio-canvas-frame"><canvas id="product-canvas" width="900" height="1125" role="img" aria-label="Предварительный просмотр карточки товара">Предварительный просмотр карточки товара</canvas><figcaption id="preview-caption" class="sr-only" aria-live="polite"></figcaption></figure></div>
+        <div class="workspace-bottom-bar"><p id="preview-hint"><svg class="studio-icon"><use href="#i-image"/></svg>Перетащите фото на холсте, чтобы найти ракурс</p><div class="workspace-zoom"><button id="preview-fit-button" type="button" class="studio-icon-button" aria-label="Вписать карточку в окно" title="Вписать в окно"><svg class="studio-icon"><use href="#i-fit"/></svg></button><label for="preview-zoom" class="sr-only">Масштаб просмотра</label><input id="preview-zoom" type="range" min="50" max="150" value="100"><output id="preview-zoom-value" for="preview-zoom">100%</output></div></div>
+        <div class="studio-export-bar"><div class="export-title"><span class="studio-overline">ГОТОВО К ПУБЛИКАЦИИ</span><p>Из идеи — в ваш магазин</p></div><div class="export-controls"><label><span class="sr-only">Формат изображения</span><select id="export-format"><option value="png">PNG</option><option value="jpeg">JPG</option></select></label><label><span class="sr-only">Качество изображения</span><select id="export-scale"><option value="1">1×</option><option value="2">2×</option></select></label><button id="download-button" class="studio-primary-button" type="button"><svg class="studio-icon"><use href="#i-download"/></svg><span>Скачать PNG</span></button><button id="publish-button" class="studio-secondary-button" type="button" disabled><svg class="studio-icon"><use href="#i-share"/></svg>Опубликовать</button></div></div>
+        <div class="workspace-status"><p id="download-status" role="status"></p><p id="publish-status" role="status" aria-live="polite"></p></div>
+        <p id="publish-login-note" class="studio-publish-note"><a id="publish-login" href="auth.html">Войдите</a>, чтобы сохранить публикацию в кабинете. Скачать изображение можно без аккаунта.</p>
+        <div id="publish-result" class="studio-publish-result" hidden><label for="published-url">Ссылка на карточку</label><div><input id="published-url" type="text" readonly><button id="copy-link-button" class="studio-small-button" type="button">Копировать</button></div><a id="published-card-link" class="studio-text-button" href="card.html">Открыть карточку ↗</a></div>
+        <div class="studio-workspace-footnote"><p><strong>Фото остаётся на устройстве.</strong> При публикации загружается готовая карточка. ИИ и удаление фона — следующий этап проекта.</p><span><kbd>Ctrl</kbd> + <kbd>Z</kbd> отменить</span></div>
       </section>
-      <section class="editor-step"><h2><span>02</span> Детали решают</h2><div class="label-row"><label for="product-name">Название товара</label><span id="name-count">24 / 60</span></div><input type="text" id="product-name" maxlength="60" value="Беспроводные наушники" placeholder="Например, керамическая чашка" autocomplete="off"><label for="product-price" class="price-label">Цена</label><div class="price-input"><input type="text" id="product-price" inputmode="decimal" value="24990" placeholder="24 990" maxlength="14" aria-describedby="price-error" autocomplete="off"><span>₸</span></div><p id="price-error" class="field-error" role="status"></p><label for="old-price" class="price-label">Старая цена <span class="optional">необязательно</span></label><div class="price-input"><input type="text" id="old-price" inputmode="decimal" placeholder="Например, 29 990" maxlength="14" aria-describedby="old-price-error" autocomplete="off"><span>₸</span></div><p id="old-price-error" class="field-error" role="status"></p></section>
-      <fieldset class="editor-step style-fieldset"><legend><span>03</span> Найдите свой стиль</legend><div class="style-options"><label><input type="radio" name="style" value="studio" checked><span class="style-option"><span class="swatch swatch-studio"><i></i><b></b></span><strong>Студия</strong><small>Спокойный</small></span></label><label><input type="radio" name="style" value="accent"><span class="style-option"><span class="swatch swatch-accent"><i></i><b></b></span><strong>Акцент</strong><small>Выразительный</small></span></label><label><input type="radio" name="style" value="minimal"><span class="style-option"><span class="swatch swatch-minimal"><i></i><b></b></span><strong>Минимал</strong><small>Чистый</small></span></label></div></fieldset>
-      <fieldset class="editor-step format-fieldset"><legend><span>04</span> Выберите формат</legend><div class="choice-row"><label><input type="radio" name="card-format" value="portrait" checked> Вертикальная 4:5</label><label><input type="radio" name="card-format" value="square"> Квадратная 1:1</label></div></fieldset>
-      <fieldset class="editor-step brand-fieldset">
-  <legend><span>05</span> Фирменный стиль магазина</legend>
+    </div>
+  </main>
 
-  <label class="brand-label" for="brand-name">Название магазина</label>
-  <input type="text" id="brand-name" maxlength="28"
-         placeholder="Например, Aru Store" autocomplete="off">
-  <p class="field-note">Если оставить пустым, на карточке будет SatuCard.</p>
-
-  <label class="brand-label" for="brand-logo">Логотип</label>
-  <input type="file" id="brand-logo"
-         accept="image/png,image/jpeg,image/webp"
-         aria-describedby="brand-logo-status">
-  <div class="brand-logo-row">
-    <p id="brand-logo-status" class="field-note" role="status">
-      Необязательно · PNG, JPG или WebP до 2 МБ.
-    </p>
-    <button type="button" id="brand-logo-remove"
-            class="brand-logo-remove" disabled>
-      Убрать логотип
-    </button>
-  </div>
-
-  <div class="brand-color-row">
-    <label class="brand-color-choice">
-      <input type="checkbox" id="brand-color-enabled">
-      Свой цвет ценника
-    </label>
-    <label for="brand-color">Цвет</label>
-    <input type="color" id="brand-color" value="#e74d24" disabled>
-  </div>
-</fieldset>
-<a class="mobile-preview-link text-link" href="#preview">Посмотреть карточку</a>
-    </form>
-    <section class="preview-panel" id="preview" aria-labelledby="preview-heading"><div class="preview-heading"><h2 id="preview-heading">Предварительный просмотр</h2><span id="format-description">4:5 · 900 × 1125</span></div><div class="preview-workspace"><figure class="canvas-figure"><canvas id="product-canvas" width="900" height="1125" role="img" aria-label="Карточка товара: беспроводные наушники, 24 990 тенге">Предварительный просмотр карточки товара</canvas><figcaption id="preview-caption" class="sr-only" aria-live="polite"></figcaption></figure><p class="preview-live"><span aria-hidden="true">✦</span> Меняйте детали. Смотрите, как меняется впечатление.</p></div><div class="preview-actions"><button type="button" id="reset-button" class="reset-button">Сбросить изменения</button><a id="download-button" class="button button-dark" aria-disabled="true" download="satucard-4x5.png">Скачать PNG</a></div><p id="download-status" class="download-status" role="status"></p>
-      <div class="publish-box"><div><h3>Поделиться карточкой</h3><p>После входа готовое изображение сохранится в вашем профиле и откроется по ссылке.</p></div><button type="button" id="publish-button" class="button button-orange" disabled>Опубликовать</button></div>
-      <p class="publish-login" id="publish-login">Для публикации <a href="auth.html" target="_blank" rel="noopener">войдите или зарегистрируйтесь</a>. PNG можно скачать без аккаунта.</p>
-      <p id="publish-status" class="publish-status" role="status" aria-live="polite"></p>
-      <div id="publish-result" class="publish-result" hidden><label for="published-url">Ссылка на карточку</label><div class="publish-link-row"><input id="published-url" type="text" readonly><button id="copy-link-button" type="button" class="button button-light">Скопировать</button></div><a id="published-card-link" class="text-link" href="card.html">Открыть опубликованную карточку</a></div>
-      <div class="editor-disclaimer"><span aria-hidden="true">i</span><p>Исходное фото обрабатывается в браузере. При нажатии «Опубликовать» готовая карточка отправляется на сервер и становится доступной всем, у кого есть ссылка. ИИ и удаление фона не используются.</p></div></section>
-  </div>
-</main>
-<dialog id="publish-dialog" class="publish-dialog" aria-labelledby="publish-dialog-title">
-  <button id="publish-dialog-close" class="publish-dialog-close" type="button" aria-label="Закрыть">×</button>
-  <span class="publish-dialog-mark" aria-hidden="true">✓</span>
-  <h2 id="publish-dialog-title">Карточка опубликована</h2>
-  <p>Она добавлена в ваш профиль. Теперь ссылкой можно поделиться с покупателем.</p>
-  <div class="publish-dialog-actions">
-    <a id="publish-dialog-link" class="button button-orange" href="card.html">Открыть карточку</a>
-    <button id="publish-dialog-copy" class="button button-light" type="button">Скопировать ссылку</button>
-  </div>
-</dialog>
-<footer class="site-footer container"><a class="brand" href="index.html">SatuCard<span class="brand-dot">.</span></a><p>Создано для идей. Сделано для Казахстана.</p><a href="examples.html#about">Учебный проект · 2026</a></footer></body></html>
+  <dialog id="publish-dialog" class="publish-dialog" aria-labelledby="publish-dialog-title"><button id="publish-dialog-close" class="publish-dialog-close" type="button" aria-label="Закрыть"><svg class="studio-icon"><use href="#i-close"/></svg></button><span class="publish-dialog-mark" aria-hidden="true"><svg class="studio-icon"><use href="#i-check"/></svg></span><p class="studio-overline">ЕЩЁ ОДИН ШАГ К ПРОДАЖЕ</p><h2 id="publish-dialog-title">Ваша карточка в сети<span>.</span></h2><p>Сохранена в личном кабинете. Отправьте ссылку покупателю или добавьте её в соцсети магазина.</p><div class="publish-dialog-actions"><a id="publish-dialog-link" class="studio-primary-button" href="card.html">Открыть карточку ↗</a><button id="publish-dialog-copy" class="studio-secondary-button" type="button">Скопировать ссылку</button></div></dialog>
+  <dialog id="fullscreen-dialog" class="studio-fullscreen-dialog" aria-label="Карточка крупным планом"><div class="fullscreen-heading"><p>Ваша карточка<span> · Крупный план</span></p><button id="fullscreen-close" class="studio-icon-button" type="button" aria-label="Закрыть крупный план"><svg class="studio-icon"><use href="#i-close"/></svg></button></div><div class="fullscreen-stage"><canvas id="fullscreen-canvas" width="900" height="1125" role="img" aria-label="Крупный предварительный просмотр карточки"></canvas></div></dialog>
+  <footer class="studio-footer"><p>SatuCard<span>.</span> <small>Инструмент для ваших продаж</small></p><a href="examples.html#about">Учебный проект · Казахстан · 2026</a></footer>
+</body>
+</html>
