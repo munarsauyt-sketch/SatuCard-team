@@ -19,6 +19,7 @@
   const publishedUrl = document.querySelector('#published-url');
   const publishedCardLink = document.querySelector('#published-card-link');
   const copyLinkButton = document.querySelector('#copy-link-button');
+  const publishLogin = document.querySelector('#publish-login');
   const canvas = document.querySelector('#product-canvas');
   const ctx = canvas.getContext('2d');
   const positionControls = document.querySelector('#photo-position-controls');
@@ -50,6 +51,11 @@
   let exportVersion = 0;
   let exportUrl = '';
   let publishing = false;
+  const updatePublishLogin = async () => {
+    publishLogin.hidden = Boolean(await window.SATUCARD_AUTH.getSession());
+  };
+  document.addEventListener('satucard:authchange', updatePublishLogin);
+  updatePublishLogin();
 
   function clearPublishedLink() {
     publishResult.hidden = true;
@@ -267,6 +273,13 @@
       publishStatus.textContent = 'Публикация доступна на сайте по интернет-ссылке.';
       return;
     }
+    const session = await window.SATUCARD_AUTH.getSession();
+    if (!session) {
+      publishStatus.textContent = 'Войдите в аккаунт, чтобы опубликовать карточку. Страница входа откроется в новой вкладке.';
+      publishLogin.hidden = false;
+      window.satucardToast?.('Для публикации нужен аккаунт.', 'error');
+      return;
+    }
 
     publishing = true;
     publishButton.disabled = true;
@@ -295,7 +308,11 @@
         throw new Error('Карточка слишком большая для публикации. Выберите другое фото.');
       }
       data.set('image', image, 'satucard.jpg');
-      const response = await fetch('api/cards', { method: 'POST', body: data });
+      const response = await fetch('api/cards', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: data
+      });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || 'Не удалось опубликовать карточку.');
 
@@ -305,8 +322,10 @@
       publishStatus.textContent = version === exportVersion
         ? 'Карточка опубликована. Скопируйте ссылку.'
         : 'Карточка опубликована. После начала публикации вы изменили макет; ссылка ведёт на предыдущую версию.';
+      window.satucardToast?.('Карточка опубликована и добавлена в профиль.');
     } catch (error) {
       publishStatus.textContent = error.message || 'Сервер недоступен. Попробуйте позже.';
+      window.satucardToast?.(publishStatus.textContent, 'error');
     } finally {
       publishing = false;
       publishButton.disabled = downloadButton.getAttribute('aria-disabled') === 'true';

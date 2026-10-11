@@ -7,26 +7,30 @@
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml"><script src="theme.js"></script>
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="app.css">
+<script src="auth-client.js" defer></script><script src="site.js" defer></script>
 </head>
 <body class="home-page">
 <a class="skip-link" href="#main">К содержимому</a>
 <header class="site-header"><div class="container header-inner">
   <a class="brand" href="index.html" aria-label="SatuCard — главная"><img class="brand-logo-icon" src="assets/favicon.svg" alt="">SatuCard<span class="brand-dot">.</span></a>
-  <nav aria-label="Основная навигация"><a href="index.html" aria-current="page">Главная</a><a href="editor.html">Редактор</a><a href="examples.html">Примеры и о проекте</a></nav>
+  <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="main-nav" aria-label="Открыть меню">☰</button>
+  <nav id="main-nav" aria-label="Основная навигация"><a href="index.html" aria-current="page">Главная</a><a href="editor.html">Редактор</a><a href="examples.html">Примеры и о проекте</a></nav>
   <button class="theme-toggle" type="button" data-theme-toggle
         aria-label="Тёмная тема" aria-pressed="false">
   <span aria-hidden="true">◐</span>
   <span class="theme-toggle-text">Тема</span>
 </button>
+  <a class="header-account" data-account-link href="auth.html">Войти</a>
 </div></header>
 <main id="main">
-  <section class="hero container">
+  <section class="hero container" data-reveal>
     <div class="hero-copy">
       <p class="eyebrow"><span class="small-line"></span> МАЛЕНЬКОМУ БИЗНЕСУ. БОЛЬШИЕ ВОЗМОЖНОСТИ.</p>
       <h1>Ваш товар.<br>В лучшем<br><span>свете.</span><span class="title-spark" aria-hidden="true">✳</span></h1>
-      <p class="hero-description">Красивые карточки начинаются с одного фото.<br class="desktop-break"> Добавьте название, цену — и свой характер.</p>
-      <div class="hero-actions"><a class="button button-orange" href="editor.html">Создать карточку</a><a class="text-link" href="examples.html">Посмотреть примеры</a></div>
-      <div class="hero-note"><span class="tiny-check" aria-hidden="true">✓</span> Без регистрации <span class="note-divider">/</span> Цены в тенге <span class="note-divider">/</span> Ссылка на готовую карточку</div>
+      <p class="hero-description">Из обычного фото — в готовую карточку товара. Добавьте название, цену в тенге и фирменный стиль. Поделитесь ссылкой с покупателем.</p>
+      <div class="hero-actions"><a class="button button-orange" href="editor.html">Попробовать бесплатно</a><a class="text-link" href="#how-it-works">Как это работает</a></div>
+      <div class="hero-note"><span class="tiny-check" aria-hidden="true">✓</span> PNG без регистрации <span class="note-divider">/</span> Цены в тенге <span class="note-divider">/</span> Публикация в аккаунте</div>
     </div>
     <div class="hero-showcase" aria-label="Пример оформления фотографии наушников в карточку товара">
       <div class="showcase-top"><span>ОБЫЧНОЕ ФОТО. НОВОЕ ВПЕЧАТЛЕНИЕ.</span><span aria-hidden="true">✳</span></div>
@@ -42,7 +46,7 @@
     </div>
   </section>
   <div class="context-strip"><div class="container"><span>ЛОКАЛЬНЫЙ БИЗНЕС. ЗАМЕТНАЯ ПОДАЧА.</span><p>Для магазинов в соцсетях</p><span aria-hidden="true">✳</span><p>Для продавцов маркетплейсов</p><span aria-hidden="true">✳</span><p>Для ваших идей</p></div></div>
-  <section class="section container benefits">
+  <section class="section container benefits" data-reveal>
     <div class="section-heading"><div><p class="eyebrow">МЕНЬШЕ РУТИНЫ, БОЛЬШЕ ТВОРЧЕСТВА</p><h2>Хорошему товару —<br>хорошую подачу.</h2></div><p>Не нужно начинать с чистого листа.<br>Мы уже продумали композицию.<br>Вам остаётся добавить своё.</p></div>
     <div class="benefit-grid">
       <article><span class="feature-icon" aria-hidden="true">▧</span><span class="feature-number">01</span><h3>Одного фото достаточно</h3><p>Снимок с телефона или готовое фото товара. Просто выберите файл на своём устройстве.</p></article>
@@ -50,11 +54,12 @@
       <article><span class="feature-icon" aria-hidden="true">₸</span><span class="feature-number">03</span><h3>Скачать или поделиться</h3><p>Сохраните PNG на устройство или опубликуйте готовую карточку и отправьте ссылку покупателю.</p></article>
     </div>
   </section>
-  <section class="result-section"><div class="container result-grid">
+  <section class="result-section" data-reveal><div class="container result-grid">
     <div class="result-copy"><p class="eyebrow">ОДНО ФОТО — ДРУГОЕ ВПЕЧАТЛЕНИЕ</p><h2>Фото есть.<br>Добавим подачу.</h2><p>Та же фотография, но с названием, ценой и оформлением. Двигать пиксели не придётся: изменения сразу видны в редакторе.</p><a class="text-link" href="editor.html">Попробовать на своём товаре</a><div class="honest-note"><span aria-hidden="true">i</span><p>Это учебный прототип. Он оформляет фотографию по шаблону, не удаляет фон и не обрабатывает её с помощью ИИ.</p></div></div>
     <div class="before-after"><figure class="before-photo"><figcaption>01 / ИСХОДНОЕ ФОТО</figcaption><img src="assets/images/sneaker.jpg" alt="Исходная фотография кроссовка" loading="lazy"></figure><figure class="after-photo"><figcaption>02 / С ХАРАКТЕРОМ</figcaption><div class="mini-product"><span>НА КАЖДЫЙ ДЕНЬ</span><h3>Лёгкость<br>в каждом шаге.</h3><img src="assets/images/sneaker.jpg" alt="Тот же кроссовок в оформленной карточке" loading="lazy"><div><strong>Кроссовки Daily</strong><b>32 500 ₸</b></div></div></figure></div>
   </div></section>
-  <section class="container closing-section"><div><p class="eyebrow">НАЧНЁМ С ВАШЕГО ТОВАРА?</p><h2>Дайте ему<br>время в центре внимания.</h2></div><a href="editor.html" class="button button-dark">Создать свою карточку</a><span class="closing-spark" aria-hidden="true">✳</span></section>
+  <section class="section container" id="how-it-works" data-reveal><div class="section-heading"><div><p class="eyebrow">ТРИ ШАГА ДО ПУБЛИКАЦИИ</p><h2>Фото. Оформление. Ссылка.</h2></div><p>Работайте в браузере с телефона или ноутбука.</p></div><div class="workflow-grid"><article><span>01</span><h3>Добавьте фото</h3><p>Выберите фотографию товара. Исходный файл остаётся на вашем устройстве.</p></article><article><span>02</span><h3>Настройте карточку</h3><p>Название, цена, стиль, формат и фирменные детали сразу видны в предпросмотре.</p></article><article><span>03</span><h3>Сохраните результат</h3><p>Скачайте PNG или войдите в аккаунт, чтобы опубликовать карточку по ссылке.</p></article></div></section>
+  <section class="container closing-section" data-reveal><div><p class="eyebrow">НАЧНЁМ С ВАШЕГО ТОВАРА?</p><h2>Дайте ему<br>время в центре внимания.</h2></div><a href="editor.html" class="button button-dark">Создать свою карточку</a><span class="closing-spark" aria-hidden="true">✳</span></section>
 </main>
 <footer class="site-footer container"><a class="brand" href="index.html">SatuCard<span class="brand-dot">.</span></a><p>Создано для идей. Сделано для Казахстана.</p><a href="examples.html#about">Учебный проект · 2026</a></footer>
 </body></html>

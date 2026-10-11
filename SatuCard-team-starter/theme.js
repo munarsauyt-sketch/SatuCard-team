@@ -31,7 +31,7 @@
           const fileName = target.pathname.split('/').pop();
 
           if (targetDirectory !== pageDirectory ||
-              !['index.html', 'editor.html', 'examples.html', 'card.html'].includes(fileName)) {
+              !['index.html', 'editor.html', 'examples.html', 'card.html', 'auth.html', 'dashboard.html'].includes(fileName)) {
             return;
           }
 

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Войти или зарегистрироваться — SatuCard</title>
+  <meta name="description" content="Создайте аккаунт SatuCard и храните опубликованные карточки товаров в одном месте.">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <script src="theme.js"></script>
+  <link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="app.css">
+  <script src="auth-client.js" defer></script><script src="site.js" defer></script><script src="auth.js" defer></script>
+</head>
+<body>
+<a class="skip-link" href="#main">К содержимому</a>
+<header class="site-header"><div class="container header-inner">
+  <a class="brand" href="index.html" aria-label="SatuCard — главная"><img class="brand-logo-icon" src="assets/favicon.svg" alt="">SatuCard<span class="brand-dot">.</span></a>
+  <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="main-nav" aria-label="Открыть меню">☰</button>
+  <nav id="main-nav" aria-label="Основная навигация"><a href="index.html">Главная</a><a href="editor.html">Редактор</a><a href="examples.html">Примеры</a></nav>
+  <button class="theme-toggle" type="button" data-theme-toggle aria-label="Тёмная тема" aria-pressed="false"><span aria-hidden="true">◐</span><span class="theme-toggle-text">Тема</span></button>
+  <a class="header-account" data-account-link href="auth.html" aria-current="page">Войти</a>
+</div></header>
+<main id="main" class="auth-main container">
+  <section class="auth-intro">
+    <span class="auth-kicker">SATUCARD / ВАШЕ ПРОСТРАНСТВО</span>
+    <h1>Карточки товара.<br><span>Всегда под рукой.</span></h1>
+    <p>Создавайте, публикуйте и находите свои карточки в личном кабинете. Скачивание PNG по-прежнему доступно без аккаунта.</p>
+    <div class="auth-art"><div class="auth-art-glow"></div><img src="assets/images/headphones.jpg" alt="Пример фотографии наушников"><span>Ваш товар — в лучшем свете ✳</span></div>
+  </section>
+  <section class="auth-card" aria-labelledby="auth-title">
+    <div class="auth-tabs" role="tablist" aria-label="Вход или регистрация">
+      <button type="button" role="tab" data-auth-mode="login" aria-selected="true">Вход</button>
+      <button type="button" role="tab" data-auth-mode="signup" aria-selected="false">Регистрация</button>
+    </div>
+    <h2 id="auth-title">С возвращением</h2>
+    <p id="auth-subtitle" class="auth-subtitle">Войдите, чтобы продолжить работу с карточками.</p>
+    <form id="auth-form" novalidate>
+      <div id="auth-name-field" hidden><label for="auth-name">Ваше имя</label><input id="auth-name" name="name" type="text" maxlength="80" autocomplete="name" placeholder="Например, Айдана"></div>
+      <label for="auth-email">Email</label><input id="auth-email" name="email" type="email" autocomplete="email" inputmode="email" required placeholder="name@example.com">
+      <label for="auth-password">Пароль</label><div class="password-wrap"><input id="auth-password" name="password" type="password" minlength="8" autocomplete="current-password" required placeholder="Минимум 8 символов"><button type="button" data-password-toggle="auth-password" aria-pressed="false">Показать</button></div>
+      <div id="auth-confirm-field" hidden><label for="auth-confirm">Повторите пароль</label><div class="password-wrap"><input id="auth-confirm" name="confirm" type="password" autocomplete="new-password" placeholder="Тот же пароль"><button type="button" data-password-toggle="auth-confirm" aria-pressed="false">Показать</button></div></div>
+      <p id="auth-notice" class="auth-notice" role="status" aria-live="polite"></p>
+      <button id="auth-submit" class="button button-orange auth-submit" type="submit">Войти в SatuCard</button>
+    </form>
+    <p class="auth-footnote">После регистрации подтвердите email по письму. Пароль хранится в Supabase Auth в защищённом виде.</p>
+  </section>
+</main>
+<footer class="site-footer container"><a class="brand" href="index.html">SatuCard<span class="brand-dot">.</span></a><p>Сделано для продавцов Казахстана.</p><a href="examples.html#about">О проекте</a></footer>
+</body></html>
