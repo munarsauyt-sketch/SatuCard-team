@@ -22,7 +22,7 @@
   const colorFields = { 'background-color': 'background', 'accent-color': 'accent', 'text-color': 'textColor' };
   const checkFields = { 'show-price': 'showPrice', 'show-brand': 'showBrand', 'custom-colors': 'customColors' };
   const photoRanges = { 'photo-zoom': 'zoom', 'photo-position-x': 'x', 'photo-position-y': 'y', 'photo-rotation': 'rotation', 'photo-brightness': 'brightness', 'photo-contrast': 'contrast', 'photo-saturation': 'saturation', 'photo-radius': 'radius' };
-  let model = { settings: renderer.normalize({ ...samples.headphones, brandName: 'SatuCard.', template: 'studio', format: 'portrait' }), photoId: null, logoId: null };
+  let model = { settings: renderer.normalize({ ...samples.headphones, brandName: 'SatuCard.', template: 'neon', format: 'portrait' }), photoId: null, logoId: null };
   let initialModel, history, geometry, dragging, pendingDraft;
   let framePending = false, initialized = false, publishing = false, exporting = false;
   let historyTimer, draftTimer, thumbTimer, lastPublished = '';

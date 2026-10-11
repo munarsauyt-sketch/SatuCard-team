@@ -4,7 +4,18 @@ document.documentElement.classList.add('js-ready');
 document.addEventListener('DOMContentLoaded', () => {
   const menu = document.querySelector('[data-menu-toggle]');
   const nav = document.querySelector('#main-nav');
+  const header = document.querySelector('.site-header');
+  if (header) {
+    const updateHeader = () => header.classList.toggle('is-scrolled', window.scrollY > 16);
+    window.addEventListener('scroll', updateHeader, { passive: true });
+    updateHeader();
+  }
   if (menu && nav) {
+    const closeMenu = () => {
+      menu.setAttribute('aria-expanded', 'false');
+      menu.setAttribute('aria-label', 'Открыть меню');
+      nav.classList.remove('menu-open');
+    };
     menu.addEventListener('click', () => {
       const open = menu.getAttribute('aria-expanded') !== 'true';
       menu.setAttribute('aria-expanded', String(open));
@@ -13,8 +24,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     nav.addEventListener('click', event => {
       if (event.target.closest('a')) {
-        menu.setAttribute('aria-expanded', 'false');
-        nav.classList.remove('menu-open');
+        closeMenu();
+      }
+    });
+    document.addEventListener('click', event => {
+      if (!menu.contains(event.target) && !nav.contains(event.target)) closeMenu();
+    });
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && menu.getAttribute('aria-expanded') === 'true') {
+        closeMenu();
+        menu.focus();
       }
     });
   }

@@ -5,6 +5,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const status = document.querySelector('#dashboard-status');
   const grid = document.querySelector('#my-cards');
   const count = document.querySelector('#cards-count');
+  const page = document.querySelector('.dashboard-main');
+  const loading = document.querySelector('#cards-loading');
+  const empty = document.querySelector('#dashboard-empty');
+  grid.setAttribute('aria-busy', 'true');
   const logout = document.querySelector('#logout-button');
   logout.addEventListener('click', async () => {
     logout.disabled = true;
@@ -23,31 +27,58 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.querySelector('.profile-avatar').textContent = profile.name[0].toUpperCase();
   } catch (error) {
     status.textContent = error.message || 'Не удалось загрузить профиль.';
+    document.querySelector('#profile-title').textContent = 'Профиль недоступен';
+    loading.hidden = true;
+    page.dataset.state = 'error';
+    grid.setAttribute('aria-busy', 'false');
     return;
   }
 
   try {
     const cards = await auth.getMyCards();
-    status.textContent = cards.length ? '' : 'Пока нет опубликованных карточек. Создайте первую в редакторе.';
+    status.textContent = cards.length ? '' : 'В коллекции пока нет опубликованных карточек.';
     count.textContent = `${cards.length} из 30 последних`;
+    empty.hidden = cards.length > 0;
+    page.dataset.state = cards.length ? 'ready' : 'empty';
     cards.forEach(card => {
       const link = document.createElement('a');
       link.className = 'my-card';
       link.href = `card.html?id=${encodeURIComponent(card.id)}`;
+      link.setAttribute('aria-label', `Открыть карточку «${card.title}»`);
+      const media = document.createElement('div');
+      media.className = 'my-card-image-stage';
       const image = document.createElement('img');
       image.src = card.imageUrl;
       image.alt = '';
       image.loading = 'lazy';
+      image.decoding = 'async';
+      const format = document.createElement('span');
+      format.className = 'my-card-format';
+      format.textContent = { portrait: 'ПОСТ / 4:5', square: 'КАТАЛОГ / 1:1', story: 'ИСТОРИЯ / 9:16' }[card.format] || 'КАРТОЧКА';
+      media.append(image, format);
       const body = document.createElement('div');
+      body.className = 'my-card-body';
       const title = document.createElement('strong');
       title.textContent = card.title;
       const price = document.createElement('span');
+      price.className = 'my-card-price';
       price.textContent = `${new Intl.NumberFormat('ru-RU').format(Number(card.price))} ₸`;
-      body.append(title, price);
-      link.append(image, body);
+      const arrow = document.createElement('span');
+      arrow.className = 'my-card-arrow';
+      arrow.textContent = '↗';
+      arrow.setAttribute('aria-hidden', 'true');
+      const date = document.createElement('span');
+      date.className = 'my-card-date';
+      date.textContent = `Опубликовано ${new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(card.createdAt))}`;
+      body.append(title, price, arrow, date);
+      link.append(media, body);
       grid.append(link);
     });
   } catch (error) {
     status.textContent = error.message || 'Не удалось загрузить карточки.';
+    page.dataset.state = 'error';
+  } finally {
+    loading.hidden = true;
+    grid.setAttribute('aria-busy', 'false');
   }
 });

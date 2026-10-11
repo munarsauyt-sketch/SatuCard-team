@@ -1,41 +1,33 @@
 <!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Карточка товара — SatuCard</title>
-  <meta name="description" content="Товарная карточка, созданная в SatuCard.">
-  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <script src="theme.js"></script>
-  <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="theme.css">
-  <link rel="stylesheet" href="app.css">
-  <script src="auth-client.js" defer></script><script src="site.js" defer></script>
-  <script src="card.js" defer></script>
+  <meta name="description" content="Опубликованная карточка товара, созданная в SatuCard.">
+  <link rel="icon" href="assets/favicon.svg?v=rebrand-20261012" type="image/svg+xml">
+  <script src="theme.js?v=rebrand-20261012"></script>
+  <link rel="stylesheet" href="brand.css?v=rebrand-20261012">
+  <link rel="stylesheet" href="account-pages.css?v=rebrand-20261012">
+  <script src="auth-client.js?v=rebrand-20261012" defer></script><script src="site.js?v=rebrand-20261012" defer></script><script src="card.js?v=rebrand-20261012" defer></script>
 </head>
-<body>
-  <a class="skip-link" href="#main">К содержимому</a>
-  <header class="site-header"><div class="container header-inner">
-    <a class="brand" href="index.html" aria-label="SatuCard — главная"><span class="brand-icon" aria-hidden="true"><i></i><i></i></span>SatuCard<span class="brand-dot">.</span></a>
-    <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="main-nav" aria-label="Открыть меню">☰</button>
-    <nav id="main-nav" aria-label="Основная навигация"><a href="index.html">Главная</a><a href="editor.html">Редактор</a><a href="examples.html">Примеры и о проекте</a></nav>
-    <button class="theme-toggle" type="button" data-theme-toggle aria-label="Тёмная тема" aria-pressed="false"><span aria-hidden="true">◐</span><span class="theme-toggle-text">Тема</span></button>
-    <a class="header-account" data-account-link href="auth.html">Войти</a>
-  </div></header>
-  <main id="main" class="container shared-card-main">
-    <div class="shared-card-heading"><p class="eyebrow">ГОТОВАЯ КАРТОЧКА ТОВАРА</p><h1 id="card-title">Загружаем карточку…</h1><p id="card-status" role="status" aria-live="polite">Получаем данные с сервера.</p></div>
-    <div id="shared-card-content" class="shared-card-layout" hidden>
-      <div class="shared-card-image"><img id="card-image" alt=""></div>
-      <section class="shared-card-details" aria-labelledby="details-heading">
-        <p class="eyebrow">SATUCARD / КАЗАХСТАН</p><h2 id="details-heading">Информация о товаре</h2>
-        <p id="card-brand" class="shared-card-brand"></p>
-        <p class="shared-card-price"><strong id="card-price"></strong> <span id="card-old-price"></span></p>
-        <p class="shared-card-note">Эта карточка опубликована продавцом. SatuCard помогает оформить фотографию и подготовить изображение для публикации.</p>
-        <a id="card-image-link" class="button button-dark" target="_blank" rel="noopener noreferrer">Открыть изображение</a>
-        <a class="text-link" href="editor.html">Создать свою карточку</a>
-      </section>
-    </div>
-  </main>
-  <footer class="site-footer container"><a class="brand" href="index.html">SatuCard<span class="brand-dot">.</span></a><p>Создано для идей. Сделано для Казахстана.</p><a href="examples.html#about">Учебный проект · 2026</a></footer>
+<body class="account-page card-page">
+<a class="skip-link" href="#main">К содержимому</a>
+<header class="site-header"><div class="container header-inner">
+  <a class="brand" href="index.html" aria-label="SatuCard — главная"><img class="brand-logo-icon" src="assets/favicon.svg?v=rebrand-20261012" alt="">SatuCard<span class="brand-dot">.</span></a>
+  <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="main-nav" aria-label="Открыть меню">☰</button>
+  <nav id="main-nav" aria-label="Основная навигация"><a href="index.html">Главная</a><a href="editor.html">Редактор</a><a href="examples.html">Шаблоны</a></nav>
+  <button class="theme-toggle" type="button" data-theme-toggle aria-label="Тёмная тема" aria-pressed="false"><span aria-hidden="true">◐</span><span class="theme-toggle-text">Тема</span></button>
+  <a class="header-account" data-account-link href="auth.html">Войти</a>
+</div></header>
+<main id="main" class="container shared-card-main" data-state="loading">
+  <div class="shared-card-heading"><a class="account-back-link" href="examples.html"><span aria-hidden="true">↖</span> Больше вдохновения</a><p class="account-kicker">ТОВАР С ХАРАКТЕРОМ / SATUCARD</p><h1 id="card-title">Загружаем карточку…</h1><p id="card-status" class="collection-status" role="status" aria-live="polite">Готовим публикацию к просмотру.</p></div>
+  <div id="card-loading" class="shared-card-loading" aria-hidden="true"><div></div><section><i></i><i></i><i></i><span></span></section></div>
+  <div id="card-error" class="shared-card-error" hidden><span class="card-error-mark" aria-hidden="true">↗</span><div><h2>Карточка пока недоступна.</h2><p>Проверьте ссылку или попробуйте загрузить страницу ещё раз.</p><div><button id="card-retry" class="button button-dark" type="button">Попробовать снова</button><a class="button button-light" href="editor.html">Создать свою карточку ↗</a></div></div></div>
+  <div id="shared-card-content" class="shared-card-layout" hidden>
+    <figure class="shared-card-image"><div class="shared-image-topline"><span>ПУБЛИКАЦИЯ / SATUCARD</span><span aria-hidden="true">↗</span></div><div class="shared-image-stage"><img id="card-image" alt="" decoding="async"></div><figcaption><span><i aria-hidden="true"></i>Создано с характером</span><span>SATU / KZ</span></figcaption></figure>
+    <section class="shared-card-details" aria-labelledby="details-heading"><div class="shared-details-topline"><span class="account-kicker">ДЕТАЛИ ТОВАРА</span><span class="shared-card-seal" aria-hidden="true">✳</span></div><h2 id="details-heading">Ваш следующий<br>выбор<span>.</span></h2><div class="shared-brand-row"><span>Магазин</span><p id="card-brand" class="shared-card-brand"></p></div><div class="shared-price-block"><span class="shared-price-label">Цена товара</span><p class="shared-card-price"><strong id="card-price"></strong><span id="card-old-price"></span></p></div><p class="shared-card-note">Здесь показана опубликованная карточка. Информация о товаре указана её автором.</p><div class="shared-card-actions"><a id="card-image-link" class="button button-dark" target="_blank" rel="noopener noreferrer">Открыть изображение <span aria-hidden="true">↗</span></a><button id="card-copy-link" class="button button-light" type="button">Скопировать ссылку <span aria-hidden="true">↗</span></button><p id="card-share-status" class="card-share-status" role="status" aria-live="polite"></p></div><div class="shared-create-note"><span aria-hidden="true">＋</span><p>Понравилось оформление?<br><a href="editor.html">Создайте свою карточку ↗</a></p></div></section>
+  </div>
+</main>
+<footer class="site-footer container"><a class="brand" href="index.html"><img class="brand-logo-icon" src="assets/favicon.svg?v=rebrand-20261012" alt="">SatuCard<span class="brand-dot">.</span></a><p>Товар ваш. Характер тоже.</p><a href="examples.html#about">О проекте ↗</a></footer>
 </body>
 </html>

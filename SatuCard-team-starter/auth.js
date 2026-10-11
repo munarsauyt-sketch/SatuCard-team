@@ -38,9 +38,18 @@ document.addEventListener('DOMContentLoaded', () => {
     notice.className = `auth-notice ${type}`;
   }
 
-  document.querySelectorAll('[data-auth-mode]').forEach(button =>
-    button.addEventListener('click', () => setMode(button.dataset.authMode))
-  );
+  const tabs = [...document.querySelectorAll('[data-auth-mode]')];
+  tabs.forEach((button, index) => {
+    button.addEventListener('click', () => setMode(button.dataset.authMode));
+    button.addEventListener('keydown', event => {
+      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+      event.preventDefault();
+      const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1
+        : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+      setMode(tabs[next].dataset.authMode);
+      tabs[next].focus();
+    });
+  });
   document.querySelectorAll('[data-password-toggle]').forEach(button =>
     button.addEventListener('click', () => {
       const input = document.getElementById(button.dataset.passwordToggle);
