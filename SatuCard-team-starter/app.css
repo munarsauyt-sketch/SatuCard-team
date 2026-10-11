@@ -33,7 +33,7 @@ html[data-theme="dark"] .hero-showcase { background-image: radial-gradient(circl
 [data-reveal] { opacity: 1; }
 @media (prefers-reduced-motion: no-preference) {
   html.js-ready [data-reveal] { opacity: 0; transform: translateY(22px); transition: opacity .55s ease, transform .55s ease; }
-  [data-reveal].is-revealed { opacity: 1; transform: translateY(0); }
+  html.js-ready [data-reveal].is-revealed { opacity: 1; transform: translateY(0); }
   .hero-showcase { background-size: 150% 150%; animation: hero-light 13s ease-in-out infinite alternate; }
   @keyframes hero-light { to { background-position: 100% 40%; } }
   .floating-tag { animation: gentle-float 5s ease-in-out infinite; }
