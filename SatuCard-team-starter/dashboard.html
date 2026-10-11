@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Личный кабинет — SatuCard</title>
+  <meta name="description" content="Профиль и опубликованные карточки SatuCard.">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <script src="theme.js"></script>
+  <link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="app.css">
+  <script src="auth-client.js" defer></script><script src="site.js" defer></script><script src="dashboard.js" defer></script>
+</head>
+<body>
+<a class="skip-link" href="#main">К содержимому</a>
+<header class="site-header"><div class="container header-inner">
+  <a class="brand" href="index.html" aria-label="SatuCard — главная"><img class="brand-logo-icon" src="assets/favicon.svg" alt="">SatuCard<span class="brand-dot">.</span></a>
+  <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="main-nav" aria-label="Открыть меню">☰</button>
+  <nav id="main-nav" aria-label="Основная навигация"><a href="index.html">Главная</a><a href="editor.html">Редактор</a><a href="examples.html">Примеры</a></nav>
+  <button class="theme-toggle" type="button" data-theme-toggle aria-label="Тёмная тема" aria-pressed="false"><span aria-hidden="true">◐</span><span class="theme-toggle-text">Тема</span></button>
+  <a class="header-account" data-account-link href="dashboard.html" aria-current="page">Профиль</a>
+</div></header>
+<main id="main" class="dashboard-main container">
+  <div class="dashboard-heading"><div><p class="eyebrow">ЛИЧНЫЙ КАБИНЕТ</p><h1>Ваши карточки.<br><span>Ваш рост.</span></h1><p>Возвращайтесь к опубликованным карточкам и делитесь ими с покупателями.</p></div><a class="button button-orange" href="editor.html">Создать карточку <span aria-hidden="true">↗</span></a></div>
+  <section class="profile-panel" aria-labelledby="profile-title"><div class="profile-avatar" aria-hidden="true">S</div><div class="profile-details"><h2 id="profile-title">Загружаем профиль…</h2><p id="profile-email"></p><p id="profile-created"></p></div><button class="button button-light" id="logout-button" type="button">Выйти</button></section>
+  <section class="dashboard-cards" aria-labelledby="cards-title"><div class="dashboard-section-title"><div><p class="eyebrow">ВАША КОЛЛЕКЦИЯ</p><h2 id="cards-title">Опубликованные карточки</h2></div><span id="cards-count"></span></div><p id="dashboard-status" role="status" aria-live="polite">Загружаем карточки…</p><div id="my-cards" class="my-cards-grid" aria-live="polite"></div></section>
+</main>
+<footer class="site-footer container"><a class="brand" href="index.html">SatuCard<span class="brand-dot">.</span></a><p>Сделано для продавцов Казахстана.</p><a href="examples.html#about">О проекте</a></footer>
+</body></html>

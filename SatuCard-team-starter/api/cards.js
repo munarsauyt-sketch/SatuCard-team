@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { configuration, verifiedUser } from '../lib/supabase.js';
 
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 const STYLES = new Set(['studio', 'accent', 'minimal']);
@@ -22,13 +23,6 @@ function priceInCents(raw, optional = false) {
   return Number(whole) * 100 + Number(fraction.padEnd(2, '0'));
 }
 
-function configuration() {
-  const base = process.env.SUPABASE_URL?.replace(/\/$/, '');
-  const key = process.env.SUPABASE_SECRET_KEY;
-  if (!base || !key || !/^https:\/\//.test(base)) return null;
-  return { base, key };
-}
-
 export async function POST(request) {
   if (!request.headers.get('content-type')?.startsWith('multipart/form-data')) {
     return json({ error: 'Нужны данные формы с изображением.' }, 415);
@@ -36,6 +30,8 @@ export async function POST(request) {
 
   const config = configuration();
   if (!config) return json({ error: 'Публикация пока не настроена.' }, 503);
+  const user = await verifiedUser(request, config);
+  if (!user) return json({ error: 'Войдите в аккаунт, чтобы опубликовать карточку.' }, 401);
 
   let form;
   try {
@@ -95,6 +91,7 @@ export async function POST(request) {
 
     const record = {
       id,
+      user_id: user.id,
       title,
       price_kzt: (price / 100).toFixed(2),
       old_price_kzt: oldPrice === null ? null : (oldPrice / 100).toFixed(2),
