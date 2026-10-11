@@ -124,15 +124,75 @@ window.SATUCARD_AUTH = (() => {
     return data.cards;
   }
 
+  function mountAccountMenus() {
+    document.querySelectorAll('[data-account-link]').forEach(link => {
+      if (link.closest('.account-control')) return;
+      const control = document.createElement('div');
+      control.className = 'account-control';
+      link.before(control);
+      control.append(link);
+
+      const details = document.createElement('details');
+      details.className = 'account-menu';
+      details.hidden = true;
+      const summary = document.createElement('summary');
+      summary.className = 'header-account';
+      const dropdown = document.createElement('div');
+      dropdown.className = 'account-dropdown';
+      const profile = document.createElement('a');
+      profile.href = 'dashboard.html';
+      profile.textContent = 'Личный кабинет';
+      const editor = document.createElement('a');
+      editor.href = 'editor.html';
+      editor.textContent = 'Создать карточку';
+      const logout = document.createElement('button');
+      logout.type = 'button';
+      logout.textContent = 'Выйти';
+      logout.addEventListener('click', async () => {
+        logout.disabled = true;
+        await signOut();
+        location.assign('auth.html');
+      });
+      dropdown.append(profile, editor, logout);
+      details.append(summary, dropdown);
+      control.append(details);
+    });
+  }
+
   function updateAccountLinks() {
+    mountAccountMenus();
     document.querySelectorAll('[data-account-link]').forEach(link => {
       const user = session?.user;
-      link.textContent = user ? (user.user_metadata?.name || 'Профиль') : 'Войти';
-      link.href = user ? 'dashboard.html' : 'auth.html';
+      const details = link.closest('.account-control').querySelector('.account-menu');
+      link.hidden = Boolean(user);
+      link.textContent = 'Войти';
+      link.href = 'auth.html';
+      details.hidden = !user;
+      if (user) {
+        const name = user.user_metadata?.name?.trim() || 'Профиль';
+        const summary = details.querySelector('summary');
+        summary.textContent = name;
+        summary.title = name;
+      } else {
+        details.open = false;
+      }
     });
   }
   document.addEventListener('DOMContentLoaded', updateAccountLinks);
   document.addEventListener('satucard:authchange', updateAccountLinks);
+  document.addEventListener('click', event => {
+    if (!event.target.closest('.account-control')) {
+      document.querySelectorAll('.account-menu[open]').forEach(menu => { menu.open = false; });
+    }
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') {
+      document.querySelectorAll('.account-menu[open]').forEach(menu => {
+        menu.open = false;
+        menu.querySelector('summary').focus();
+      });
+    }
+  });
   window.addEventListener('storage', event => {
     if (event.key !== storageKey) return;
     try { session = event.newValue ? JSON.parse(event.newValue) : null; }
