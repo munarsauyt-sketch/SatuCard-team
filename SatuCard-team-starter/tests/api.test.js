@@ -2,6 +2,7 @@ import test, { afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { POST } from '../api/cards.js';
 import { GET } from '../api/card.js';
+import { GET as GET_MINE } from '../api/my-cards.js';
 
 const savedFetch = globalThis.fetch;
 const savedUrl = process.env.SUPABASE_URL;
@@ -29,12 +30,19 @@ function uploadRequest(overrides = {}) {
   form.set('format', overrides.format ?? 'portrait');
   form.set('brandName', overrides.brandName ?? 'Мой магазин');
   form.set('image', overrides.image ?? new File([Uint8Array.from([0xff, 0xd8, 0xff, 0xd9])], 'card.jpg', { type: 'image/jpeg' }));
-  return new Request('https://satucard.example/api/cards', { method: 'POST', body: form });
+  return new Request('https://satucard.example/api/cards', {
+    method: 'POST',
+    headers: overrides.authorized === false ? {} : { Authorization: 'Bearer test.jwt.token' },
+    body: form
+  });
 }
 
 test('rejects malformed prices and image before contacting Supabase', async () => {
   configure();
-  globalThis.fetch = () => { throw new Error('Unexpected database access'); };
+  globalThis.fetch = async url => {
+    if (String(url).endsWith('/auth/v1/user')) return Response.json({ id: 'aaac8be7-1386-45b8-8d49-3f9d7f5c9fb6' });
+    throw new Error('Unexpected database access');
+  };
 
   const priceResponse = await POST(uploadRequest({ price: 'not-a-price' }));
   assert.equal(priceResponse.status, 400);
@@ -49,6 +57,7 @@ test('uploads the JPEG and stores card metadata with a secret key', async () => 
   const calls = [];
   globalThis.fetch = async (url, options) => {
     calls.push({ url, options });
+    if (String(url).endsWith('/auth/v1/user')) return Response.json({ id: 'aaac8be7-1386-45b8-8d49-3f9d7f5c9fb6' });
     return new Response(null, { status: options.method === 'POST' ? 201 : 200 });
   };
 
@@ -57,12 +66,13 @@ test('uploads the JPEG and stores card metadata with a secret key', async () => 
   const result = await response.json();
   assert.match(result.id, /^[0-9a-f-]{36}$/);
   assert.equal(result.url, `https://satucard.example/card.html?id=${result.id}`);
-  assert.equal(calls.length, 2);
-  assert.match(calls[0].url, new RegExp(`/storage/v1/object/cards/${result.id}\\.jpg$`));
-  assert.equal(calls[0].options.headers.apikey, 'sb_secret_test');
-  assert.equal(calls[1].url, 'https://example.supabase.co/rest/v1/cards');
+  assert.equal(calls.length, 3);
+  assert.match(calls[1].url, new RegExp(`/storage/v1/object/cards/${result.id}\\.jpg$`));
   assert.equal(calls[1].options.headers.apikey, 'sb_secret_test');
-  const record = JSON.parse(calls[1].options.body);
+  assert.equal(calls[2].url, 'https://example.supabase.co/rest/v1/cards');
+  assert.equal(calls[2].options.headers.apikey, 'sb_secret_test');
+  const record = JSON.parse(calls[2].options.body);
+  assert.equal(record.user_id, 'aaac8be7-1386-45b8-8d49-3f9d7f5c9fb6');
   assert.equal(record.price_kzt, '24990.00');
   assert.equal(record.old_price_kzt, '29990.00');
   assert.equal(record.image_path, `${result.id}.jpg`);
@@ -72,6 +82,7 @@ test('removes the uploaded image if saving metadata fails', async () => {
   configure();
   const methods = [];
   globalThis.fetch = async (_url, options) => {
+    if (String(_url).endsWith('/auth/v1/user')) return Response.json({ id: 'aaac8be7-1386-45b8-8d49-3f9d7f5c9fb6' });
     methods.push(options.method);
     return new Response(null, { status: methods.length === 2 ? 500 : 200 });
   };
@@ -79,6 +90,28 @@ test('removes the uploaded image if saving metadata fails', async () => {
   const response = await POST(uploadRequest());
   assert.equal(response.status, 502);
   assert.deepEqual(methods, ['POST', 'POST', 'DELETE']);
+});
+
+test('refuses publication without a verified account', async () => {
+  configure();
+  globalThis.fetch = () => { throw new Error('Unexpected database access'); };
+  const response = await POST(uploadRequest({ authorized: false }));
+  assert.equal(response.status, 401);
+});
+
+test('lists only cards belonging to the verified user', async () => {
+  configure();
+  const id = 'aaac8be7-1386-45b8-8d49-3f9d7f5c9fb6';
+  globalThis.fetch = async (url) => {
+    if (String(url).endsWith('/auth/v1/user')) return Response.json({ id });
+    assert.match(String(url), /user_id=eq\./);
+    assert.match(String(url), new RegExp(id));
+    return Response.json([{ id, title: 'Мой товар', price_kzt: '1000.00', style: 'studio', format: 'portrait', created_at: '2026-10-11T00:00:00Z', image_path: `${id}.jpg` }]);
+  };
+  const response = await GET_MINE(new Request('https://satucard.example/api/my-cards', { headers: { Authorization: 'Bearer test.jwt.token' } }));
+  assert.equal(response.status, 200);
+  const result = await response.json();
+  assert.equal(result.cards[0].title, 'Мой товар');
 });
 
 test('loads a published card and returns a public image URL', async () => {
