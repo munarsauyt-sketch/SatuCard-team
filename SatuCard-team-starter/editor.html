@@ -56,4 +56,15 @@
       <div id="publish-result" class="publish-result" hidden><label for="published-url">Ссылка на карточку</label><div class="publish-link-row"><input id="published-url" type="text" readonly><button id="copy-link-button" type="button" class="button button-light">Скопировать</button></div><a id="published-card-link" class="text-link" href="card.html">Открыть опубликованную карточку</a></div>
       <div class="editor-disclaimer"><span aria-hidden="true">i</span><p>Исходное фото обрабатывается в браузере. При нажатии «Опубликовать» готовая карточка отправляется на сервер и становится доступной всем, у кого есть ссылка. ИИ и удаление фона не используются.</p></div></section>
   </div>
-</main><footer class="site-footer container"><a class="brand" href="index.html">SatuCard<span class="brand-dot">.</span></a><p>Создано для идей. Сделано для Казахстана.</p><a href="examples.html#about">Учебный проект · 2026</a></footer></body></html>
+</main>
+<dialog id="publish-dialog" class="publish-dialog" aria-labelledby="publish-dialog-title">
+  <button id="publish-dialog-close" class="publish-dialog-close" type="button" aria-label="Закрыть">×</button>
+  <span class="publish-dialog-mark" aria-hidden="true">✓</span>
+  <h2 id="publish-dialog-title">Карточка опубликована</h2>
+  <p>Она добавлена в ваш профиль. Теперь ссылкой можно поделиться с покупателем.</p>
+  <div class="publish-dialog-actions">
+    <a id="publish-dialog-link" class="button button-orange" href="card.html">Открыть карточку</a>
+    <button id="publish-dialog-copy" class="button button-light" type="button">Скопировать ссылку</button>
+  </div>
+</dialog>
+<footer class="site-footer container"><a class="brand" href="index.html">SatuCard<span class="brand-dot">.</span></a><p>Создано для идей. Сделано для Казахстана.</p><a href="examples.html#about">Учебный проект · 2026</a></footer></body></html>

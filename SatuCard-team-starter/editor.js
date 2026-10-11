@@ -19,6 +19,9 @@
   const publishedUrl = document.querySelector('#published-url');
   const publishedCardLink = document.querySelector('#published-card-link');
   const copyLinkButton = document.querySelector('#copy-link-button');
+  const publishDialog = document.querySelector('#publish-dialog');
+  const publishDialogLink = document.querySelector('#publish-dialog-link');
+  const publishDialogCopy = document.querySelector('#publish-dialog-copy');
   const publishLogin = document.querySelector('#publish-login');
   const canvas = document.querySelector('#product-canvas');
   const ctx = canvas.getContext('2d');
@@ -275,7 +278,7 @@
     }
     const session = await window.SATUCARD_AUTH.getSession();
     if (!session) {
-      publishStatus.textContent = 'Войдите в аккаунт, чтобы опубликовать карточку. Страница входа откроется в новой вкладке.';
+      publishStatus.textContent = 'Войдите или зарегистрируйтесь по ссылке ниже, затем вернитесь в редактор.';
       publishLogin.hidden = false;
       window.satucardToast?.('Для публикации нужен аккаунт.', 'error');
       return;
@@ -318,11 +321,13 @@
 
       publishedUrl.value = result.url;
       publishedCardLink.href = result.url;
+      publishDialogLink.href = result.url;
       publishResult.hidden = false;
       publishStatus.textContent = version === exportVersion
         ? 'Карточка опубликована. Скопируйте ссылку.'
         : 'Карточка опубликована. После начала публикации вы изменили макет; ссылка ведёт на предыдущую версию.';
       window.satucardToast?.('Карточка опубликована и добавлена в профиль.');
+      if (typeof publishDialog.showModal === 'function') publishDialog.showModal();
     } catch (error) {
       publishStatus.textContent = error.message || 'Сервер недоступен. Попробуйте позже.';
       window.satucardToast?.(publishStatus.textContent, 'error');
@@ -332,14 +337,24 @@
     }
   });
 
-  copyLinkButton.addEventListener('click', async () => {
+  const copyPublishedLink = async () => {
     try {
       await navigator.clipboard.writeText(publishedUrl.value);
       publishStatus.textContent = 'Ссылка скопирована.';
+      publishDialogCopy.textContent = 'Ссылка скопирована';
+      setTimeout(() => { publishDialogCopy.textContent = 'Скопировать ссылку'; }, 2500);
+      window.satucardToast?.('Ссылка скопирована.');
     } catch {
       publishedUrl.select();
       publishStatus.textContent = 'Скопируйте выделенную ссылку.';
+      publishDialog.close();
     }
+  };
+  copyLinkButton.addEventListener('click', copyPublishedLink);
+  publishDialogCopy.addEventListener('click', copyPublishedLink);
+  document.querySelector('#publish-dialog-close').addEventListener('click', () => publishDialog.close());
+  publishDialog.addEventListener('click', event => {
+    if (event.target === publishDialog) publishDialog.close();
   });
   const params = new URLSearchParams(window.location.search);
   if (Object.hasOwn(themes, params.get('style'))) style = params.get('style');
