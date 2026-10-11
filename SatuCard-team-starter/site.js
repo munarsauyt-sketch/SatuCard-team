@@ -33,7 +33,10 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const targets = document.querySelectorAll('[data-reveal]');
-  if (!('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (!('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    targets.forEach(target => target.classList.add('is-revealed'));
+    return;
+  }
   const observer = new IntersectionObserver(entries => {
     entries.forEach(entry => {
       if (!entry.isIntersecting) return;
