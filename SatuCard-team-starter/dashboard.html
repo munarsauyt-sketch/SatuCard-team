@@ -2,26 +2,34 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Личный кабинет — SatuCard</title>
-  <meta name="description" content="Профиль и опубликованные карточки SatuCard.">
-  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <script src="theme.js"></script>
-  <link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="app.css">
-  <script src="auth-client.js" defer></script><script src="site.js" defer></script><script src="dashboard.js" defer></script>
+  <title>Ваша коллекция — SatuCard</title>
+  <meta name="description" content="Опубликованные карточки вашего магазина. Возвращайтесь к своим работам и делитесь ими по ссылке.">
+  <link rel="icon" href="assets/favicon.svg?v=rebrand-20261012" type="image/svg+xml">
+  <script src="theme.js?v=rebrand-20261012"></script>
+  <link rel="stylesheet" href="brand.css?v=rebrand-20261012">
+  <link rel="stylesheet" href="account-pages.css?v=rebrand-20261012">
+  <script src="auth-client.js?v=rebrand-20261012" defer></script><script src="site.js?v=rebrand-20261012" defer></script><script src="dashboard.js?v=rebrand-20261012" defer></script>
 </head>
-<body>
+<body class="account-page dashboard-page">
 <a class="skip-link" href="#main">К содержимому</a>
 <header class="site-header"><div class="container header-inner">
-  <a class="brand" href="index.html" aria-label="SatuCard — главная"><img class="brand-logo-icon" src="assets/favicon.svg" alt="">SatuCard<span class="brand-dot">.</span></a>
+  <a class="brand" href="index.html" aria-label="SatuCard — главная"><img class="brand-logo-icon" src="assets/favicon.svg?v=rebrand-20261012" alt="">SatuCard<span class="brand-dot">.</span></a>
   <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="main-nav" aria-label="Открыть меню">☰</button>
-  <nav id="main-nav" aria-label="Основная навигация"><a href="index.html">Главная</a><a href="editor.html">Редактор</a><a href="examples.html">Примеры</a></nav>
+  <nav id="main-nav" aria-label="Основная навигация"><a href="index.html">Главная</a><a href="editor.html">Редактор</a><a href="examples.html">Шаблоны</a></nav>
   <button class="theme-toggle" type="button" data-theme-toggle aria-label="Тёмная тема" aria-pressed="false"><span aria-hidden="true">◐</span><span class="theme-toggle-text">Тема</span></button>
   <a class="header-account" data-account-link href="dashboard.html" aria-current="page">Профиль</a>
 </div></header>
-<main id="main" class="dashboard-main container">
-  <div class="dashboard-heading"><div><p class="eyebrow">ЛИЧНЫЙ КАБИНЕТ</p><h1>Ваши карточки.<br><span>Ваш рост.</span></h1><p>Возвращайтесь к опубликованным карточкам и делитесь ими с покупателями.</p></div><a class="button button-orange" href="editor.html">Создать карточку <span aria-hidden="true">↗</span></a></div>
-  <section class="profile-panel" aria-labelledby="profile-title"><div class="profile-avatar" aria-hidden="true">S</div><div class="profile-details"><h2 id="profile-title">Загружаем профиль…</h2><p id="profile-email"></p><p id="profile-created"></p></div><button class="button button-light" id="logout-button" type="button">Выйти</button></section>
-  <section class="dashboard-cards" aria-labelledby="cards-title"><div class="dashboard-section-title"><div><p class="eyebrow">ВАША КОЛЛЕКЦИЯ</p><h2 id="cards-title">Опубликованные карточки</h2></div><span id="cards-count"></span></div><p id="dashboard-status" role="status" aria-live="polite">Загружаем карточки…</p><div id="my-cards" class="my-cards-grid" aria-live="polite"></div></section>
+<main id="main" class="dashboard-main container" data-state="loading">
+  <div class="dashboard-heading"><div><p class="account-kicker">ЛИЧНЫЙ КАБИНЕТ / ВАШ МАГАЗИН</p><h1>Всё, что вы<br>создали<span>.</span></h1><p>Ваша коллекция карточек. Готова к следующей продаже.</p></div><a class="button button-orange" href="editor.html">Создать карточку <span aria-hidden="true">↗</span></a></div>
+  <section class="profile-panel" aria-labelledby="profile-title"><div class="profile-avatar" aria-hidden="true">S</div><div class="profile-details"><span class="profile-label">ВАШ ПРОФИЛЬ</span><h2 id="profile-title">Загружаем профиль…</h2><p id="profile-email"></p><p id="profile-created"></p></div><span class="profile-connection"><i aria-hidden="true"></i>Ваше пространство</span><button class="button button-light" id="logout-button" type="button">Выйти <span aria-hidden="true">↗</span></button></section>
+  <section class="dashboard-cards" aria-labelledby="cards-title"><div class="dashboard-section-title"><div><p class="account-kicker">КОЛЛЕКЦИЯ / SATUCARD</p><h2 id="cards-title">Опубликованные карточки<span>.</span></h2></div><span id="cards-count" class="cards-count"></span></div>
+    <p id="dashboard-status" class="collection-status" role="status" aria-live="polite">Загружаем вашу коллекцию…</p>
+    <div id="cards-loading" class="collection-loading" aria-hidden="true"><div class="card-skeleton"><div></div><i></i><span></span></div><div class="card-skeleton"><div></div><i></i><span></span></div><div class="card-skeleton"><div></div><i></i><span></span></div></div>
+    <div id="dashboard-empty" class="collection-empty" hidden><div class="empty-card-composition" aria-hidden="true"><div>YOUR<br>NEXT<br>FAVOURITE<span>↗</span></div><i>＋</i></div><div><span class="account-kicker">НАЧНИТЕ С ОДНОГО ТОВАРА</span><h3>У каждой коллекции<br>есть первая карточка.</h3><p>Добавьте фотографию, найдите свой стиль и опубликуйте результат. Он появится здесь.</p><a class="button button-dark" href="editor.html">Открыть редактор <span aria-hidden="true">↗</span></a></div></div>
+    <div id="my-cards" class="my-cards-grid" aria-live="polite"></div>
+  </section>
+  <aside class="collection-tip"><span aria-hidden="true">✳</span><p><strong>Один товар — несколько впечатлений.</strong> Попробуйте другой шаблон для следующей публикации и найдите стиль вашего магазина.</p><a href="examples.html">Выбрать шаблон ↗</a></aside>
 </main>
-<footer class="site-footer container"><a class="brand" href="index.html">SatuCard<span class="brand-dot">.</span></a><p>Сделано для продавцов Казахстана.</p><a href="examples.html#about">О проекте</a></footer>
-</body></html>
+<footer class="site-footer container"><a class="brand" href="index.html"><img class="brand-logo-icon" src="assets/favicon.svg?v=rebrand-20261012" alt="">SatuCard<span class="brand-dot">.</span></a><p>Товар ваш. Характер тоже.</p><a href="examples.html#about">О проекте ↗</a></footer>
+</body>
+</html>

@@ -5,11 +5,33 @@
   const title = document.querySelector('#card-title');
   const status = document.querySelector('#card-status');
   const content = document.querySelector('#shared-card-content');
+  const page = document.querySelector('.shared-card-main');
+  const loading = document.querySelector('#card-loading');
+  const errorPanel = document.querySelector('#card-error');
+  const copy = document.querySelector('#card-copy-link');
+  const shareStatus = document.querySelector('#card-share-status');
   const formatter = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 });
+
+  document.querySelector('#card-retry').addEventListener('click', () => location.reload());
+  copy.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(location.href);
+      shareStatus.textContent = 'Ссылка скопирована. Ею можно поделиться.';
+    } catch (_) {
+      shareStatus.textContent = 'Скопируйте ссылку из адресной строки браузера.';
+    }
+  });
+
+  function showError() {
+    loading.hidden = true;
+    errorPanel.hidden = false;
+    page.dataset.state = 'error';
+  }
 
   if (!id) {
     title.textContent = 'Ссылка на карточку неполная';
     status.textContent = 'Откройте ссылку, которую вы получили после публикации.';
+    showError();
     return;
   }
 
@@ -31,10 +53,13 @@
         : `${formatter.format(Number(card.oldPrice))} ₸`;
       document.querySelector('#card-brand').textContent = card.brandName || 'Карточка создана в SatuCard';
       status.textContent = '';
+      loading.hidden = true;
+      page.dataset.state = 'ready';
       content.hidden = false;
     })
     .catch(error => {
       title.textContent = 'Карточка недоступна';
       status.textContent = error.message || 'Попробуйте открыть ссылку позже.';
+      showError();
     });
 })();

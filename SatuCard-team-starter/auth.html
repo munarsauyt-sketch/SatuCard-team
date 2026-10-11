@@ -2,46 +2,59 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Войти или зарегистрироваться — SatuCard</title>
-  <meta name="description" content="Создайте аккаунт SatuCard и храните опубликованные карточки товаров в одном месте.">
-  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <script src="theme.js"></script>
-  <link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="app.css">
-  <script src="auth-client.js" defer></script><script src="site.js" defer></script><script src="auth.js" defer></script>
+  <title>Ваше пространство — SatuCard</title>
+  <meta name="description" content="Войдите в SatuCard и соберите опубликованные карточки вашего магазина в одном месте.">
+  <link rel="icon" href="assets/favicon.svg?v=rebrand-20261012" type="image/svg+xml">
+  <script src="theme.js?v=rebrand-20261012"></script>
+  <link rel="stylesheet" href="brand.css?v=rebrand-20261012">
+  <link rel="stylesheet" href="account-pages.css?v=rebrand-20261012">
+  <script src="auth-client.js?v=rebrand-20261012" defer></script><script src="site.js?v=rebrand-20261012" defer></script><script src="auth.js?v=rebrand-20261012" defer></script>
 </head>
-<body>
+<body class="account-page auth-page">
 <a class="skip-link" href="#main">К содержимому</a>
 <header class="site-header"><div class="container header-inner">
-  <a class="brand" href="index.html" aria-label="SatuCard — главная"><img class="brand-logo-icon" src="assets/favicon.svg" alt="">SatuCard<span class="brand-dot">.</span></a>
+  <a class="brand" href="index.html" aria-label="SatuCard — главная"><img class="brand-logo-icon" src="assets/favicon.svg?v=rebrand-20261012" alt="">SatuCard<span class="brand-dot">.</span></a>
   <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="main-nav" aria-label="Открыть меню">☰</button>
-  <nav id="main-nav" aria-label="Основная навигация"><a href="index.html">Главная</a><a href="editor.html">Редактор</a><a href="examples.html">Примеры</a></nav>
+  <nav id="main-nav" aria-label="Основная навигация"><a href="index.html">Главная</a><a href="editor.html">Редактор</a><a href="examples.html">Шаблоны</a></nav>
   <button class="theme-toggle" type="button" data-theme-toggle aria-label="Тёмная тема" aria-pressed="false"><span aria-hidden="true">◐</span><span class="theme-toggle-text">Тема</span></button>
   <a class="header-account" data-account-link href="auth.html" aria-current="page">Войти</a>
 </div></header>
 <main id="main" class="auth-main container">
-  <section class="auth-intro">
-    <span class="auth-kicker">SATUCARD / ВАШЕ ПРОСТРАНСТВО</span>
-    <h1>Карточки товара.<br><span>Всегда под рукой.</span></h1>
-    <p>Создавайте, публикуйте и находите свои карточки в личном кабинете. Скачивание PNG по-прежнему доступно без аккаунта.</p>
-    <div class="auth-art"><div class="auth-art-glow"></div><img src="assets/images/headphones.jpg" alt="Пример фотографии наушников"><span>Ваш товар — в лучшем свете ✳</span></div>
-  </section>
-  <section class="auth-card" aria-labelledby="auth-title">
-    <div class="auth-tabs" role="tablist" aria-label="Вход или регистрация">
-      <button type="button" role="tab" data-auth-mode="login" aria-selected="true">Вход</button>
-      <button type="button" role="tab" data-auth-mode="signup" aria-selected="false">Регистрация</button>
-    </div>
-    <h2 id="auth-title">С возвращением</h2>
-    <p id="auth-subtitle" class="auth-subtitle">Войдите, чтобы продолжить работу с карточками.</p>
-    <form id="auth-form" novalidate>
-      <div id="auth-name-field" hidden><label for="auth-name">Ваше имя</label><input id="auth-name" name="name" type="text" maxlength="80" autocomplete="name" placeholder="Например, Айдана"></div>
-      <label for="auth-email">Email</label><input id="auth-email" name="email" type="email" autocomplete="email" inputmode="email" required placeholder="name@example.com">
-      <label for="auth-password">Пароль</label><div class="password-wrap"><input id="auth-password" name="password" type="password" minlength="8" autocomplete="current-password" required placeholder="Минимум 8 символов"><button type="button" data-password-toggle="auth-password" aria-pressed="false">Показать</button></div>
-      <div id="auth-confirm-field" hidden><label for="auth-confirm">Повторите пароль</label><div class="password-wrap"><input id="auth-confirm" name="confirm" type="password" autocomplete="new-password" placeholder="Тот же пароль"><button type="button" data-password-toggle="auth-confirm" aria-pressed="false">Показать</button></div></div>
-      <p id="auth-notice" class="auth-notice" role="status" aria-live="polite"></p>
-      <button id="auth-submit" class="button button-orange auth-submit" type="submit">Войти в SatuCard</button>
-    </form>
-    <p class="auth-footnote">В учебной версии аккаунт доступен сразу после регистрации. Пароль хранится в Supabase Auth в защищённом виде.</p>
-  </section>
+  <div class="auth-shell">
+    <section class="auth-intro" aria-labelledby="account-heading">
+      <div class="auth-intro-top"><span class="account-kicker">ВАШЕ ПРОСТРАНСТВО</span><span class="auth-orbit-mark" aria-hidden="true">✳</span></div>
+      <h1 id="account-heading">Товары ваши.<br>Стиль тоже<span>.</span></h1>
+      <p>Соберите карточки вашего магазина в одном месте. Создавайте. Публикуйте. Делитесь.</p>
+      <div class="auth-art" aria-hidden="true">
+        <div class="auth-art-orbit"></div>
+        <div class="auth-art-card auth-art-card-back"><span>SATU / COLLECTION</span><strong>YOUR<br>NEXT<br>FAVOURITE.</strong><i>01 / SELECTED GOODS</i></div>
+        <div class="auth-art-card auth-art-card-front"><div class="auth-art-card-label"><span>STUDIO / 01</span><b>↗</b></div><strong>Музыка<br>в вашем ритме.</strong><img src="assets/images/headphones.jpg" alt=""><div class="auth-art-card-footer"><span>БЕСПРОВОДНЫЕ<br>НАУШНИКИ</span><b>24 990 ₸</b></div></div>
+        <span class="auth-art-sticker">Сделано<br>с характером ↗</span>
+        <span class="auth-art-coordinate">СДЕЛАНО ДЛЯ КАЗАХСТАНА / ₸</span>
+      </div>
+      <div class="auth-intro-bottom"><span><i aria-hidden="true"></i>Место для ваших идей</span><span>SATUCARD / KZ</span></div>
+    </section>
+    <section class="auth-card" aria-labelledby="auth-title">
+      <div class="auth-card-top"><span class="account-kicker">ПРОДОЛЖИМ СОЗДАВАТЬ</span><span class="auth-step-number" aria-hidden="true">01</span></div>
+      <div class="auth-tabs" role="tablist" aria-label="Вход или регистрация">
+        <button id="auth-login-tab" type="button" role="tab" data-auth-mode="login" aria-selected="true" aria-controls="auth-form">Вход</button>
+        <button id="auth-signup-tab" type="button" role="tab" data-auth-mode="signup" aria-selected="false" aria-controls="auth-form" tabindex="-1">Регистрация</button>
+      </div>
+      <h2 id="auth-title">С возвращением</h2>
+      <p id="auth-subtitle" class="auth-subtitle">Войдите, чтобы продолжить работу с карточками.</p>
+      <form id="auth-form" novalidate>
+        <div id="auth-name-field" hidden><label for="auth-name">Ваше имя</label><input id="auth-name" name="name" type="text" maxlength="80" autocomplete="name" placeholder="Например, Айдана"></div>
+        <label for="auth-email">Email</label><input id="auth-email" name="email" type="email" autocomplete="email" inputmode="email" required placeholder="name@example.com">
+        <label for="auth-password">Пароль</label><div class="password-wrap"><input id="auth-password" name="password" type="password" minlength="8" autocomplete="current-password" required placeholder="Минимум 8 символов"><button type="button" data-password-toggle="auth-password" aria-pressed="false">Показать</button></div>
+        <div id="auth-confirm-field" hidden><label for="auth-confirm">Повторите пароль</label><div class="password-wrap"><input id="auth-confirm" name="confirm" type="password" autocomplete="new-password" placeholder="Тот же пароль"><button type="button" data-password-toggle="auth-confirm" aria-pressed="false">Показать</button></div></div>
+        <p id="auth-notice" class="auth-notice" role="status" aria-live="polite"></p>
+        <button id="auth-submit" class="button button-orange auth-submit" type="submit">Войти в SatuCard</button>
+      </form>
+      <p class="auth-footnote"><span aria-hidden="true">↳</span>В учебной версии аккаунт готов сразу после регистрации. Ваши публикации будут доступны по ссылке.</p>
+      <a class="auth-editor-link" href="editor.html">Сначала попробовать редактор <span aria-hidden="true">↗</span></a>
+    </section>
+  </div>
 </main>
-<footer class="site-footer container"><a class="brand" href="index.html">SatuCard<span class="brand-dot">.</span></a><p>Сделано для продавцов Казахстана.</p><a href="examples.html#about">О проекте</a></footer>
-</body></html>
+<footer class="site-footer container"><a class="brand" href="index.html"><img class="brand-logo-icon" src="assets/favicon.svg?v=rebrand-20261012" alt="">SatuCard<span class="brand-dot">.</span></a><p>Товар ваш. Характер тоже.</p><a href="examples.html#about">О проекте ↗</a></footer>
+</body>
+</html>
