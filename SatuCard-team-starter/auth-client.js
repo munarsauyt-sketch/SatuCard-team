@@ -6,8 +6,12 @@ window.SATUCARD_AUTH = (() => {
   const base = 'https://pnnaqvfcswdroldovbty.supabase.co';
   const key = 'sb_publishable_aGyscvYLYpZsyn3eG1c3mQ_I_W_pOBL';
   const storageKey = 'satucard-session-v1';
+  const googleFlowKey = 'satucard-google-pkce-v1';
+  const googleFlowLifetime = 10 * 60 * 1000;
   let session = null;
   let refreshPromise = null;
+  let googleSignInPending = false;
+  let googleCallbackPromise = null;
 
   try {
     const saved = JSON.parse(localStorage.getItem(storageKey) || 'null');
@@ -27,14 +31,19 @@ window.SATUCARD_AUTH = (() => {
 
   async function request(path, options = {}) {
     let response;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
     try {
       response = await fetch(`${base}${path}`, {
         ...options,
         headers: { apikey: key, 'content-type': 'application/json', ...options.headers },
-        cache: 'no-store'
+        cache: 'no-store', signal: controller.signal
       });
-    } catch (_) {
+    } catch (error) {
+      if (error.name === 'AbortError') throw new Error('Сервер долго не отвечает. Повторите попытку.');
       throw new Error('Нет соединения с сервером. Проверьте интернет.');
+    } finally {
+      clearTimeout(timeout);
     }
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -50,6 +59,9 @@ window.SATUCARD_AUTH = (() => {
       if (code === 'email_address_invalid') throw new Error('Введите корректный email.');
       if (code === 'email_address_not_authorized') throw new Error('Для этого адреса пока не настроена отправка писем.');
       if (code === 'over_email_send_rate_limit' || response.status === 429) throw new Error('Слишком много запросов. Попробуйте позже.');
+      if (['bad_code_verifier', 'flow_state_not_found', 'flow_state_expired', 'validation_failed'].includes(code)) {
+        throw new Error('Ссылка входа устарела. Нажмите «Продолжить с Google» ещё раз.');
+      }
       throw new Error(response.status >= 500 ? 'Ошибка сервера. Попробуйте позже.' : 'Не удалось выполнить действие. Проверьте данные и попробуйте снова.');
     }
     return data;
@@ -91,9 +103,101 @@ window.SATUCARD_AUTH = (() => {
     return data;
   }
 
+  function isGoogleCallback() {
+    const query = new URLSearchParams(location.search);
+    const hash = new URLSearchParams(location.hash.slice(1));
+    return query.has('code') || query.has('error') || query.has('error_code') || hash.has('error') || hash.has('access_token') || hash.has('refresh_token');
+  }
+
+  async function signInWithGoogle() {
+    if (googleSignInPending) return;
+    if (location.protocol !== 'https:' && !(location.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(location.hostname))) {
+      throw new Error('Для входа через Google откройте сайт https://satucard-team.vercel.app/auth.html');
+    }
+    if (!window.crypto?.subtle || !window.crypto?.getRandomValues) {
+      throw new Error('Браузер не поддерживает безопасный вход. Обновите его или войдите по email.');
+    }
+    googleSignInPending = true;
+    try {
+      const settings = await request('/auth/v1/settings');
+      if (!settings.external?.google) {
+        throw new Error('Вход через Google ещё не подключён. Пока используйте email.');
+      }
+      // Supabase validates Google's OAuth state. PKCE additionally binds the
+      // single-use code to the browser tab that initiated this sign-in.
+      const bytes = window.crypto.getRandomValues(new Uint8Array(32));
+      const verifier = Array.from(bytes, value => value.toString(16).padStart(2, '0')).join('');
+      const digest = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
+      const challenge = btoa(String.fromCharCode(...new Uint8Array(digest)))
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      const callback = new URL('auth.html', location.href);
+      callback.search = '';
+      callback.hash = '';
+      try {
+        sessionStorage.setItem(googleFlowKey, JSON.stringify({ verifier, createdAt: Date.now(), callback: callback.href }));
+      } catch (_) {
+        throw new Error('Разрешите хранение данных сайта в браузере, чтобы продолжить вход через Google.');
+      }
+      const target = new URL(`${base}/auth/v1/authorize`);
+      target.search = new URLSearchParams({
+        provider: 'google', redirect_to: callback.href,
+        code_challenge: challenge, code_challenge_method: 's256', prompt: 'select_account'
+      }).toString();
+      location.assign(target.href);
+    } catch (error) {
+      googleSignInPending = false;
+      throw error;
+    }
+  }
+
+  function completeGoogleSignIn() {
+    // One exchange per page even if several consumers initialise together.
+    if (googleCallbackPromise) return googleCallbackPromise;
+    if (!isGoogleCallback()) return Promise.resolve(false);
+    googleCallbackPromise = (async () => {
+      const query = new URLSearchParams(location.search);
+      const fragment = new URLSearchParams(location.hash.slice(1));
+      const code = query.get('code');
+      const errorCode = query.get('error') || query.get('error_code') || fragment.get('error');
+      // Remove OAuth parameters before a network request or navigation. Tokens
+      // from an implicit-flow fragment are never accepted as a login session.
+      history.replaceState(null, '', location.pathname);
+      let flow;
+      try {
+        flow = JSON.parse(sessionStorage.getItem(googleFlowKey) || 'null');
+        sessionStorage.removeItem(googleFlowKey);
+      } catch (_) {
+        throw new Error('Не удалось восстановить вход. Разрешите хранение данных сайта и попробуйте ещё раз.');
+      }
+      if (errorCode) {
+        throw new Error(errorCode === 'access_denied'
+          ? 'Вход через Google отменён. Можно повторить попытку или войти по email.'
+          : 'Google не завершил вход. Повторите попытку или используйте email.');
+      }
+      const callback = new URL('auth.html', location.href).href;
+      const age = Date.now() - Number(flow?.createdAt);
+      if (!code || !/^[0-9a-f]{64}$/.test(flow?.verifier || '') || !Number.isFinite(age) || age < 0 || age > googleFlowLifetime || flow.callback !== callback) {
+        throw new Error('Попытка входа устарела или открыта в другой вкладке. Нажмите «Продолжить с Google» ещё раз.');
+      }
+      const data = await request('/auth/v1/token?grant_type=pkce', {
+        method: 'POST', body: JSON.stringify({ auth_code: code, code_verifier: flow.verifier })
+      });
+      if (!data.access_token || !data.refresh_token || !data.user?.id || !Number.isFinite(Number(data.expires_in)) || Number(data.expires_in) <= 0) {
+        throw new Error('Не удалось завершить вход. Попробуйте ещё раз.');
+      }
+      // Persist only SatuCard's Supabase session, never Google's provider tokens.
+      save({ access_token: data.access_token, refresh_token: data.refresh_token,
+        token_type: data.token_type || 'bearer', expires_in: Number(data.expires_in),
+        expires_at: Math.floor(Date.now() / 1000) + Number(data.expires_in), user: data.user });
+      return true;
+    })();
+    return googleCallbackPromise;
+  }
+
   async function signOut() {
     const token = session?.access_token;
     save(null);
+    try { sessionStorage.removeItem(googleFlowKey); } catch (_) {}
     if (token) {
       try { await request('/auth/v1/logout', { method: 'POST', headers: { Authorization: `Bearer ${token}` } }); }
       catch (_) {}
@@ -169,7 +273,7 @@ window.SATUCARD_AUTH = (() => {
       link.href = 'auth.html';
       details.hidden = !user;
       if (user) {
-        const name = user.user_metadata?.name?.trim() || 'Профиль';
+        const name = user.user_metadata?.name?.trim() || user.user_metadata?.full_name?.trim() || 'Профиль';
         const summary = details.querySelector('summary');
         summary.textContent = name;
         summary.title = name;
@@ -199,7 +303,10 @@ window.SATUCARD_AUTH = (() => {
     catch (_) { session = null; }
     document.dispatchEvent(new CustomEvent('satucard:authchange', { detail: { user: session?.user || null } }));
   });
+  window.addEventListener('pageshow', event => {
+    if (event.persisted) googleSignInPending = false;
+  });
   getSession().then(updateAccountLinks);
 
-  return { getSession, signUp, signIn, signOut, getProfile, getMyCards };
+  return { getSession, signUp, signIn, signInWithGoogle, isGoogleCallback, completeGoogleSignIn, signOut, getProfile, getMyCards };
 })();

@@ -4,11 +4,12 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Ваше пространство — SatuCard</title>
   <meta name="description" content="Войдите в SatuCard и соберите опубликованные карточки вашего магазина в одном месте.">
+  <meta name="referrer" content="no-referrer">
   <link rel="icon" href="assets/favicon.svg?v=rebrand-20261012" type="image/svg+xml">
   <script src="theme.js?v=rebrand-20261012"></script>
   <link rel="stylesheet" href="brand.css?v=rebrand-20261012">
-  <link rel="stylesheet" href="account-pages.css?v=rebrand-20261012">
-  <script src="auth-client.js?v=rebrand-20261012" defer></script><script src="site.js?v=rebrand-20261012" defer></script><script src="auth.js?v=rebrand-20261012" defer></script>
+  <link rel="stylesheet" href="account-pages.css?v=google-auth-20261024">
+  <script src="auth-client.js?v=google-auth-20261024" defer></script><script src="site.js?v=rebrand-20261012" defer></script><script src="auth.js?v=google-auth-20261024" defer></script>
 </head>
 <body class="account-page auth-page">
 <a class="skip-link" href="#main">К содержимому</a>
@@ -42,6 +43,12 @@
       </div>
       <h2 id="auth-title">С возвращением</h2>
       <p id="auth-subtitle" class="auth-subtitle">Войдите, чтобы продолжить работу с карточками.</p>
+      <button id="auth-google" class="auth-google" type="button" aria-describedby="auth-google-note">
+        <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5Z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65Z"/><path fill="#FBBC05" d="M10.53 28.59A14.4 14.4 0 0 1 9.75 24c0-1.59.28-3.13.79-4.59l-7.98-6.19A23.85 23.85 0 0 0 0 24c0 3.87.93 7.53 2.56 10.78l7.97-6.19Z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.91-5.8l-7.73-6c-2.15 1.45-4.92 2.3-8.18 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48Z"/></svg>
+        <span>Продолжить с Google</span>
+      </button>
+      <p id="auth-google-note" class="auth-google-note">Для входа и регистрации. Пароль Google остаётся у Google.</p>
+      <div class="auth-divider"><span>или используйте email</span></div>
       <form id="auth-form" novalidate>
         <div id="auth-name-field" hidden><label for="auth-name">Ваше имя</label><input id="auth-name" name="name" type="text" maxlength="80" autocomplete="name" placeholder="Например, Айдана"></div>
         <label for="auth-email">Email</label><input id="auth-email" name="email" type="email" autocomplete="email" inputmode="email" required placeholder="name@example.com">
@@ -50,7 +57,7 @@
         <p id="auth-notice" class="auth-notice" role="status" aria-live="polite"></p>
         <button id="auth-submit" class="button button-orange auth-submit" type="submit">Войти в SatuCard</button>
       </form>
-      <p class="auth-footnote"><span aria-hidden="true">↳</span>В учебной версии аккаунт готов сразу после регистрации. Ваши публикации будут доступны по ссылке.</p>
+      <p class="auth-footnote"><span aria-hidden="true">↳</span>Войдите тем же способом или используйте тот же email, чтобы продолжить работу со своими карточками.</p>
       <a class="auth-editor-link" href="editor.html">Сначала попробовать редактор <span aria-hidden="true">↗</span></a>
     </section>
   </div>
