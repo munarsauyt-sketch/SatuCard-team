@@ -240,6 +240,12 @@
     try {
       const session = await window.SATUCARD_AUTH?.getSession();
       if (!session) { $('publish-login').hidden = false; status('publish-status', 'Войдите в аккаунт, чтобы сохранить карточку в личном кабинете.'); return; }
+      const profile = await window.SATUCARD_AUTH.getProfile();
+      if (!profile?.profile_completed_at) {
+        $('publish-login').href = 'profile.html?registration=1'; $('publish-login').textContent = 'Завершите регистрацию';
+        $('publish-login').hidden = false; $('publish-login-note').hidden = false;
+        status('publish-status', 'Перед публикацией укажите имя и фамилию в профиле. Черновик карточки сохранён в этом браузере.'); return;
+      }
       await readyFonts(saved); renderer.render(surface, saved, photos);
       let blob; for (const quality of [0.9, 0.78, 0.64, 0.48]) { blob = await blobFromCanvas(surface, 'image/jpeg', quality); if (blob.size <= 2 * 1024 * 1024) break; }
       if (blob.size > 2 * 1024 * 1024) throw new Error('Изображение превышает 2 МБ. Скачайте его или используйте более простое фото.');

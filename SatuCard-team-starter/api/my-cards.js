@@ -1,4 +1,5 @@
-import { configuration, verifiedUser } from '../lib/supabase.js';
+import { configuration } from '../lib/supabase.js';
+import { readAccount, accountFailure } from '../lib/account.js';
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -10,8 +11,9 @@ function json(data, status = 200) {
 export async function GET(request) {
   const config = configuration();
   if (!config) return json({ error: 'Сервер пока не настроен.' }, 503);
-  const user = await verifiedUser(request, config);
-  if (!user) return json({ error: 'Войдите в аккаунт.' }, 401);
+  let user;
+  try { ({ user } = await readAccount(request, config, { complete: true })); }
+  catch (error) { return accountFailure(error); }
   const query = new URLSearchParams({
     user_id: `eq.${user.id}`,
     select: 'id,title,price_kzt,style,format,created_at,image_path',

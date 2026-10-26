@@ -12,6 +12,8 @@ window.SATUCARD_AUTH = (() => {
   let refreshPromise = null;
   let googleSignInPending = false;
   let googleCallbackPromise = null;
+  let completedIntent = 'login';
+  let currentProfile = null;
 
   try {
     const saved = JSON.parse(localStorage.getItem(storageKey) || 'null');
@@ -21,6 +23,7 @@ window.SATUCARD_AUTH = (() => {
   }
 
   function save(value) {
+    if (session?.user?.id !== value?.user?.id) currentProfile = null;
     session = value;
     try {
       if (value) localStorage.setItem(storageKey, JSON.stringify(value));
@@ -48,6 +51,9 @@ window.SATUCARD_AUTH = (() => {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
       const code = data.error_code || data.code || '';
+      const errorText = `${data.msg || ''} ${data.message || ''} ${data.error_description || ''}`;
+      if (errorText.includes('MAILBOX_PROOF_REQUIRED')) throw new Error('Старый аккаунт требует подтверждения почты. Войдите через Google или по коду из письма.');
+      if (errorText.includes('EMAIL_CONFIRMATION_REQUIRED')) throw new Error('Сначала подтвердите email по письму или войдите через Google.');
       if (code === 'user_already_exists' || /already registered/i.test(data.msg || data.message || '')) {
         throw new Error('Такой email уже зарегистрирован.');
       }
@@ -58,6 +64,8 @@ window.SATUCARD_AUTH = (() => {
       if (code === 'weak_password') throw new Error('Выберите более надёжный пароль.');
       if (code === 'email_address_invalid') throw new Error('Введите корректный email.');
       if (code === 'email_address_not_authorized') throw new Error('Для этого адреса пока не настроена отправка писем.');
+      if (code === 'otp_expired') throw new Error('Код или ссылка устарели. Запросите новое письмо.');
+      if (code === 'otp_disabled' || code === 'signup_disabled') throw new Error('Если аккаунт уже создан, попробуйте Google или запросите письмо позже. Для нового аккаунта откройте «Регистрация».');
       if (code === 'over_email_send_rate_limit' || response.status === 429) throw new Error('Слишком много запросов. Попробуйте позже.');
       if (['bad_code_verifier', 'flow_state_not_found', 'flow_state_expired', 'validation_failed'].includes(code)) {
         throw new Error('Ссылка входа устарела. Нажмите «Продолжить с Google» ещё раз.');
@@ -83,14 +91,24 @@ window.SATUCARD_AUTH = (() => {
     return refreshPromise;
   }
 
-  async function signUp({ name, email, password }) {
+  async function signUp({ email, password }) {
+    const settings = await request('/auth/v1/settings');
+    if (settings.mailer_autoconfirm !== false) throw new Error('Регистрация по email временно недоступна: подтверждение почты не настроено. Используйте Google.');
     const data = await request('/auth/v1/signup', {
       method: 'POST',
-      body: JSON.stringify({ email, password, data: { name } })
+      body: JSON.stringify({ email, password })
     });
-    if (data.access_token && data.refresh_token) {
-      save({ ...data, expires_at: Math.floor(Date.now() / 1000) + data.expires_in });
+    // A sign-up response never signs the user in without proof of the mailbox.
+    if (data.access_token) throw new Error('Сервер выдал сессию без проверки почты. Вход остановлен. Используйте Google.');
+    return data;
+  }
+
+  function saveAuthResponse(data) {
+    if (!data.access_token || !data.refresh_token || !data.user?.id || !data.user.email_confirmed_at || !(Number(data.expires_in) > 0)) {
+      throw new Error('Почта не подтверждена. Проверьте письмо или войдите через Google.');
     }
+    save({ access_token: data.access_token, refresh_token: data.refresh_token, token_type: data.token_type || 'bearer',
+      expires_in: Number(data.expires_in), expires_at: Math.floor(Date.now() / 1000) + Number(data.expires_in), user: data.user });
     return data;
   }
 
@@ -99,8 +117,28 @@ window.SATUCARD_AUTH = (() => {
       method: 'POST',
       body: JSON.stringify({ email, password })
     });
-    save({ ...data, expires_at: Math.floor(Date.now() / 1000) + data.expires_in });
+    saveAuthResponse(data);
     return data;
+  }
+
+  async function sendEmailCode(email, signup = false) {
+    return request(signup ? '/auth/v1/resend' : '/auth/v1/otp', { method: 'POST',
+      body: JSON.stringify(signup ? { email, type: 'signup' } : { email, create_user: false }) });
+  }
+
+  async function verifyEmailCode({ email, token, signup = false }) {
+    return saveAuthResponse(await request('/auth/v1/verify', { method: 'POST',
+      body: JSON.stringify({ email, token, type: signup ? 'signup' : 'email' }) }));
+  }
+
+  function isEmailCallback() { return new URLSearchParams(location.search).has('token_hash'); }
+  async function completeEmailSignIn() {
+    const query = new URLSearchParams(location.search), token = query.get('token_hash'), type = query.get('type');
+    history.replaceState(null, '', location.pathname);
+    if (!/^[A-Za-z0-9_-]{20,256}$/.test(token || '') || !['signup', 'email', 'magiclink', 'recovery'].includes(type)) {
+      throw new Error('Некорректная ссылка подтверждения. Запросите новое письмо.');
+    }
+    return saveAuthResponse(await request('/auth/v1/verify', { method: 'POST', body: JSON.stringify({ token_hash: token, type }) }));
   }
 
   function isGoogleCallback() {
@@ -109,7 +147,7 @@ window.SATUCARD_AUTH = (() => {
     return query.has('code') || query.has('error') || query.has('error_code') || hash.has('error') || hash.has('access_token') || hash.has('refresh_token');
   }
 
-  async function signInWithGoogle() {
+  async function signInWithGoogle({ intent = 'login' } = {}) {
     if (googleSignInPending) return;
     if (location.protocol !== 'https:' && !(location.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(location.hostname))) {
       throw new Error('Для входа через Google откройте сайт https://satucard-team.vercel.app/auth.html');
@@ -134,7 +172,7 @@ window.SATUCARD_AUTH = (() => {
       callback.search = '';
       callback.hash = '';
       try {
-        sessionStorage.setItem(googleFlowKey, JSON.stringify({ verifier, createdAt: Date.now(), callback: callback.href }));
+        sessionStorage.setItem(googleFlowKey, JSON.stringify({ verifier, createdAt: Date.now(), callback: callback.href, intent: intent === 'signup' ? 'signup' : 'login' }));
       } catch (_) {
         throw new Error('Разрешите хранение данных сайта в браузере, чтобы продолжить вход через Google.');
       }
@@ -179,10 +217,11 @@ window.SATUCARD_AUTH = (() => {
       if (!code || !/^[0-9a-f]{64}$/.test(flow?.verifier || '') || !Number.isFinite(age) || age < 0 || age > googleFlowLifetime || flow.callback !== callback) {
         throw new Error('Попытка входа устарела или открыта в другой вкладке. Нажмите «Продолжить с Google» ещё раз.');
       }
+      completedIntent = flow.intent === 'signup' ? 'signup' : 'login';
       const data = await request('/auth/v1/token?grant_type=pkce', {
         method: 'POST', body: JSON.stringify({ auth_code: code, code_verifier: flow.verifier })
       });
-      if (!data.access_token || !data.refresh_token || !data.user?.id || !Number.isFinite(Number(data.expires_in)) || Number(data.expires_in) <= 0) {
+      if (!data.access_token || !data.refresh_token || !data.user?.id || !data.user.email_confirmed_at || !Number.isFinite(Number(data.expires_in)) || Number(data.expires_in) <= 0) {
         throw new Error('Не удалось завершить вход. Попробуйте ещё раз.');
       }
       // Persist only SatuCard's Supabase session, never Google's provider tokens.
@@ -207,10 +246,30 @@ window.SATUCARD_AUTH = (() => {
   async function getProfile() {
     const active = await getSession();
     if (!active) return null;
-    const response = await request(`/rest/v1/profiles?id=eq.${encodeURIComponent(active.user.id)}&select=id,name,email,created_at&limit=1`, {
-      headers: { Authorization: `Bearer ${active.access_token}` }
-    });
-    return response[0] || null;
+    const data = await accountRequest('/api/profile');
+    if (session?.user?.id === active.user.id) {
+      currentProfile = data.profile;
+      updateAccountLinks();
+    }
+    return data.profile;
+  }
+
+  async function accountRequest(path, options = {}) {
+    const active = await getSession();
+    if (!active) throw Object.assign(new Error('Войдите в аккаунт.'), { code: 'sign_in_required' });
+    let response;
+    try { response = await fetch(path, { ...options, headers: { 'content-type': 'application/json', Authorization: `Bearer ${active.access_token}` }, cache: 'no-store' }); }
+    catch { throw new Error('Нет соединения с сервером. Проверьте интернет.'); }
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw Object.assign(new Error(data.error || 'Не удалось выполнить действие.'), { code: data.code, status: response.status });
+    return data;
+  }
+
+  async function saveProfile(firstName, lastName) {
+    const data = await accountRequest('/api/profile', { method: 'POST', body: JSON.stringify({ firstName, lastName }) });
+    currentProfile = data.profile;
+    updateAccountLinks();
+    return data.profile;
   }
 
   async function getMyCards() {
@@ -273,7 +332,7 @@ window.SATUCARD_AUTH = (() => {
       link.href = 'auth.html';
       details.hidden = !user;
       if (user) {
-        const name = user.user_metadata?.name?.trim() || user.user_metadata?.full_name?.trim() || 'Профиль';
+        const name = currentProfile?.id === user.id && currentProfile.profile_completed_at ? currentProfile.name : 'Профиль';
         const summary = details.querySelector('summary');
         summary.textContent = name;
         summary.title = name;
@@ -306,7 +365,9 @@ window.SATUCARD_AUTH = (() => {
   window.addEventListener('pageshow', event => {
     if (event.persisted) googleSignInPending = false;
   });
-  getSession().then(updateAccountLinks);
+  getSession().then(active => { updateAccountLinks(); if (active && document.querySelectorAll('[data-account-link]').length) getProfile().catch(() => {}); });
 
-  return { getSession, signUp, signIn, signInWithGoogle, isGoogleCallback, completeGoogleSignIn, signOut, getProfile, getMyCards };
+  return { getSession, signUp, signIn, sendEmailCode, verifyEmailCode, isEmailCallback, completeEmailSignIn,
+    signInWithGoogle, isGoogleCallback, completeGoogleSignIn, getAuthIntent: () => completedIntent,
+    signOut, getProfile, saveProfile, getMyCards };
 })();

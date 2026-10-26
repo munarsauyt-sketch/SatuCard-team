@@ -8,8 +8,8 @@
   <link rel="icon" href="assets/favicon.svg?v=rebrand-20261012" type="image/svg+xml">
   <script src="theme.js?v=rebrand-20261012"></script>
   <link rel="stylesheet" href="brand.css?v=rebrand-20261012">
-  <link rel="stylesheet" href="account-pages.css?v=google-auth-20261024">
-  <script src="auth-client.js?v=google-auth-20261024" defer></script><script src="site.js?v=rebrand-20261012" defer></script><script src="auth.js?v=google-auth-20261024" defer></script>
+  <link rel="stylesheet" href="account-pages.css?v=verified-auth-20261026">
+  <script src="auth-client.js?v=verified-auth-20261026" defer></script><script src="site.js?v=rebrand-20261012" defer></script><script src="auth.js?v=verified-auth-20261026" defer></script>
 </head>
 <body class="account-page auth-page">
 <a class="skip-link" href="#main">К содержимому</a>
@@ -35,7 +35,7 @@
       </div>
       <div class="auth-intro-bottom"><span><i aria-hidden="true"></i>Место для ваших идей</span><span>SATUCARD / KZ</span></div>
     </section>
-    <section class="auth-card" aria-labelledby="auth-title">
+    <section class="auth-card" id="auth-card-content" aria-labelledby="auth-title">
       <div class="auth-card-top"><span class="account-kicker">ПРОДОЛЖИМ СОЗДАВАТЬ</span><span class="auth-step-number" aria-hidden="true">01</span></div>
       <div class="auth-tabs" role="tablist" aria-label="Вход или регистрация">
         <button id="auth-login-tab" type="button" role="tab" data-auth-mode="login" aria-selected="true" aria-controls="auth-form">Вход</button>
@@ -43,6 +43,7 @@
       </div>
       <h2 id="auth-title">С возвращением</h2>
       <p id="auth-subtitle" class="auth-subtitle">Войдите, чтобы продолжить работу с карточками.</p>
+      <div id="auth-main-options">
       <button id="auth-google" class="auth-google" type="button" aria-describedby="auth-google-note">
         <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5Z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65Z"/><path fill="#FBBC05" d="M10.53 28.59A14.4 14.4 0 0 1 9.75 24c0-1.59.28-3.13.79-4.59l-7.98-6.19A23.85 23.85 0 0 0 0 24c0 3.87.93 7.53 2.56 10.78l7.97-6.19Z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.91-5.8l-7.73-6c-2.15 1.45-4.92 2.3-8.18 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48Z"/></svg>
         <span>Продолжить с Google</span>
@@ -50,14 +51,23 @@
       <p id="auth-google-note" class="auth-google-note">Для входа и регистрации. Пароль Google остаётся у Google.</p>
       <div class="auth-divider"><span>или используйте email</span></div>
       <form id="auth-form" novalidate>
-        <div id="auth-name-field" hidden><label for="auth-name">Ваше имя</label><input id="auth-name" name="name" type="text" maxlength="80" autocomplete="name" placeholder="Например, Айдана"></div>
         <label for="auth-email">Email</label><input id="auth-email" name="email" type="email" autocomplete="email" inputmode="email" required placeholder="name@example.com">
         <label for="auth-password">Пароль</label><div class="password-wrap"><input id="auth-password" name="password" type="password" minlength="8" autocomplete="current-password" required placeholder="Минимум 8 символов"><button type="button" data-password-toggle="auth-password" aria-pressed="false">Показать</button></div>
         <div id="auth-confirm-field" hidden><label for="auth-confirm">Повторите пароль</label><div class="password-wrap"><input id="auth-confirm" name="confirm" type="password" autocomplete="new-password" placeholder="Тот же пароль"><button type="button" data-password-toggle="auth-confirm" aria-pressed="false">Показать</button></div></div>
-        <p id="auth-notice" class="auth-notice" role="status" aria-live="polite"></p>
         <button id="auth-submit" class="button button-orange auth-submit" type="submit">Войти в SatuCard</button>
       </form>
-      <p class="auth-footnote"><span aria-hidden="true">↳</span>Войдите тем же способом или используйте тот же email, чтобы продолжить работу со своими карточками.</p>
+      <button id="email-code-login" class="auth-inline-button" type="button">Не знаете пароль? Войти по коду из письма</button>
+      </div>
+      <form id="email-code-form" class="account-details-form" hidden novalidate>
+        <p>Почта для подтверждения: <strong id="code-email"></strong></p>
+        <label for="email-code">Код из письма</label>
+        <input id="email-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" pattern="[0-9]{6,8}" placeholder="Код подтверждения">
+        <button class="button button-orange auth-submit" type="submit">Подтвердить почту</button>
+        <button id="send-email-code" class="auth-inline-button" type="button">Получить письмо</button>
+        <button id="code-back" class="auth-inline-button" type="button">Другой способ входа</button>
+      </form>
+      <p id="auth-notice" class="auth-notice" role="status" aria-live="polite"></p>
+      <p class="auth-footnote"><span aria-hidden="true">↳</span>Пароль от SatuCard и пароль от Google — разные пароли. Подтверждайте только собственную почту.</p>
       <a class="auth-editor-link" href="editor.html">Сначала попробовать редактор <span aria-hidden="true">↗</span></a>
     </section>
   </div>

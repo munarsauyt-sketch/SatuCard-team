@@ -73,6 +73,18 @@
 .auth-editor-link { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; margin-top: 14px; font-size: 14px; font-weight: 750; color: var(--ink); }
 .auth-editor-link:hover { text-decoration: underline; }
 
+.auth-inline-button { display: block; min-height: 44px; margin-top: 10px; padding: 8px 0; border: 0; background: none; color: var(--ink); text-align: left; font: inherit; font-size: 14px; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
+.auth-inline-button:disabled { opacity: .55; cursor: wait; }
+.account-details-form label { display: block; margin: 20px 0 8px; font-size: 14px; font-weight: 750; }
+.account-details-form input { width: 100%; min-width: 0; min-height: 54px; padding: 12px 15px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink); font: inherit; font-size: 16px; }
+.account-details-form input:focus { outline: 3px solid color-mix(in srgb, var(--orange) 24%, transparent); border-color: var(--orange); outline-offset: 1px; }
+.account-details-form p, .profile-email-line { color: var(--muted); font-size: 14px; line-height: 1.7; overflow-wrap: anywhere; }
+.profile-setup-main { padding-block: 56px 80px; min-height: 75vh; }
+.profile-setup-card { max-width: 660px; margin-inline: auto; padding: clamp(22px, 5vw, 48px); border: 1px solid var(--line); border-radius: 24px; background: var(--surface); }
+.profile-setup-card h1 { font-size: clamp(34px, 5vw, 48px); line-height: 1.1; }
+.profile-name-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+@media (max-width: 520px) { .profile-name-fields { grid-template-columns: 1fr; gap: 0; } .profile-setup-main { padding-block: 24px 40px; } }
+
 /* A collection is composed of whole images, including tall story exports. */
 .dashboard-main { min-height: 70vh; padding-block: 60px 72px; }
 .dashboard-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 28px; margin-bottom: 44px; }

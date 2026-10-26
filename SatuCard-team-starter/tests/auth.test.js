@@ -40,7 +40,7 @@ function harness({ url = `${origin}/auth.html`, saved = {}, pending = {}, respon
 }
 const tokenResponse = {
   access_token: 'satu-access', refresh_token: 'satu-refresh', token_type: 'bearer', expires_in: 3600,
-  user: { id: 'existing-user', email: 'seller@example.com', user_metadata: { full_name: 'Seller' } },
+  user: { id: 'existing-user', email: 'seller@example.com', email_confirmed_at: '2026-10-26T10:00:00Z', user_metadata: { full_name: 'Seller' } },
   provider_token: 'google-access-not-to-be-persisted', provider_refresh_token: 'google-refresh-not-to-be-persisted'
 };
 
@@ -154,10 +154,35 @@ test('existing expired sessions refresh once when several pages request the sess
   assert.ok(h.calls[0].url.endsWith('grant_type=refresh_token'));
 });
 
-test('email signup still preserves the supplied name and returns a session', async () => {
-  const h = harness({ responder: () => tokenResponse });
-  await h.auth.signUp({ name: 'Айдана', email: 'seller@example.com', password: 'test-only-password' });
-  assert.ok(h.calls[0].url.endsWith('/auth/v1/signup'));
-  assert.equal(JSON.parse(h.calls[0].options.body).data.name, 'Айдана');
+test('email signup requires confirmation and never stores an automatic session', async () => {
+  const h = harness({ responder: url => url.endsWith('/settings') ? { mailer_autoconfirm: false } : { id: 'pending-user' } });
+  await h.auth.signUp({ email: 'seller@example.com', password: 'test-only-password' });
+  assert.ok(h.calls[1].url.endsWith('/auth/v1/signup'));
+  assert.equal(h.local.getItem(sessionKey), null);
+  const unsafe = harness({ responder: () => ({ mailer_autoconfirm: true }) });
+  await assert.rejects(unsafe.auth.signUp({ email: 'seller@example.com', password: 'password' }), /подтверждение почты/);
+  assert.equal(unsafe.calls.length, 1);
+  const race = harness({ responder: url => url.endsWith('/settings') ? { mailer_autoconfirm: false } : tokenResponse });
+  await assert.rejects(race.auth.signUp({ email: 'seller@example.com', password: 'password' }), /без проверки/);
+  assert.equal(race.local.getItem(sessionKey), null);
+});
+
+test('email code login cannot create accounts and stores only a confirmed session', async () => {
+  const h = harness({ responder: url => url.endsWith('/verify') ? tokenResponse : {} });
+  await h.auth.sendEmailCode('seller@example.com');
+  assert.equal(JSON.parse(h.calls[0].options.body).create_user, false);
+  await h.auth.verifyEmailCode({ email: 'seller@example.com', token: '123456' });
+  assert.equal(JSON.parse(h.calls[1].options.body).type, 'email');
   assert.equal((await h.auth.getSession()).user.id, tokenResponse.user.id);
+  assert.ok(!h.local.getItem(sessionKey).includes('google-access-not-to-be-persisted'));
+});
+
+test('email confirmation scrubs the URL before verification and rejects an unconfirmed response', async () => {
+  const h = harness({ url: `${origin}/auth.html?token_hash=${'a'.repeat(64)}&type=signup`, responder: () => tokenResponse });
+  await h.auth.completeEmailSignIn();
+  assert.equal(h.calls[0].pageURL, `${origin}/auth.html`);
+  assert.equal(JSON.parse(h.calls[0].options.body).type, 'signup');
+  const bad = harness({ responder: () => ({ ...tokenResponse, user: { ...tokenResponse.user, email_confirmed_at: null } }) });
+  await assert.rejects(bad.auth.verifyEmailCode({ email: 'seller@example.com', token: '123456' }), /не подтверждена/);
+  assert.equal(bad.local.getItem(sessionKey), null);
 });

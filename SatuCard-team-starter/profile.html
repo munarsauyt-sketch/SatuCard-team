@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer"><title>Ваш профиль — SatuCard</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <script src="theme.js?v=rebrand-20261012"></script>
+  <link rel="stylesheet" href="brand.css?v=rebrand-20261012"><link rel="stylesheet" href="account-pages.css?v=verified-auth-20261026">
+  <script src="auth-client.js?v=verified-auth-20261026" defer></script><script src="site.js?v=rebrand-20261012" defer></script><script src="profile.js?v=verified-auth-20261026" defer></script>
+</head>
+<body class="account-page">
+<a class="skip-link" href="#main">К содержимому</a>
+<header class="site-header"><div class="container header-inner">
+  <a class="brand" href="index.html" aria-label="SatuCard — главная"><img class="brand-logo-icon" src="assets/favicon.svg" alt="">SatuCard<span class="brand-dot">.</span></a>
+  <nav aria-label="Основная навигация"><a href="index.html">Главная</a><a href="editor.html">Редактор</a></nav>
+  <button class="theme-toggle" type="button" data-theme-toggle aria-label="Тёмная тема" aria-pressed="false"><span aria-hidden="true">◐</span><span class="theme-toggle-text">Тема</span></button>
+  <a class="header-account" data-account-link href="auth.html">Войти</a>
+</div></header>
+<main id="main" class="container profile-setup-main">
+  <section class="profile-setup-card" aria-labelledby="profile-setup-title">
+    <div class="auth-card-top"><span class="account-kicker">ВАШ ПРОФИЛЬ / ШАГ 2 ИЗ 2</span><span class="auth-step-number">02</span></div>
+    <h1 id="profile-setup-title">Давайте познакомимся<span>.</span></h1>
+    <p class="auth-subtitle" id="profile-setup-description">Почта подтверждена. Чтобы завершить регистрацию, укажите, как к вам обращаться в SatuCard. Имя из Google не подставляется автоматически.</p>
+    <p class="profile-email-line">Почта аккаунта: <strong id="setup-email">Загружаем…</strong></p>
+    <form id="profile-form" class="account-details-form" novalidate>
+      <div class="profile-name-fields">
+        <div><label for="first-name">Имя</label><input id="first-name" name="given-name" type="text" maxlength="39" autocomplete="given-name" required placeholder="Ваше имя" disabled></div>
+        <div><label for="last-name">Фамилия</label><input id="last-name" name="family-name" type="text" maxlength="39" autocomplete="family-name" required placeholder="Ваша фамилия" disabled></div>
+      </div>
+      <p id="profile-notice" class="auth-notice" role="status" aria-live="polite">Загружаем профиль…</p>
+      <button id="save-profile" class="button button-orange auth-submit" type="submit" disabled>Завершить регистрацию</button>
+    </form>
+    <p class="auth-footnote">Эти данные будут отображаться в вашем личном кабинете. Их можно изменить позже.</p>
+    <button id="setup-logout" class="auth-inline-button" type="button">Выйти и использовать другой аккаунт</button>
+  </section>
+</main>
+</body>
+</html>

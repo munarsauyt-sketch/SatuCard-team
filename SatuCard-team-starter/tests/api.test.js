@@ -4,6 +4,7 @@ import { POST } from '../api/cards.js';
 import { GET } from '../api/card.js';
 import { GET as GET_MINE } from '../api/my-cards.js';
 
+const readyProfile = { id: 'aaac8be7-1386-45b8-8d49-3f9d7f5c9fb6', name: 'Test Seller', profile_completed_at: '2026-10-26T00:00:00Z', mail_proof_required: false };
 const savedFetch = globalThis.fetch;
 const savedUrl = process.env.SUPABASE_URL;
 const savedKey = process.env.SUPABASE_SECRET_KEY;
@@ -40,7 +41,8 @@ function uploadRequest(overrides = {}) {
 test('rejects malformed prices and image before contacting Supabase', async () => {
   configure();
   globalThis.fetch = async url => {
-    if (String(url).endsWith('/auth/v1/user')) return Response.json({ id: 'aaac8be7-1386-45b8-8d49-3f9d7f5c9fb6' });
+    if (String(url).endsWith('/auth/v1/user')) return Response.json({ id: 'aaac8be7-1386-45b8-8d49-3f9d7f5c9fb6', email_confirmed_at: '2026-10-26T00:00:00Z' });
+    if (String(url).includes('/rest/v1/profiles?')) return Response.json([readyProfile]);
     throw new Error('Unexpected database access');
   };
 
@@ -57,7 +59,8 @@ test('uploads the JPEG and stores card metadata with a secret key', async () => 
   const calls = [];
   globalThis.fetch = async (url, options) => {
     calls.push({ url, options });
-    if (String(url).endsWith('/auth/v1/user')) return Response.json({ id: 'aaac8be7-1386-45b8-8d49-3f9d7f5c9fb6' });
+    if (String(url).endsWith('/auth/v1/user')) return Response.json({ id: 'aaac8be7-1386-45b8-8d49-3f9d7f5c9fb6', email_confirmed_at: '2026-10-26T00:00:00Z' });
+    if (String(url).includes('/rest/v1/profiles?')) return Response.json([readyProfile]);
     return new Response(null, { status: options.method === 'POST' ? 201 : 200 });
   };
 
@@ -66,12 +69,12 @@ test('uploads the JPEG and stores card metadata with a secret key', async () => 
   const result = await response.json();
   assert.match(result.id, /^[0-9a-f-]{36}$/);
   assert.equal(result.url, `https://satucard.example/card.html?id=${result.id}`);
-  assert.equal(calls.length, 3);
-  assert.match(calls[1].url, new RegExp(`/storage/v1/object/cards/${result.id}\\.jpg$`));
-  assert.equal(calls[1].options.headers.apikey, 'sb_secret_test');
-  assert.equal(calls[2].url, 'https://example.supabase.co/rest/v1/cards');
+  assert.equal(calls.length, 4);
+  assert.match(calls[2].url, new RegExp(`/storage/v1/object/cards/${result.id}\\.jpg$`));
   assert.equal(calls[2].options.headers.apikey, 'sb_secret_test');
-  const record = JSON.parse(calls[2].options.body);
+  assert.equal(calls[3].url, 'https://example.supabase.co/rest/v1/cards');
+  assert.equal(calls[3].options.headers.apikey, 'sb_secret_test');
+  const record = JSON.parse(calls[3].options.body);
   assert.equal(record.user_id, 'aaac8be7-1386-45b8-8d49-3f9d7f5c9fb6');
   assert.equal(record.price_kzt, '24990.00');
   assert.equal(record.old_price_kzt, '29990.00');
@@ -82,7 +85,8 @@ test('publishes a neon story card and keeps its verified owner', async () => {
   configure();
   let stored;
   globalThis.fetch = async (url, options) => {
-    if (String(url).endsWith('/auth/v1/user')) return Response.json({ id: 'aaac8be7-1386-45b8-8d49-3f9d7f5c9fb6' });
+    if (String(url).endsWith('/auth/v1/user')) return Response.json({ id: 'aaac8be7-1386-45b8-8d49-3f9d7f5c9fb6', email_confirmed_at: '2026-10-26T00:00:00Z' });
+    if (String(url).includes('/rest/v1/profiles?')) return Response.json([readyProfile]);
     if (String(url).endsWith('/rest/v1/cards')) stored = JSON.parse(options.body);
     return new Response(null, { status: 201 });
   };
@@ -98,7 +102,8 @@ test('rejects unknown templates and formats before uploading any image', async (
   configure();
   let backendCalls = 0;
   globalThis.fetch = async url => {
-    if (String(url).endsWith('/auth/v1/user')) return Response.json({ id: 'aaac8be7-1386-45b8-8d49-3f9d7f5c9fb6' });
+    if (String(url).endsWith('/auth/v1/user')) return Response.json({ id: 'aaac8be7-1386-45b8-8d49-3f9d7f5c9fb6', email_confirmed_at: '2026-10-26T00:00:00Z' });
+    if (String(url).includes('/rest/v1/profiles?')) return Response.json([readyProfile]);
     backendCalls += 1;
     throw new Error('Invalid metadata must not reach Storage or Postgres');
   };
@@ -114,7 +119,8 @@ test('removes the uploaded image if saving metadata fails', async () => {
   configure();
   const methods = [];
   globalThis.fetch = async (_url, options) => {
-    if (String(_url).endsWith('/auth/v1/user')) return Response.json({ id: 'aaac8be7-1386-45b8-8d49-3f9d7f5c9fb6' });
+    if (String(_url).endsWith('/auth/v1/user')) return Response.json({ id: 'aaac8be7-1386-45b8-8d49-3f9d7f5c9fb6', email_confirmed_at: '2026-10-26T00:00:00Z' });
+    if (String(_url).includes('/rest/v1/profiles?')) return Response.json([readyProfile]);
     methods.push(options.method);
     return new Response(null, { status: methods.length === 2 ? 500 : 200 });
   };
@@ -135,7 +141,8 @@ test('lists only cards belonging to the verified user', async () => {
   configure();
   const id = 'aaac8be7-1386-45b8-8d49-3f9d7f5c9fb6';
   globalThis.fetch = async (url) => {
-    if (String(url).endsWith('/auth/v1/user')) return Response.json({ id });
+    if (String(url).endsWith('/auth/v1/user')) return Response.json({ id, email_confirmed_at: '2026-10-26T00:00:00Z' });
+    if (String(url).includes('/rest/v1/profiles?')) return Response.json([readyProfile]);
     assert.match(String(url), /user_id=eq\./);
     assert.match(String(url), new RegExp(id));
     return Response.json([{ id, title: 'Мой товар', price_kzt: '1000.00', style: 'studio', format: 'portrait', created_at: '2026-10-11T00:00:00Z', image_path: `${id}.jpg` }]);
