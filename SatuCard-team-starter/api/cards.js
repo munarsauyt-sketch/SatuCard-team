@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { configuration, verifiedUser } from '../lib/supabase.js';
+import { configuration } from '../lib/supabase.js';
+import { readAccount, accountFailure } from '../lib/account.js';
 
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 const STYLES = new Set(['studio', 'accent', 'minimal', 'noir', 'neon', 'editorial', 'bloom', 'bold']);
@@ -30,8 +31,9 @@ export async function POST(request) {
 
   const config = configuration();
   if (!config) return json({ error: 'Публикация пока не настроена.' }, 503);
-  const user = await verifiedUser(request, config);
-  if (!user) return json({ error: 'Войдите в аккаунт, чтобы опубликовать карточку.' }, 401);
+  let user;
+  try { ({ user } = await readAccount(request, config, { complete: true })); }
+  catch (error) { return accountFailure(error); }
 
   let form;
   try {

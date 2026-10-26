@@ -21,11 +21,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     const profile = await auth.getProfile();
     if (!profile) throw new Error('Профиль не найден. Попробуйте войти снова.');
+    if (!profile.profile_completed_at) { location.replace('profile.html?registration=1'); return; }
     document.querySelector('#profile-title').textContent = profile.name;
     document.querySelector('#profile-email').textContent = profile.email;
     document.querySelector('#profile-created').textContent = `В SatuCard с ${new Intl.DateTimeFormat('ru-RU', { dateStyle: 'long' }).format(new Date(profile.created_at))}`;
     document.querySelector('.profile-avatar').textContent = profile.name[0].toUpperCase();
   } catch (error) {
+    if (['sign_in_required', 'mail_proof_required', 'email_unconfirmed'].includes(error.code)) { location.replace('auth.html?verify=1'); return; }
     status.textContent = error.message || 'Не удалось загрузить профиль.';
     document.querySelector('#profile-title').textContent = 'Профиль недоступен';
     loading.hidden = true;

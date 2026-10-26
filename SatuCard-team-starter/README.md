@@ -44,7 +44,7 @@
 1. Создайте проект Supabase. В SQL Editor выполните [`database/schema.sql`](database/schema.sql). Схема повторно применима и к существующему проекту с карточками.
 2. В настройках проекта скопируйте Project URL и секретный ключ `sb_secret_...` (или действующий service role key, если проект использует старый формат).
 3. Не записывайте ключ в файлы сайта и не публикуйте его в репозитории.
-4. В Authentication включите email signup. Для учебной версии подтверждение email отключено: встроенный почтовый сервис Supabase не отправляет письма внешним адресатам. Для коммерческого запуска настройте SMTP и включите подтверждение email. В URL Configuration укажите опубликованную страницу `auth.html` как Site URL.
+4. В Authentication включите email signup. Включите обязательное подтверждение email и настройте SMTP для доставки писем внешним адресатам. Выполните миграции и настройте защиту старых аккаунтов по [инструкции](docs/verified-registration.md). В URL Configuration укажите опубликованную страницу `auth.html` как Site URL.
 
 Supabase Auth хранит пароли и сессии. При регистрации триггер создаёт запись в `public.profiles` с `id`, `name`, `email`, `created_at`. Политика RLS разрешает пользователю читать только собственный профиль. `public.cards.user_id` связывает новые карточки с автором; личный список проверяет токен на сервере. Старые демонстрационные карточки без `user_id` остаются доступными по публичным ссылкам.
 
@@ -58,6 +58,8 @@ Supabase Auth хранит пароли и сессии. При регистра
 2. Укажите **Root Directory:** `SatuCard-team-starter`. Оставьте Framework Preset `Other`; команда сборки не нужна.
 3. В Environment Variables задайте `SUPABASE_URL` и `SUPABASE_SECRET_KEY` для Production и Preview. Образец имён есть в `.env.example`.
 4. Выполните Deploy. Проверьте регистрацию, вход, личный кабинет, скачивание PNG и публикацию карточки.
+
+Профиль редактируется через `GET /api/profile` и `POST /api/profile`; сервер проверяет почту, текущий способ входа и владельца данных.
 
 Frontend — статические HTML/CSS/JavaScript без сборки. Backend — Vercel Functions с REST API `POST /api/cards`, `GET /api/card?id=...` и `GET /api/my-cards`. Authentication — Supabase Auth; база — PostgreSQL; изображения — Supabase Storage. Ключ `sb_publishable_...` в `auth-client.js` публичен и работает с RLS. `SUPABASE_SECRET_KEY` используется только сервером. Исходный загруженный файл обрабатывается в браузере. Только готовый JPEG до 2 МБ отправляется при публикации. Публичную ссылку может открыть любой, у кого она есть.
 

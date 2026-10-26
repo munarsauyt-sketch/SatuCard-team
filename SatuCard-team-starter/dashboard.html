@@ -7,8 +7,8 @@
   <link rel="icon" href="assets/favicon.svg?v=rebrand-20261012" type="image/svg+xml">
   <script src="theme.js?v=rebrand-20261012"></script>
   <link rel="stylesheet" href="brand.css?v=rebrand-20261012">
-  <link rel="stylesheet" href="account-pages.css?v=rebrand-20261012">
-  <script src="auth-client.js?v=rebrand-20261012" defer></script><script src="site.js?v=rebrand-20261012" defer></script><script src="dashboard.js?v=rebrand-20261012" defer></script>
+  <link rel="stylesheet" href="account-pages.css?v=verified-auth-20261026">
+  <script src="auth-client.js?v=verified-auth-20261026" defer></script><script src="site.js?v=rebrand-20261012" defer></script><script src="dashboard.js?v=verified-auth-20261026" defer></script>
 </head>
 <body class="account-page dashboard-page">
 <a class="skip-link" href="#main">К содержимому</a>
@@ -21,7 +21,7 @@
 </div></header>
 <main id="main" class="dashboard-main container" data-state="loading">
   <div class="dashboard-heading"><div><p class="account-kicker">ЛИЧНЫЙ КАБИНЕТ / ВАШ МАГАЗИН</p><h1>Всё, что вы<br>создали<span>.</span></h1><p>Ваша коллекция карточек. Готова к следующей продаже.</p></div><a class="button button-orange" href="editor.html">Создать карточку <span aria-hidden="true">↗</span></a></div>
-  <section class="profile-panel" aria-labelledby="profile-title"><div class="profile-avatar" aria-hidden="true">S</div><div class="profile-details"><span class="profile-label">ВАШ ПРОФИЛЬ</span><h2 id="profile-title">Загружаем профиль…</h2><p id="profile-email"></p><p id="profile-created"></p></div><span class="profile-connection"><i aria-hidden="true"></i>Ваше пространство</span><button class="button button-light" id="logout-button" type="button">Выйти <span aria-hidden="true">↗</span></button></section>
+  <section class="profile-panel" aria-labelledby="profile-title"><div class="profile-avatar" aria-hidden="true">S</div><div class="profile-details"><span class="profile-label">ВАШ ПРОФИЛЬ</span><h2 id="profile-title">Загружаем профиль…</h2><p id="profile-email"></p><p id="profile-created"></p></div><span class="profile-connection"><i aria-hidden="true"></i>Ваше пространство</span><a class="button button-light" href="profile.html?edit=1">Изменить профиль</a><button class="button button-light" id="logout-button" type="button">Выйти <span aria-hidden="true">↗</span></button></section>
   <section class="dashboard-cards" aria-labelledby="cards-title"><div class="dashboard-section-title"><div><p class="account-kicker">КОЛЛЕКЦИЯ / SATUCARD</p><h2 id="cards-title">Опубликованные карточки<span>.</span></h2></div><span id="cards-count" class="cards-count"></span></div>
     <p id="dashboard-status" class="collection-status" role="status" aria-live="polite">Загружаем вашу коллекцию…</p>
     <div id="cards-loading" class="collection-loading" aria-hidden="true"><div class="card-skeleton"><div></div><i></i><span></span></div><div class="card-skeleton"><div></div><i></i><span></span></div><div class="card-skeleton"><div></div><i></i><span></span></div></div>

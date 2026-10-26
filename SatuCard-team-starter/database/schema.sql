@@ -28,6 +28,10 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   name varchar(80) not null check (length(trim(name)) > 0),
   email text not null,
+  first_name text not null default '',
+  last_name text not null default '',
+  profile_completed_at timestamptz,
+  mail_proof_required boolean not null default false,
   created_at timestamptz not null default now()
 );
 
