@@ -344,6 +344,8 @@
     fitPreview();
     try { const saved = await project.draftAction('get'); if (saved) { project.parseProject(saved, renderer.normalize); pendingDraft = saved; $('draft-restore-banner').hidden = false; status('draft-status', 'На этом устройстве есть сохранённый черновик.'); } else status('draft-status', 'Изменения сохраняются на этом устройстве.'); }
     catch (_) { status('draft-status', 'Автосохранение недоступно — используйте «Сохранить проект».'); }
+    form.dataset.editorReady = 'true';
+    document.dispatchEvent(new Event('satucard:editor-ready'));
     document.fonts?.ready.then(() => requestRender(true));
   }
   initialize();

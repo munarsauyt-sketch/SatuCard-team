@@ -6,7 +6,7 @@
   <title>Дизайн-студия — SatuCard</title>
   <meta name="description" content="Создайте выразительную карточку товара: оформление, тексты, фирменные цвета, настройка фотографии и экспорт для вашего магазина.">
   <link rel="icon" href="assets/favicon.svg?v=rebrand-20261012" type="image/svg+xml">
-  <script src="theme.js?v=rebrand-20261012"></script>
+  <script src="theme.js?v=guide-20261105"></script>
   <link rel="stylesheet" href="brand.css?v=rebrand-20261012">
   <link rel="stylesheet" href="studio.css?v=rebrand-20261012">
   <script src="auth-client.js?v=verified-auth-20261026" defer></script>
@@ -14,7 +14,9 @@
   <script src="assets/demo-images.js" defer></script>
   <script src="studio-renderer.js" defer></script>
   <script src="studio-project.js" defer></script>
-  <script src="editor.js?v=rebrand-20261012" defer></script>
+  <script src="editor.js?v=guide-20261105" defer></script>
+  <link rel="stylesheet" href="editor-tour.css?v=20261105">
+  <script src="editor-tour.js?v=20261105" defer></script>
 </head>
 <body class="studio-page">
   <a class="skip-link" href="#main">К редактору</a>
@@ -47,10 +49,14 @@
   <main id="main" class="studio-main">
     <div class="studio-project-bar">
       <div class="studio-project-title"><span class="project-symbol" aria-hidden="true"><svg class="studio-icon"><use href="#i-spark"/></svg></span><div><p class="studio-overline">ДИЗАЙН-СТУДИЯ / ВАШ СЛЕДУЮЩИЙ БЕСТСЕЛЛЕР</p><h1>Сделайте товар заметным<span>.</span></h1></div><span id="draft-status" class="draft-status" role="status">Новый проект</span></div>
-      <div class="studio-project-tools"><div class="history-tools" aria-label="История изменений"><button id="undo-button" class="studio-icon-button" type="button" title="Отменить · Ctrl+Z" aria-label="Отменить изменение" disabled><svg class="studio-icon"><use href="#i-undo"/></svg></button><button id="redo-button" class="studio-icon-button" type="button" title="Повторить · Ctrl+Shift+Z" aria-label="Повторить изменение" disabled><svg class="studio-icon"><use href="#i-redo"/></svg></button></div><button id="reset-button" class="studio-icon-button reset-project" type="button" title="Начать заново" aria-label="Сбросить проект"><svg class="studio-icon"><use href="#i-reset"/></svg></button><div class="studio-project-files"><label for="load-project-input" class="studio-quiet-button"><svg class="studio-icon"><use href="#i-folder"/></svg><span>Открыть</span></label><input id="load-project-input" class="studio-file-input" type="file" accept="application/json,.json"><button id="save-project-button" class="studio-quiet-button" type="button"><svg class="studio-icon"><use href="#i-download"/></svg><span>Сохранить проект</span></button></div></div>
+      <div class="studio-project-tools"><button id="start-tour" class="studio-quiet-button" type="button" hidden>Как пользоваться?</button><div class="history-tools" aria-label="История изменений"><button id="undo-button" class="studio-icon-button" type="button" title="Отменить · Ctrl+Z" aria-label="Отменить изменение" disabled><svg class="studio-icon"><use href="#i-undo"/></svg></button><button id="redo-button" class="studio-icon-button" type="button" title="Повторить · Ctrl+Shift+Z" aria-label="Повторить изменение" disabled><svg class="studio-icon"><use href="#i-redo"/></svg></button></div><button id="reset-button" class="studio-icon-button reset-project" type="button" title="Начать заново" aria-label="Сбросить проект"><svg class="studio-icon"><use href="#i-reset"/></svg></button><div class="studio-project-files"><label for="load-project-input" class="studio-quiet-button"><svg class="studio-icon"><use href="#i-folder"/></svg><span>Открыть</span></label><input id="load-project-input" class="studio-file-input" type="file" accept="application/json,.json"><button id="save-project-button" class="studio-quiet-button" type="button"><svg class="studio-icon"><use href="#i-download"/></svg><span>Сохранить проект</span></button></div></div>
     </div>
     <p id="project-status" class="project-status" role="status" aria-live="polite"></p>
     <div id="draft-restore-banner" class="draft-banner" hidden><div><strong>Ваш черновик на месте</strong><p>Продолжите с сохранёнными настройками и фотографией.</p></div><div><button id="restore-draft-button" class="studio-small-button" type="button">Восстановить</button><button id="discard-draft-button" class="studio-text-button" type="button">Начать заново</button></div></div>
+    <aside id="tour-welcome" class="tour-welcome" aria-label="Знакомство с редактором" hidden>
+      <div><strong>Ваша первая карточка?</strong><p>Пройдите по инструментам вместе с подсказками. Все изменения остаются под вашим контролем.</p></div>
+      <div class="tour-welcome-actions"><button id="welcome-start-tour" class="studio-small-button" type="button" disabled>Пройти обучение</button><a href="guide.html">Читать инструкцию ↗</a><button id="dismiss-tour-welcome" type="button" aria-label="Скрыть предложение обучения">×</button></div>
+    </aside>
     <noscript><p class="notice">Включите JavaScript, чтобы редактировать карточку и сохранить изображение.</p></noscript>
 
     <div class="studio-layout">
@@ -116,6 +122,14 @@
 
   <dialog id="publish-dialog" class="publish-dialog" aria-labelledby="publish-dialog-title"><button id="publish-dialog-close" class="publish-dialog-close" type="button" aria-label="Закрыть"><svg class="studio-icon"><use href="#i-close"/></svg></button><span class="publish-dialog-mark" aria-hidden="true"><svg class="studio-icon"><use href="#i-check"/></svg></span><p class="studio-overline">ЕЩЁ ОДИН ШАГ К ПРОДАЖЕ</p><h2 id="publish-dialog-title">Ваша карточка в сети<span>.</span></h2><p>Сохранена в личном кабинете. Отправьте ссылку покупателю или добавьте её в соцсети магазина.</p><div class="publish-dialog-actions"><a id="publish-dialog-link" class="studio-primary-button" href="card.html">Открыть карточку ↗</a><button id="publish-dialog-copy" class="studio-secondary-button" type="button">Скопировать ссылку</button></div></dialog>
   <dialog id="fullscreen-dialog" class="studio-fullscreen-dialog" aria-label="Карточка крупным планом"><div class="fullscreen-heading"><p>Ваша карточка<span> · Крупный план</span></p><button id="fullscreen-close" class="studio-icon-button" type="button" aria-label="Закрыть крупный план"><svg class="studio-icon"><use href="#i-close"/></svg></button></div><div class="fullscreen-stage"><canvas id="fullscreen-canvas" width="900" height="1125" role="img" aria-label="Крупный предварительный просмотр карточки"></canvas></div></dialog>
-  <footer class="studio-footer"><p>SatuCard<span>.</span> <small>Инструмент для ваших продаж</small></p><a href="examples.html#about">Учебный проект · Казахстан · 2026</a></footer>
+  <section id="editor-tour" class="editor-tour" role="region" aria-labelledby="tour-title" hidden>
+    <div class="tour-top"><p id="tour-progress" role="status" aria-live="polite"></p><button id="tour-close" type="button" aria-label="Закрыть обучение">×</button></div>
+    <div class="tour-meter" aria-hidden="true"><span id="tour-meter-fill"></span></div>
+    <h2 id="tour-title" tabindex="-1"></h2><p id="tour-description"></p>
+    <p class="tour-hint">Можно менять настройки прямо во время обучения.</p>
+    <div class="tour-actions"><button id="tour-prev" type="button">Назад</button><button id="tour-next" type="button">Далее →</button></div>
+    <a class="tour-guide" href="guide.html" target="_blank" rel="noopener">Полная инструкция ↗</a>
+  </section>
+  <footer class="studio-footer"><p>SatuCard<span>.</span> <small>Инструмент для ваших продаж</small></p><a href="guide.html">Инструкция</a><a href="examples.html#about">Учебный проект · Казахстан · 2026</a></footer>
 </body>
 </html>

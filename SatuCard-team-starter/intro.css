@@ -17,3 +17,7 @@
 .hero-example[open] .hero-studio { margin-top: 10px; }
 @media(max-width:600px) { .intro-player figcaption { padding: 16px; gap: 10px; }.intro-player h2 { font-size: 17px; }.intro-player figcaption p { font-size: 11px; }.intro-play { width: 62px; height: 62px; }.intro-play svg { width: 25px; height: 25px; } }
 @media(prefers-reduced-motion:reduce) { .intro-play:hover { transform: none; } }
+
+.intro-guide-link { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:16px; padding:15px 18px; border:1px solid var(--line); border-radius:12px; font-size:13px; background:var(--surface); color:var(--muted); }
+.intro-guide-link strong { color:var(--ink); margin-left:5px; }
+.intro-guide-link:hover { border-color:var(--orange); }
