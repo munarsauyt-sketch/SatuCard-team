@@ -1,6 +1,7 @@
 import { configuration } from '../lib/supabase.js';
 import { readAccount, accountFailure, accountJson } from '../lib/account.js';
-import { validateInput, generateCopy } from '../lib/copy.js';
+import { validateInput, generateCopy, COPY_MODEL, MAX_REQUEST_BYTES } from '../lib/copy.js';
+import { reserveCopyQuota } from '../lib/copy-quota.js';
 
 // Paid generation is closed by default. Only explicitly trusted account UUIDs
 // may use it; self-service signup is not permission to spend the owner's key.
@@ -8,25 +9,15 @@ function allowedUsers() {
   return new Set((process.env.OPENAI_COPY_ALLOWED_USER_IDS || '').split(',').map(id => id.trim().toLowerCase())
     .filter(id => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id)));
 }
-// Best-effort warm-instance protection, NOT a distributed billing cap. Cold
-// starts and parallel instances reset/partition this state. Configure a provider
-// project budget/quota; use a durable atomic limiter before opening access wider.
-const usage = new Map();
-function reserve(userId) {
-  const now = Date.now(), day = Math.floor(now / 86400000);
-  for (const [id, entry] of usage) if (entry.day !== day && !entry.busy) usage.delete(id);
-  const entry = usage.get(userId) || { day, calls: 0, last: 0, busy: false };
-  if (entry.busy || (entry.calls && now - entry.last < 10000) || (entry.day === day && entry.calls >= 20)) return null;
-  if (entry.day !== day) { entry.day = day; entry.calls = 0; }
-  entry.calls++; entry.last = now; entry.busy = true; usage.set(userId, entry);
-  return () => { entry.busy = false; };
+function enabled() {
+  return process.env.OPENAI_COPY_ENABLED === 'true' && (!process.env.OPENAI_COPY_MODEL?.trim() || process.env.OPENAI_COPY_MODEL.trim() === COPY_MODEL);
 }
 export function GET() {
-  return accountJson({ available: Boolean(configuration() && process.env.OPENAI_API_KEY?.trim() && allowedUsers().size) });
+  return accountJson({ available: Boolean(enabled() && configuration() && process.env.OPENAI_API_KEY?.trim() && allowedUsers().size) });
 }
 export async function POST(request) {
   const config = configuration();
-  if (!config) return accountJson({ error: 'ИИ-помощник пока не настроен.', code: 'ai_unavailable' }, 503);
+  if (!config || !enabled()) return accountJson({ error: 'ИИ-помощник пока не настроен.', code: 'ai_unavailable' }, 503);
   let user;
   try { ({ user } = await readAccount(request, config, { complete: true })); }
   catch (error) { return accountFailure(error); }
@@ -37,7 +28,7 @@ export async function POST(request) {
   let input;
   try {
     // Bound streamed bytes too; Content-Length alone is not trustworthy.
-    if (Number(request.headers.get('content-length')) > 16000) throw new Error('Too large');
+    if (Number(request.headers.get('content-length')) > MAX_REQUEST_BYTES) throw new Error('Too large');
     const reader = request.body?.getReader();
     if (!reader) throw new Error('Missing body');
     const parts = []; let length = 0;
@@ -45,17 +36,19 @@ export async function POST(request) {
       while (true) {
         const { value, done } = await reader.read(); if (done) break;
         length += value.length;
-        if (length > 16000) { await reader.cancel(); throw new Error('Too large'); }
+        if (length > MAX_REQUEST_BYTES) { await reader.cancel(); throw new Error('Too large'); }
         parts.push(value);
       }
     } finally { reader.releaseLock(); }
     input = validateInput(JSON.parse(Buffer.concat(parts).toString('utf8')));
   } catch { return accountJson({ error: 'Проверьте название, факты, язык и тон.', code: 'invalid_input' }, 400); }
-  const release = reserve(user.id);
-  if (!release) return accountJson({ error: 'Лимит ИИ-запросов достигнут. Подождите или используйте локальный шаблон.', code: 'ai_rate_limited' }, 429);
+  let allowed;
+  try { allowed = await reserveCopyQuota(config, user.id); }
+  catch { return accountJson({ error: 'Общий лимит ИИ недоступен. Используйте локальный шаблон.', code: 'ai_quota_unavailable' }, 503); }
+  if (!allowed) return accountJson({ error: 'Лимит ИИ-запросов достигнут. Подождите не менее минуты или используйте локальный шаблон.', code: 'ai_rate_limited' }, 429);
   try {
-    return accountJson(await generateCopy(input, { key, model: process.env.OPENAI_COPY_MODEL?.trim() || 'gpt-4.1-mini' }));
+    return accountJson(await generateCopy(input, { key }));
   } catch {
-    return accountJson({ error: 'Не удалось получить корректный черновик ИИ. Попробуйте ещё раз или выберите локальный шаблон.', code: 'ai_failed' }, 502);
-  } finally { release(); }
+    return accountJson({ error: 'Не удалось получить корректный черновик ИИ. Попытка учтена в лимите. Используйте шаблон или повторите позже.', code: 'ai_failed' }, 502);
+  }
 }

@@ -500,9 +500,15 @@
       model.views.forEach(view => { for (const key of keys) view.settings[key] = model.settings[key]; view.settings.customColors = true; });
       model.settings.customColors = true; syncForm(); edited(true);
     },
-    applyCopy(draft, expectedRevision) {
+    applyCopy(draft, expectedRevision, options = {}) {
       if (expectedRevision !== revision) throw new Error('Карточка изменилась. Создайте подсказку заново, чтобы не затереть новые правки.');
-      commit(); model.settings = renderer.normalize({ ...model.settings, title: draft.title, subtitle: draft.subtitle, description: draft.description, features: draft.features });
+      const styling = {};
+      if (options.template && Object.hasOwn(renderer.templates, options.template)) {
+        styling.template = options.template;
+        if (options.replaceColors) { const palette = renderer.templates[options.template]; Object.assign(styling, { customColors: false, background: palette.background, accent: palette.accent, textColor: palette.textColor }); }
+        else styling.customColors = true;
+      }
+      commit(); model.settings = renderer.normalize({ ...model.settings, ...styling, title: draft.title, subtitle: draft.subtitle, description: draft.description, features: draft.features });
       syncForm(); edited(true);
     },
     async replacePhoto(source, expectedRevision) {
