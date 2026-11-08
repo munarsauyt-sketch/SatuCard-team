@@ -19,8 +19,8 @@
   <script src="cloud-projects.js?v=workflow-1" defer></script>
   <script src="editor.js?v=workflow-1" defer></script>
   <script src="studio-workflow.js?v=workflow-1" defer></script>
-  <script src="studio-chat.js?v=chat-1" defer></script>
-  <link rel="stylesheet" href="studio-chat.css?v=chat-1">
+  <script src="studio-chat.js?v=chat-2" defer></script>
+  <link rel="stylesheet" href="studio-chat.css?v=chat-2">
   <link rel="stylesheet" href="studio-workflow.css?v=workflow-1">
   <link rel="stylesheet" href="editor-tour.css?v=20261105">
   <script src="editor-tour.js?v=20261105" defer></script>
@@ -56,7 +56,7 @@
   <main id="main" class="studio-main">
     <div class="studio-project-bar">
       <div class="studio-project-title"><span class="project-symbol" aria-hidden="true"><svg class="studio-icon"><use href="#i-spark"/></svg></span><div><p class="studio-overline">ДИЗАЙН-СТУДИЯ / ВАШ СЛЕДУЮЩИЙ БЕСТСЕЛЛЕР</p><h1>Сделайте товар заметным<span>.</span></h1></div><span id="draft-status" class="draft-status" role="status">Новый проект</span></div>
-      <div class="studio-project-tools"><button id="open-ai-chat" class="studio-small-button ai-open-button" type="button" data-open-ai aria-controls="ai-chat" aria-expanded="false"><svg class="studio-icon" aria-hidden="true"><use href="#i-spark"/></svg>ИИ</button><button id="start-tour" class="studio-quiet-button" type="button" hidden>Как пользоваться?</button><div class="history-tools" aria-label="История изменений"><button id="undo-button" class="studio-icon-button" type="button" title="Отменить · Ctrl+Z" aria-label="Отменить изменение" disabled><svg class="studio-icon"><use href="#i-undo"/></svg></button><button id="redo-button" class="studio-icon-button" type="button" title="Повторить · Ctrl+Shift+Z" aria-label="Повторить изменение" disabled><svg class="studio-icon"><use href="#i-redo"/></svg></button></div><button id="reset-button" class="studio-icon-button reset-project" type="button" title="Начать заново" aria-label="Сбросить проект"><svg class="studio-icon"><use href="#i-reset"/></svg></button><div class="studio-project-files"><label for="load-project-input" class="studio-quiet-button"><svg class="studio-icon"><use href="#i-folder"/></svg><span>Открыть</span></label><input id="load-project-input" class="studio-file-input" type="file" accept="application/json,.json"><button id="save-project-button" class="studio-quiet-button" type="button"><svg class="studio-icon"><use href="#i-download"/></svg><span>Сохранить проект</span></button></div></div>
+      <div class="studio-project-tools"><button id="start-tour" class="studio-quiet-button" type="button" hidden>Как пользоваться?</button><div class="history-tools" aria-label="История изменений"><button id="undo-button" class="studio-icon-button" type="button" title="Отменить · Ctrl+Z" aria-label="Отменить изменение" disabled><svg class="studio-icon"><use href="#i-undo"/></svg></button><button id="redo-button" class="studio-icon-button" type="button" title="Повторить · Ctrl+Shift+Z" aria-label="Повторить изменение" disabled><svg class="studio-icon"><use href="#i-redo"/></svg></button></div><button id="reset-button" class="studio-icon-button reset-project" type="button" title="Начать заново" aria-label="Сбросить проект"><svg class="studio-icon"><use href="#i-reset"/></svg></button><div class="studio-project-files"><label for="load-project-input" class="studio-quiet-button"><svg class="studio-icon"><use href="#i-folder"/></svg><span>Открыть</span></label><input id="load-project-input" class="studio-file-input" type="file" accept="application/json,.json"><button id="save-project-button" class="studio-quiet-button" type="button"><svg class="studio-icon"><use href="#i-download"/></svg><span>Сохранить проект</span></button></div></div>
     </div>
     <p id="project-status" class="project-status" role="status" aria-live="polite"></p>
     <div id="draft-restore-banner" class="draft-banner" hidden><div><strong>Ваш черновик на месте</strong><p>Продолжите с сохранёнными настройками и фотографией.</p></div><div><button id="restore-draft-button" class="studio-small-button" type="button">Восстановить</button><button id="discard-draft-button" class="studio-text-button" type="button">Начать заново</button></div></div>
@@ -73,6 +73,7 @@
 
     <div class="studio-layout">
       <aside id="studio-settings" class="studio-sidebar" aria-label="Настройки карточки">
+        <button class="ai-sidebar-launch" type="button" data-open-ai aria-controls="ai-chat" aria-expanded="false"><svg class="studio-icon" aria-hidden="true"><use href="#i-spark"/></svg><span>Чат с ИИ</span><span aria-hidden="true">↗</span></button>
         <div class="studio-tabs" role="tablist" aria-label="Разделы редактора"><button id="tab-photo" type="button" role="tab" data-editor-tab="photo" aria-controls="panel-photo" aria-selected="true"><svg class="studio-icon"><use href="#i-image"/></svg>Фото</button><button id="tab-content" type="button" role="tab" data-editor-tab="content" aria-controls="panel-content" aria-selected="false" tabindex="-1"><svg class="studio-icon"><use href="#i-text"/></svg>Тексты</button><button id="tab-design" type="button" role="tab" data-editor-tab="design" aria-controls="panel-design" aria-selected="false" tabindex="-1"><svg class="studio-icon"><use href="#i-design"/></svg>Дизайн</button></div>
         <form id="editor-form" class="studio-form" novalidate>
           <section id="panel-photo" data-editor-panel="photo" role="tabpanel" aria-labelledby="tab-photo" tabindex="0">
@@ -152,14 +153,16 @@
     </div>
   </main>
 
-  <aside id="ai-chat" class="ai-chat" aria-labelledby="ai-chat-title" hidden>
-    <header class="ai-chat-header"><div><p class="studio-overline">ПОМОЩНИК В РЕДАКТОРЕ</p><h2 id="ai-chat-title">ИИ <span>для вашей карточки</span></h2></div><button id="ai-chat-close" class="studio-icon-button" type="button" aria-label="Закрыть чат ИИ">×</button></header>
+  <button id="open-ai-chat" class="ai-floating-launch" type="button" data-open-ai aria-controls="ai-chat" aria-expanded="false"><svg class="studio-icon" aria-hidden="true"><use href="#i-spark"/></svg>Чат с ИИ</button>
+  <div id="ai-chat-backdrop" class="ai-chat-backdrop" hidden></div>
+  <aside id="ai-chat" class="ai-chat" role="dialog" aria-modal="true" aria-labelledby="ai-chat-title" hidden>
+    <header class="ai-chat-header"><div class="ai-chat-heading"><h2 id="ai-chat-title">ИИ</h2><p id="ai-chat-connection" class="ai-connection" role="status">Проверяем подключение…</p></div><div class="ai-chat-header-actions"><button id="ai-chat-new" class="ai-quiet-button" type="button">Новый чат</button><button id="ai-chat-close" class="ai-close-button" type="button" aria-label="Закрыть чат ИИ">×</button></div></header>
     <div class="ai-chat-scroll">
-      <p id="ai-chat-connection" class="ai-connection" role="status">Проверяем подключение…</p>
-      <div id="ai-chat-setup" class="ai-chat-setup" hidden><strong>ИИ ещё не подключён</strong><p>Для настоящих ответов владелец сайта должен подключить серверный ключ OpenAI, доступ к модели и лимиты. Ключи в чат не вводите.</p><p>Фото, ручные тексты, шаблоны и скачивание уже работают бесплатно.</p><button id="ai-chat-recheck" type="button" class="studio-text-button">Проверить подключение</button></div>
-      <div class="ai-chat-context"><span>ТЕКУЩАЯ КАРТОЧКА</span><strong id="ai-chat-card"></strong><p>Могу обсудить оформление, сократить текст, перевести на қазақша и предложить один из 8 шаблонов. Изменения сначала покажу для проверки.</p></div>
+      <div id="ai-chat-setup" class="ai-chat-setup" hidden><p><strong>ИИ ещё не подключён.</strong> Ответы появятся после подключения. Редактор работает.</p><details><summary>Как подключить</summary><p>Владелец сайта подключает серверный ключ OpenAI, доступ к модели и лимиты. Не вводите ключи в чат.</p><button id="ai-chat-recheck" type="button" class="ai-quiet-button">Проверить снова</button></details></div>
+      <div id="ai-chat-welcome" class="ai-chat-welcome"><h3>Что изменим в карточке?</h3><p id="ai-chat-card"></p>
+        <div id="ai-chat-prompts" class="ai-chat-prompts" aria-label="Примеры запросов"><button type="button" data-ai-prompt="Предложи более лаконичный текст и подходящий шаблон. Не придумывай свойства товара.">Улучшить текст</button><button type="button" data-ai-language="kk" data-ai-prompt="Переведи тексты карточки на казахский, сохрани факты и оформление.">На қазақша</button><button type="button" data-ai-prompt="Предложи подходящий шаблон для этой карточки, сохрани проверенные тексты.">Выбрать стиль</button></div>
+      </div>
       <div id="ai-chat-messages" class="ai-chat-messages" role="log" aria-label="Переписка с ИИ" aria-live="polite" aria-relevant="additions"></div>
-      <div id="ai-chat-prompts" class="ai-chat-prompts" aria-label="Примеры запросов"><button type="button" data-ai-prompt="Предложи более лаконичный текст и подходящий шаблон. Не придумывай свойства товара.">Улучшить карточку</button><button type="button" data-ai-prompt="Переведи тексты карточки на казахский, сохрани факты и оформление.">Қазақша</button><button type="button" data-ai-prompt="Каких проверенных фактов не хватает для понятной карточки? Пока ничего не меняй.">Что добавить?</button></div>
       <section id="ai-chat-proposal" class="ai-chat-proposal" aria-labelledby="ai-proposal-title" hidden>
         <h3 id="ai-proposal-title">Предложение для проверки</h3><p>Только выбранная карточка. Фото, цена и бренд не меняются.</p>
         <canvas id="ai-proposal-preview" width="180" height="225" role="img" aria-label="Предпросмотр предложенной карточки"></canvas>
@@ -175,7 +178,7 @@
         <label class="ai-check"><input id="ai-reviewed" type="checkbox"> Я проверил(а) факты, перевод и оформление</label>
         <div class="workflow-actions"><button id="ai-apply" class="studio-small-button" type="button" disabled>Применить к карточке</button><button id="ai-dismiss" class="studio-text-button" type="button">Отклонить</button></div>
       </section>
-      <details class="ai-chat-options"><summary>Факты, язык и фото</summary>
+      <details class="ai-chat-options"><summary>Факты и фото <span aria-hidden="true">+</span></summary>
         <label for="ai-facts">Проверенные факты о товаре</label><textarea id="ai-facts" maxlength="2000" rows="3" placeholder="Материал, размеры, комплектация. Не добавляйте секреты и личные данные."></textarea>
         <div class="ai-options-row"><div><label for="ai-language">Язык</label><select id="ai-language"><option value="ru">Русский</option><option value="kk">Қазақша</option></select></div><div><label for="ai-tone">Тон</label><select id="ai-tone"><option value="neutral">Нейтральный</option><option value="friendly">Дружелюбный</option><option value="premium">Сдержанный</option></select></div></div>
         <label class="ai-check"><input id="ai-photo-consent" type="checkbox"> Разрешаю отправить уменьшенное основное фото OpenAI для выбора оформления. Не для определения свойств товара.</label>
@@ -183,9 +186,9 @@
     </div>
     <form id="ai-chat-form" class="ai-chat-composer">
       <p id="ai-chat-status" role="status"></p>
-      <label for="ai-chat-input">Сообщение ИИ</label><textarea id="ai-chat-input" maxlength="1500" rows="3" placeholder="Например: сделай заголовок короче и предложи тёмный шаблон" aria-describedby="ai-chat-privacy"></textarea>
-      <div class="ai-chat-send-row"><button id="ai-chat-new" class="studio-text-button" type="button">Новый чат</button><button id="ai-chat-stop" class="studio-text-button" type="button" hidden>Остановить</button><button id="ai-chat-send" class="studio-small-button" type="submit" disabled>Отправить ↑</button></div>
-      <p id="ai-chat-privacy">По «Отправить» тексты текущей карточки, факты и последние 8 сообщений уйдут OpenAI. Фото только по отдельной отметке. Каждый ответ использует общий лимит ИИ. Чат не сохраняется после перезагрузки.</p>
+      <div class="ai-input-shell"><label for="ai-chat-input" class="ai-sr-only">Сообщение ИИ</label><textarea id="ai-chat-input" maxlength="1500" rows="3" placeholder="Что изменить в карточке?" aria-describedby="ai-chat-privacy"></textarea><div class="ai-chat-send-row"><span class="ai-input-hint">Изменения — после вашей проверки</span><button id="ai-chat-stop" class="ai-quiet-button" type="button" hidden>Остановить</button><button id="ai-chat-send" class="ai-send-button" type="submit" aria-label="Отправить сообщение" disabled>Отправить <span aria-hidden="true">↑</span></button></div></div>
+
+      <details class="ai-privacy-details"><summary id="ai-chat-privacy">Тексты отправятся OpenAI. Фото — только с разрешения. <span>Подробнее</span></summary><p>По «Отправить» будут переданы тексты текущей карточки, введённые факты и последние 8 сообщений. Каждый ответ использует общий лимит ИИ. Переписка не сохраняется после перезагрузки. Не добавляйте секреты и личные данные.</p></details>
     </form>
   </aside>
 
