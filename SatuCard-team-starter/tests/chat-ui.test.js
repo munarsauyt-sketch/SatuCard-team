@@ -49,7 +49,7 @@ async function chatApp(options = {}) {
   return { ...app, requests };
 }
 function check(app, id, value = true) { app.$(id).checked = value; app.$(id).dispatchEvent(new app.w.Event('input', { bubbles: true })); }
-function send(app, text = 'Сделай короче') { app.input('ai-chat-input', text); app.$('ai-chat-form').dispatchEvent(new app.w.Event('submit', { bubbles: true, cancelable: true })); }
+function send(app, text = 'Сделай короче', approve = true) { app.input('ai-chat-input', text); app.$('ai-chat-form').dispatchEvent(new app.w.Event('submit', { bubbles: true, cancelable: true })); if (approve && !app.$('ai-data-consent').hidden) app.$('ai-data-confirm').click(); }
 test('visible AI entry, truthful disconnected state and manual editor work without AI', async () => {
   const app = await chatApp({available:false});
   try {
@@ -151,7 +151,7 @@ test('right chat has one persistent entry, readable typography and no blocking o
     assert.equal(app.$('open-ai-chat').textContent.trim(),'sAI');
     assert.equal(app.$('ai-chat').getAttribute('aria-modal'),'false');
     assert.equal(app.$('ai-chat-backdrop'),null);assert.equal(app.w.document.querySelector('.ai-sidebar-launch'),null);assert.equal(app.$('main').hasAttribute('inert'),false);
-    assert.equal(app.w.document.querySelector('.ai-privacy-details').open,false);assert.equal(app.$('ai-chat-welcome'),null);
+    assert.equal(app.w.document.querySelector('.ai-privacy-details'),null);assert.equal(app.$('ai-chat-welcome'),null);
     assert.doesNotMatch(app.$('ai-chat').textContent,/ПОМОЩНИК В РЕДАКТОРЕ|ТЕКУЩАЯ КАРТОЧКА/);
     const css=readFileSync(new URL('../studio-chat.css',import.meta.url),'utf8');assert.match(css,/width: min\(580px/);assert.match(css,/right: 24px/);assert.doesNotMatch(css,/backdrop-filter|body\.ai-chat-open\s*\{\s*overflow/);
     for(const [,size] of css.matchAll(/font-size:\s*(\d+)px/g))assert.ok(Number(size)>=14);
@@ -197,7 +197,7 @@ test('sAI composer is minimal with an accessible arrow-only send button',async()
     assert.equal(app.$('ai-chat-send').querySelector('span').getAttribute('aria-hidden'),'true');
     assert.equal(app.$('ai-chat-send').disabled,true);
     app.input('ai-chat-input','Помоги с карточкой');assert.equal(app.$('ai-chat-send').disabled,false);
-    app.$('ai-chat-send').click();await until(()=>app.requests.length===1 && app.$('ai-chat-stop').hidden);
+    app.$('ai-chat-send').click();app.$('ai-data-confirm').click();await until(()=>app.requests.length===1 && app.$('ai-chat-stop').hidden);
     assert.equal(app.requests[0].message,'Помоги с карточкой');
     assert.equal(app.$('ai-chat-messages').lastElementChild.getAttribute('aria-label'),'sAI');
     assert.equal(app.$('ai-chat-send').textContent.trim(),'↑');
@@ -215,6 +215,43 @@ test('removed welcome and suggestions stay absent through chat resets and errors
     app.$('ai-chat-new').click();absent();
     app.$('ai-chat-close').click();app.$('open-ai-chat').click();absent();
     assert.equal(app.$('ai-photo-consent').checked,false);
-    assert.equal(app.w.document.querySelector('.ai-privacy-details').open,false);
+    assert.equal(app.w.document.querySelector('.ai-privacy-details'),null);
+  }finally{app.dom.window.close();}
+});
+
+
+test('composer starts compact, grows for text and shrinks after clearing',async()=>{
+  const app=await chatApp();
+  try{
+    const input=app.$('ai-chat-input');
+    assert.equal(input.rows,1);assert.equal(input.style.height,'44px');
+    assert.equal(input.hasAttribute('aria-describedby'),false);
+    assert.equal(app.$('ai-chat-privacy'),null);assert.equal(app.w.document.querySelector('.ai-privacy-details'),null);
+    assert.doesNotMatch(app.$('ai-chat').textContent,/Тексты отправятся OpenAI|После отправки будут переданы|Переписка не сохраняется после перезагрузки/);
+    Object.defineProperty(input,'scrollHeight',{configurable:true,get:()=>input.value ? 200 : 44});
+    app.input('ai-chat-input','Длинный запрос');assert.equal(input.style.height,'140px');assert.equal(input.style.overflowY,'auto');
+    app.input('ai-chat-input','');assert.equal(input.style.height,'44px');assert.equal(input.style.overflowY,'hidden');
+    const css=readFileSync(new URL('../studio-chat.css',import.meta.url),'utf8');
+    assert.match(css,/\.ai-input-shell \{ display: flex; align-items: flex-end/);
+    assert.doesNotMatch(css,/min-height: (78|62)px|ai-privacy-details/);
+  }finally{app.dom.window.close();}
+});
+test('first-send data consent is contextual, cancelable and never implies photo consent',async()=>{
+  const app=await chatApp();
+  try{
+    assert.equal(app.$('ai-data-consent').hidden,true);send(app,'Первый запрос',false);
+    assert.equal(app.requests.length,0);assert.equal(app.$('ai-data-consent').hidden,false);
+    assert.match(app.$('ai-data-question').textContent,/OpenAI.*запрос.*карточки.*факты.*историю/);
+    app.$('ai-data-cancel').click();assert.equal(app.$('ai-data-consent').hidden,true);assert.equal(app.requests.length,0);
+    assert.equal(app.$('ai-chat-input').value,'Первый запрос');
+    send(app,'Первый запрос',false);app.$('ai-data-confirm').click();app.$('ai-data-confirm').click();
+    await until(()=>app.requests.length===1 && app.$('ai-chat-stop').hidden);
+    assert.equal(app.requests[0].imageDataUrl,undefined);assert.equal(app.$('ai-photo-consent').checked,false);
+    send(app,'Продолжение',false);await until(()=>app.requests.length===2 && app.$('ai-chat-stop').hidden);
+    assert.equal(app.$('ai-data-consent').hidden,true);
+    app.$('ai-chat-new').click();send(app,'Другой чат',false);assert.equal(app.$('ai-data-consent').hidden,false);assert.equal(app.requests.length,2);
+    app.$('ai-chat-close').click();app.$('open-ai-chat').click();assert.equal(app.$('ai-data-consent').hidden,true);
+    app.$('ai-data-confirm').click();assert.equal(app.requests.length,2);
+    send(app,'Новый запрос',false);app.input('ai-chat-input','Исправленный запрос');assert.equal(app.$('ai-data-consent').hidden,true);
   }finally{app.dom.window.close();}
 });

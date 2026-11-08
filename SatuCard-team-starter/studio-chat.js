@@ -8,13 +8,18 @@
     started = true;
     const editor = window.SATUCARD_EDITOR, renderer = window.SATUCARD_RENDERER;
     let configured = false, busy = false, generation = 0, controller = null, proposal = null, proposalRevision = -1;
-    let history = [], applying = false, account, statusGeneration = 0, opener = $('open-ai-chat');
+    let history = [], textConsent = false, applying = false, account, statusGeneration = 0, opener = $('open-ai-chat');
     let activeView = editor.snapshot().model.activeViewId, activePhoto = editor.snapshot().model.photoId;
     const status = (text, error = false) => { $('ai-chat-status').textContent = text; $('ai-chat-status').classList.toggle('error', error); };
-    const buttons = () => { $('ai-chat-send').disabled = busy || !configured || !$('ai-chat-input').value.trim(); $('ai-chat-stop').hidden = !busy; $('ai-chat-input').readOnly = busy; };
+    const buttons = () => { $('ai-chat-send').disabled = busy || !configured || !$('ai-chat-input').value.trim(); $('ai-chat-stop').hidden = !busy; $('ai-chat-input').readOnly = busy; resizeInput(); };
+    function resizeInput() {
+      const input = $('ai-chat-input'); input.style.height = 'auto';
+      const height = Math.max(44, Math.min(140, input.scrollHeight));
+      input.style.height = height + 'px'; input.style.overflowY = input.scrollHeight > 140 ? 'auto' : 'hidden';
+    }
     function discardProposal() { proposal = null; $('ai-chat-proposal').hidden = true; $('ai-reviewed').checked = false; $('ai-apply').disabled = true; }
-    function invalidate(text) { ++generation; controller?.abort(); controller = null; busy = false; discardProposal(); buttons(); if (text !== undefined) status(text); }
-    function clearChat(text) { invalidate(text); history = []; $('ai-chat-messages').replaceChildren(); }
+    function invalidate(text) { $('ai-data-consent').hidden = true; ++generation; controller?.abort(); controller = null; busy = false; discardProposal(); buttons(); if (text !== undefined) status(text); }
+    function clearChat(text) { invalidate(text); textConsent = false; history = []; $('ai-chat-messages').replaceChildren(); }
     function append(role, content) {
       const row = document.createElement('div'), label = document.createElement('strong'), paragraph = document.createElement('p');
       row.className = 'ai-message'; row.dataset.role = role; row.setAttribute('aria-label', role === 'user' ? 'Вы' : 'sAI'); label.textContent = role === 'user' ? 'Вы' : 'sAI'; paragraph.textContent = content;
@@ -28,7 +33,7 @@
       opener = event?.currentTarget || $('open-ai-chat');
       $('ai-chat').hidden = false; document.body.classList.add('ai-chat-open');
       document.querySelectorAll('[data-open-ai]').forEach(button => button.setAttribute('aria-expanded', 'true'));
-      $('ai-chat-input').focus();
+      resizeInput(); $('ai-chat-input').focus();
     }
     function close() {
       const wasBusy = busy; invalidate(wasBusy ? 'Запрос остановлен. Попытка могла учитываться в лимите.' : '');
@@ -57,7 +62,13 @@
       } finally { if (token === statusGeneration) { $('ai-chat-setup').hidden = configured; $('ai-chat-recheck').disabled = false; buttons(); } }
     }
     $('ai-chat-recheck').addEventListener('click', checkConnection);
-    $('ai-chat-input').addEventListener('input', buttons);
+    $('ai-chat-input').addEventListener('input', () => { $('ai-data-consent').hidden = true; buttons(); });
+    window.addEventListener('resize', resizeInput);
+    $('ai-data-cancel').addEventListener('click', () => { $('ai-data-consent').hidden = true; $('ai-chat-input').focus(); });
+    $('ai-data-confirm').addEventListener('click', () => {
+      if ($('ai-data-consent').hidden) return;
+      textConsent = true; $('ai-data-consent').hidden = true; $('ai-chat-form').requestSubmit(); $('ai-chat-input').focus();
+    });
     $('ai-chat-new').addEventListener('click', () => { clearChat(''); status(''); $('ai-chat-input').value = ''; $('ai-facts').value = ''; $('ai-photo-consent').checked = false; buttons(); $('ai-chat-input').focus(); });
     $('ai-chat-stop').addEventListener('click', () => invalidate('Ожидание остановлено. Уже отправленный запрос может учитываться в лимите и расходах.'));
     $('ai-dismiss').addEventListener('click', () => { discardProposal(); status('Предложение отклонено. Можно уточнить запрос.'); });
@@ -98,6 +109,7 @@
     $('ai-chat-form').addEventListener('submit', async event => {
       event.preventDefault(); if (busy || !configured) return;
       const message = $('ai-chat-input').value.trim(); if (!message || message.length > 1500) return;
+      if (!textConsent) { $('ai-data-consent').hidden = false; $('ai-data-confirm').focus(); return; }
       invalidate(); const token = generation, snapshot = editor.snapshot(), revision = editor.revision;
       const current = () => token === generation && revision === editor.revision;
       busy = true; buttons(); status('sAI отвечает…');
