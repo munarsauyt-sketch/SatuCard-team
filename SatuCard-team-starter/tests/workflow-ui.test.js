@@ -187,7 +187,8 @@ test('photo batch upload respects file limit and switching cards cancels stale i
     const choose = files => { Object.defineProperty(picker, 'files', { configurable: true, value: files }); picker.dispatchEvent(new w.Event('change', { bubbles: true })); };
     const photo = name => new w.File([new Uint8Array([1, 2, 3])], name, { type: 'image/png' });
     choose([photo('a.png'), photo('b.png')]); await until(() => w.SATUCARD_EDITOR.snapshot().model.libraryIds.length === 3);
-    assert.equal(w.SATUCARD_EDITOR.snapshot().images.photos.length, 3);
+    assert.equal(w.SATUCARD_EDITOR.snapshot().images.photos.length, 2, 'real photos replace the selected demo');
+    assert.ok(w.SATUCARD_EDITOR.snapshot().model.photoIds.every(id => !id.startsWith('sample-')));
     const before = w.SATUCARD_EDITOR.snapshot(true).serialized;
     choose(Array.from({ length: 10 }, (_, i) => photo(`${i}.png`))); assert.match($('file-status').textContent, /до 12/);
     assert.equal(w.SATUCARD_EDITOR.snapshot(true).serialized, before);
@@ -222,7 +223,7 @@ test('editing between decoded upload files keeps pending photo assets alive', as
     await until(() => Boolean(release)); // First photo registered, second decoding.
     $('apply-brand').click(); release();
     await until(() => w.SATUCARD_EDITOR.snapshot().model.libraryIds.length === 3);
-    assert.equal(w.SATUCARD_EDITOR.snapshot().images.photos.length, 3);
+    assert.equal(w.SATUCARD_EDITOR.snapshot().images.photos.length, 2);
     assert.equal($('photo-library').children.length, 3);
     assert.doesNotThrow(() => validateProject(JSON.parse(w.SATUCARD_EDITOR.snapshot(true).serialized)));
   } finally { app.dom.window.close(); }

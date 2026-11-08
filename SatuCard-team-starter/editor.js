@@ -259,7 +259,12 @@
         const source = await optimizedImage(file, 1800); added.push(await registerAsset(source));
         if (version !== photoVersion || viewId !== model.activeViewId) throw new Error('Выбор карточки или фото изменился. Загрузите файлы ещё раз.');
       }
-      commit(); model.libraryIds.push(...added); setPhotoIds([...model.photoIds, ...added].slice(0, 3));
+      commit(); model.libraryIds.push(...added);
+      // A first real upload must not quietly export the demo product alongside it.
+      const selected = model.photoIds.filter(id => !id.startsWith('sample-'));
+      const photoIds = [...selected, ...added].slice(0, 3);
+      if (photoIds[0] !== model.photoId) model.settings.photo = renderer.normalize({}).photo;
+      setPhotoIds(photoIds);
       syncForm(); edited(true); status('file-status', `Добавлено фото: ${added.length}. Нажимайте миниатюры, чтобы выбрать до 3 для этой карточки.`);
     } catch (error) { added.forEach(id => assets.delete(id)); if (version === photoVersion) status('file-status', error.message, true); }
     finally { added.forEach(id => pendingAssets.delete(id)); releaseUnusedAssets(); }
