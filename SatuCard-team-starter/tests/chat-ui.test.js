@@ -148,10 +148,10 @@ test('right chat has one persistent entry, readable typography and no blocking o
   const app = await chatApp({available:false});
   try {
     assert.equal(app.w.document.querySelectorAll('[data-open-ai]').length,1);
-    assert.equal(app.$('open-ai-chat').textContent.trim(),'Чат с ИИ');
+    assert.equal(app.$('open-ai-chat').textContent.trim(),'sAI');
     assert.equal(app.$('ai-chat').getAttribute('aria-modal'),'false');
     assert.equal(app.$('ai-chat-backdrop'),null);assert.equal(app.w.document.querySelector('.ai-sidebar-launch'),null);assert.equal(app.$('main').hasAttribute('inert'),false);
-    assert.equal(app.w.document.querySelector('.ai-privacy-details').open,false);assert.equal(app.$('ai-chat-welcome').hidden,false);
+    assert.equal(app.w.document.querySelector('.ai-privacy-details').open,false);assert.equal(app.$('ai-chat-welcome'),null);
     assert.doesNotMatch(app.$('ai-chat').textContent,/ПОМОЩНИК В РЕДАКТОРЕ|ТЕКУЩАЯ КАРТОЧКА/);
     const css=readFileSync(new URL('../studio-chat.css',import.meta.url),'utf8');assert.match(css,/width: min\(580px/);assert.match(css,/right: 24px/);assert.doesNotMatch(css,/backdrop-filter|body\.ai-chat-open\s*\{\s*overflow/);
     for(const [,size] of css.matchAll(/font-size:\s*(\d+)px/g))assert.ok(Number(size)>=14);
@@ -164,16 +164,16 @@ test('editor remains usable beside the chat, keyboard is not trapped and close r
   try{
     assert.equal(app.$('main').hasAttribute('inert'),false);
     app.input('product-name','Редактирование рядом с чатом');
-    assert.equal(app.$('ai-chat').hidden,false);assert.equal(app.$('ai-chat-card').textContent,'Редактирование рядом с чатом');
+    assert.equal(app.$('ai-chat').hidden,false);assert.equal(app.w.SATUCARD_EDITOR.snapshot().model.settings.title,'Редактирование рядом с чатом');
     const tab=new app.w.KeyboardEvent('keydown',{key:'Tab',shiftKey:true,bubbles:true,cancelable:true});
     app.$('ai-chat-new').focus();app.$('ai-chat-new').dispatchEvent(tab);assert.equal(tab.defaultPrevented,false);
     app.$('ai-chat-close').click();assert.equal(app.w.document.activeElement,app.$('open-ai-chat'));assert.equal(app.w.document.body.classList.contains('ai-chat-open'),false);
   }finally{app.dom.window.close();}
 });
-test('Kazakh quick prompt updates language without a fake answer',async()=>{
+test('Kazakh language selection still works without suggestion buttons',async()=>{
   const app=await chatApp();
   try{
-    app.w.document.querySelector('[data-ai-language="kk"]').click();assert.equal(app.$('ai-language').value,'kk');
+    app.input('ai-language','kk');assert.equal(app.$('ai-language').value,'kk');
     assert.equal(app.requests.length,0);assert.equal(app.$('ai-chat-messages').children.length,0);send(app);await until(()=>app.requests.length===1);assert.equal(app.requests[0].language,'kk');
   }finally{app.dom.window.close();}
 });
@@ -181,4 +181,40 @@ test('Kazakh quick prompt updates language without a fake answer',async()=>{
 test('repeated open cannot leave the editor inert after close',async()=>{
   const app=await chatApp();
   try{app.$('open-ai-chat').click();app.$('open-ai-chat').click();app.$('ai-chat-close').click();assert.equal(app.$('main').hasAttribute('inert'),false);assert.equal(app.$('ai-chat-backdrop'),null);}finally{app.dom.window.close();}
+});
+
+
+test('sAI composer is minimal with an accessible arrow-only send button',async()=>{
+  const app=await chatApp();
+  try{
+    assert.equal(app.$('ai-chat-title').textContent,'sAI');
+    assert.equal(app.$('open-ai-chat').getAttribute('aria-label'),'Открыть чат sAI');
+    assert.equal(app.$('ai-chat-input').hasAttribute('placeholder'),false);
+    assert.equal(app.w.document.querySelector('label[for="ai-chat-input"]').textContent,'Сообщение sAI');
+    assert.equal(app.w.document.querySelector('.ai-input-hint'),null);
+    assert.equal(app.$('ai-chat-send').textContent.trim(),'↑');
+    assert.equal(app.$('ai-chat-send').getAttribute('aria-label'),'Отправить сообщение');
+    assert.equal(app.$('ai-chat-send').querySelector('span').getAttribute('aria-hidden'),'true');
+    assert.equal(app.$('ai-chat-send').disabled,true);
+    app.input('ai-chat-input','Помоги с карточкой');assert.equal(app.$('ai-chat-send').disabled,false);
+    app.$('ai-chat-send').click();await until(()=>app.requests.length===1 && app.$('ai-chat-stop').hidden);
+    assert.equal(app.requests[0].message,'Помоги с карточкой');
+    assert.equal(app.$('ai-chat-messages').lastElementChild.getAttribute('aria-label'),'sAI');
+    assert.equal(app.$('ai-chat-send').textContent.trim(),'↑');
+  }finally{app.dom.window.close();}
+});
+test('removed welcome and suggestions stay absent through chat resets and errors',async()=>{
+  const app=await chatApp({reply:async()=>Response.json({error:'Попробуйте позже'},{status:429})});
+  try{
+    const absent=()=>{
+      for(const id of ['ai-chat-welcome','ai-chat-prompts','ai-chat-card'])assert.equal(app.$(id),null);
+      assert.equal(app.w.document.querySelector('[data-ai-prompt]'),null);
+      assert.doesNotMatch(app.$('ai-chat').textContent,/Что изменим в карточке|Изменения — после вашей проверки|Улучшить текст|Выбрать стиль/);
+    };
+    absent();send(app);await until(()=>/Попробуйте позже/.test(app.$('ai-chat-status').textContent));absent();
+    app.$('ai-chat-new').click();absent();
+    app.$('ai-chat-close').click();app.$('open-ai-chat').click();absent();
+    assert.equal(app.$('ai-photo-consent').checked,false);
+    assert.equal(app.w.document.querySelector('.ai-privacy-details').open,false);
+  }finally{app.dom.window.close();}
 });

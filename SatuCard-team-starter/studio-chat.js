@@ -14,11 +14,10 @@
     const buttons = () => { $('ai-chat-send').disabled = busy || !configured || !$('ai-chat-input').value.trim(); $('ai-chat-stop').hidden = !busy; $('ai-chat-input').readOnly = busy; };
     function discardProposal() { proposal = null; $('ai-chat-proposal').hidden = true; $('ai-reviewed').checked = false; $('ai-apply').disabled = true; }
     function invalidate(text) { ++generation; controller?.abort(); controller = null; busy = false; discardProposal(); buttons(); if (text !== undefined) status(text); }
-    function clearChat(text) { invalidate(text); history = []; $('ai-chat-messages').replaceChildren(); $('ai-chat-prompts').hidden = false; $('ai-chat-welcome').hidden = false; }
-    function cardLabel() { $('ai-chat-card').textContent = editor.snapshot().model.settings.title || 'Без названия'; }
+    function clearChat(text) { invalidate(text); history = []; $('ai-chat-messages').replaceChildren(); }
     function append(role, content) {
       const row = document.createElement('div'), label = document.createElement('strong'), paragraph = document.createElement('p');
-      row.className = 'ai-message'; row.dataset.role = role; row.setAttribute('aria-label', role === 'user' ? 'Вы' : 'ИИ'); $('ai-chat-welcome').hidden = true; label.textContent = role === 'user' ? 'Вы' : 'ИИ'; paragraph.textContent = content;
+      row.className = 'ai-message'; row.dataset.role = role; row.setAttribute('aria-label', role === 'user' ? 'Вы' : 'sAI'); label.textContent = role === 'user' ? 'Вы' : 'sAI'; paragraph.textContent = content;
       row.append(label, paragraph); $('ai-chat-messages').append(row);
       // Match the bounded server context; old turns are not silently stored forever.
       while ($('ai-chat-messages').children.length > 8) $('ai-chat-messages').firstElementChild.remove();
@@ -29,7 +28,7 @@
       opener = event?.currentTarget || $('open-ai-chat');
       $('ai-chat').hidden = false; document.body.classList.add('ai-chat-open');
       document.querySelectorAll('[data-open-ai]').forEach(button => button.setAttribute('aria-expanded', 'true'));
-      cardLabel(); $('ai-chat-input').focus();
+      $('ai-chat-input').focus();
     }
     function close() {
       const wasBusy = busy; invalidate(wasBusy ? 'Запрос остановлен. Попытка могла учитываться в лимите.' : '');
@@ -42,12 +41,6 @@
     $('ai-chat').addEventListener('keydown', event => {
       if (event.key === 'Escape') { event.preventDefault(); close(); }
     });
-    document.querySelectorAll('[data-ai-prompt]').forEach(button => button.addEventListener('click', () => {
-      if (busy) return;
-      $('ai-chat-input').value = button.dataset.aiPrompt;
-      if (button.dataset.aiLanguage === 'kk') { $('ai-language').value = 'kk'; clearChat('Язык изменён. Новый запрос начнёт новую переписку.'); }
-      buttons(); $('ai-chat-input').focus();
-    }));
     async function checkConnection() {
       const token = ++statusGeneration; $('ai-chat-recheck').disabled = true;
       try {
@@ -107,7 +100,7 @@
       const message = $('ai-chat-input').value.trim(); if (!message || message.length > 1500) return;
       invalidate(); const token = generation, snapshot = editor.snapshot(), revision = editor.revision;
       const current = () => token === generation && revision === editor.revision;
-      busy = true; buttons(); status('ИИ отвечает…');
+      busy = true; buttons(); status('sAI отвечает…');
       const ownController = new AbortController(); controller = ownController;
       const timer = setTimeout(() => ownController.abort(), 35000);
       let userRow;
@@ -120,12 +113,12 @@
         const settings = snapshot.model.settings;
         const body = { message, history: history.slice(-8), card: { title: settings.title, subtitle: settings.subtitle, description: settings.description, features: [...settings.features].filter(Boolean), template: settings.template }, facts: $('ai-facts').value, language: $('ai-language').value, tone: $('ai-tone').value };
         if ($('ai-photo-consent').checked) { body.imageDataUrl = thumbnail(snapshot.images.photo); body.imageConsent = true; }
-        userRow = append('user', message); $('ai-chat-prompts').hidden = true;
+        userRow = append('user', message);
         const response = await fetch('api/chat', { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}`, 'content-type': 'application/json' }, body: JSON.stringify(body), signal: ownController.signal });
         const result = await response.json();
         if (!current()) return;
         if (!response.ok) throw new Error(result.error || 'Не удалось получить ответ. Попробуйте позже.');
-        if (!validReply(result)) throw new Error('Некорректный ответ ИИ. Карточка не изменена.');
+        if (!validReply(result)) throw new Error('Некорректный ответ sAI. Карточка не изменена.');
         append('assistant', result.reply);
         history.push({ role: 'user', content: message }, { role: 'assistant', content: result.reply });
         history = history.slice(-8); while (history.reduce((sum, item) => sum + item.content.length, 0) > 12000) history.splice(0, 2);
@@ -140,7 +133,7 @@
         } else status('Можно продолжить разговор. Карточка не менялась.');
         userRow = null;
         $('ai-chat-messages').lastElementChild?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
-      } catch (error) { if (current()) { userRow?.remove(); if (!$('ai-chat-messages').children.length) $('ai-chat-welcome').hidden = false; status(error.name === 'AbortError' ? 'Время ожидания истекло. Попытка могла учитываться в лимите. Повторите позже.' : error.message, true); } }
+      } catch (error) { if (current()) { userRow?.remove(); status(error.name === 'AbortError' ? 'Время ожидания истекло. Попытка могла учитываться в лимите. Повторите позже.' : error.message, true); } }
       finally { clearTimeout(timer); if (token === generation) { controller = null; busy = false; buttons(); } }
     });
     $('ai-apply').addEventListener('click', () => {
@@ -153,7 +146,7 @@
       } catch (error) { status(error.message, true); } finally { applying = false; }
     });
     document.addEventListener('satucard:editor-change', () => {
-      cardLabel(); if (applying) return;
+      if (applying) return;
       const model = editor.snapshot().model, view = model.activeViewId;
       const photoChanged = activePhoto !== model.photoId; activePhoto = model.photoId;
       if (view !== activeView) { activeView = view; clearChat('Выбрана другая карточка. Начните новую переписку.'); $('ai-photo-consent').checked = false; $('ai-facts').value = ''; $('ai-chat-input').value = ''; buttons(); }
@@ -168,7 +161,7 @@
     });
     window.SATUCARD_AUTH?.getSession().then(session => { if (account === undefined) account = session?.user?.id || null; }).catch(() => {});
     window.addEventListener('pagehide', () => { clearChat(); $('ai-photo-consent').checked = false; });
-    cardLabel(); checkConnection();
+    checkConnection();
   }
   document.addEventListener('satucard:editor-ready', start);
   if ($('editor-form')?.dataset.editorReady === 'true') start();

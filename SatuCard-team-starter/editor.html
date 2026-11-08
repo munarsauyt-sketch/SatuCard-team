@@ -19,8 +19,8 @@
   <script src="cloud-projects.js?v=workflow-1" defer></script>
   <script src="editor.js?v=workflow-1" defer></script>
   <script src="studio-workflow.js?v=workflow-1" defer></script>
-  <script src="studio-chat.js?v=chat-3" defer></script>
-  <link rel="stylesheet" href="studio-chat.css?v=chat-3">
+  <script src="studio-chat.js?v=chat-4" defer></script>
+  <link rel="stylesheet" href="studio-chat.css?v=chat-4">
   <link rel="stylesheet" href="studio-workflow.css?v=workflow-1">
   <link rel="stylesheet" href="editor-tour.css?v=20261105">
   <script src="editor-tour.js?v=20261105" defer></script>
@@ -152,15 +152,12 @@
     </div>
   </main>
 
-  <button id="open-ai-chat" class="ai-floating-launch" type="button" data-open-ai aria-controls="ai-chat" aria-expanded="false"><svg class="studio-icon" aria-hidden="true"><use href="#i-spark"/></svg>Чат с ИИ</button>
+  <button id="open-ai-chat" class="ai-floating-launch" type="button" data-open-ai aria-controls="ai-chat" aria-expanded="false" aria-label="Открыть чат sAI"><svg class="studio-icon" aria-hidden="true"><use href="#i-spark"/></svg>sAI</button>
   <aside id="ai-chat" class="ai-chat" role="dialog" aria-modal="false" aria-labelledby="ai-chat-title" hidden>
-    <header class="ai-chat-header"><div class="ai-chat-heading"><h2 id="ai-chat-title">ИИ</h2><p id="ai-chat-connection" class="ai-connection" role="status">Проверяем подключение…</p></div><div class="ai-chat-header-actions"><button id="ai-chat-new" class="ai-quiet-button" type="button">Новый чат</button><button id="ai-chat-close" class="ai-close-button" type="button" aria-label="Закрыть чат ИИ">×</button></div></header>
+    <header class="ai-chat-header"><div class="ai-chat-heading"><h2 id="ai-chat-title">sAI</h2><p id="ai-chat-connection" class="ai-connection" role="status">Проверяем подключение…</p></div><div class="ai-chat-header-actions"><button id="ai-chat-new" class="ai-quiet-button" type="button">Новый чат</button><button id="ai-chat-close" class="ai-close-button" type="button" aria-label="Закрыть чат sAI">×</button></div></header>
     <div class="ai-chat-scroll">
-      <div id="ai-chat-setup" class="ai-chat-setup" hidden><p><strong>ИИ ещё не подключён.</strong> Ответы появятся после подключения. Редактор работает.</p><details><summary>Как подключить</summary><p>Владелец сайта подключает серверный ключ OpenAI, доступ к модели и лимиты. Не вводите ключи в чат.</p><button id="ai-chat-recheck" type="button" class="ai-quiet-button">Проверить снова</button></details></div>
-      <div id="ai-chat-welcome" class="ai-chat-welcome"><h3>Что изменим в карточке?</h3><p id="ai-chat-card"></p>
-        <div id="ai-chat-prompts" class="ai-chat-prompts" aria-label="Примеры запросов"><button type="button" data-ai-prompt="Предложи более лаконичный текст и подходящий шаблон. Не придумывай свойства товара.">Улучшить текст</button><button type="button" data-ai-language="kk" data-ai-prompt="Переведи тексты карточки на казахский, сохрани факты и оформление.">На қазақша</button><button type="button" data-ai-prompt="Предложи подходящий шаблон для этой карточки, сохрани проверенные тексты.">Выбрать стиль</button></div>
-      </div>
-      <div id="ai-chat-messages" class="ai-chat-messages" role="log" aria-label="Переписка с ИИ" aria-live="polite" aria-relevant="additions"></div>
+      <div id="ai-chat-setup" class="ai-chat-setup" hidden><p><strong>sAI ещё не подключён.</strong> Ответы появятся после подключения. Редактор работает.</p><details><summary>Как подключить</summary><p>Владелец сайта подключает серверный ключ OpenAI, доступ к модели и лимиты. Не вводите ключи в чат.</p><button id="ai-chat-recheck" type="button" class="ai-quiet-button">Проверить снова</button></details></div>
+      <div id="ai-chat-messages" class="ai-chat-messages" role="log" aria-label="Переписка с sAI" aria-live="polite" aria-relevant="additions"></div>
       <section id="ai-chat-proposal" class="ai-chat-proposal" aria-labelledby="ai-proposal-title" hidden>
         <h3 id="ai-proposal-title">Предложение для проверки</h3><p>Только выбранная карточка. Фото, цена и бренд не меняются.</p>
         <canvas id="ai-proposal-preview" width="180" height="225" role="img" aria-label="Предпросмотр предложенной карточки"></canvas>
@@ -184,9 +181,9 @@
     </div>
     <form id="ai-chat-form" class="ai-chat-composer">
       <p id="ai-chat-status" role="status"></p>
-      <div class="ai-input-shell"><label for="ai-chat-input" class="ai-sr-only">Сообщение ИИ</label><textarea id="ai-chat-input" maxlength="1500" rows="3" placeholder="Что изменить в карточке?" aria-describedby="ai-chat-privacy"></textarea><div class="ai-chat-send-row"><span class="ai-input-hint">Изменения — после вашей проверки</span><button id="ai-chat-stop" class="ai-quiet-button" type="button" hidden>Остановить</button><button id="ai-chat-send" class="ai-send-button" type="submit" aria-label="Отправить сообщение" disabled>Отправить <span aria-hidden="true">↑</span></button></div></div>
+      <div class="ai-input-shell"><label for="ai-chat-input" class="ai-sr-only">Сообщение sAI</label><textarea id="ai-chat-input" maxlength="1500" rows="3" aria-describedby="ai-chat-privacy"></textarea><div class="ai-chat-send-row"><button id="ai-chat-stop" class="ai-quiet-button" type="button" hidden>Остановить</button><button id="ai-chat-send" class="ai-send-button" type="submit" aria-label="Отправить сообщение" disabled><span aria-hidden="true">↑</span></button></div></div>
 
-      <details class="ai-privacy-details"><summary id="ai-chat-privacy">Тексты отправятся OpenAI. Фото — только с разрешения. <span>Подробнее</span></summary><p>По «Отправить» будут переданы тексты текущей карточки, введённые факты и последние 8 сообщений. Каждый ответ использует общий лимит ИИ. Переписка не сохраняется после перезагрузки. Не добавляйте секреты и личные данные.</p></details>
+      <details class="ai-privacy-details"><summary id="ai-chat-privacy">Тексты отправятся OpenAI. Фото — только с разрешения. <span>Подробнее</span></summary><p>После отправки будут переданы тексты текущей карточки, введённые факты и последние 8 сообщений. Каждый ответ использует общий лимит ИИ. Переписка не сохраняется после перезагрузки. Не добавляйте секреты и личные данные.</p></details>
     </form>
   </aside>
 
