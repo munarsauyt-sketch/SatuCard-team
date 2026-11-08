@@ -30,6 +30,21 @@
       /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(value));
   }
 
+  function parseViews(value, activeViewId, normalize) {
+    if (value === undefined) return {};
+    if (!Array.isArray(value) || value.length < 1 || value.length > 8) throw new Error('Комплект должен содержать от 1 до 8 карточек.');
+    const ids = new Set();
+    const views = value.map(view => {
+      if (!view || typeof view.id !== 'string' || !/^[a-zA-Z0-9_-]{1,64}$/.test(view.id) || ids.has(view.id) ||
+          typeof view.label !== 'string' || !view.label.trim() || view.label.length > 60 ||
+          !view.settings || typeof view.settings !== 'object' || Array.isArray(view.settings)) throw new Error('Некорректная карточка в комплекте.');
+      ids.add(view.id);
+      return { id: view.id, label: view.label.trim(), settings: normalize(view.settings) };
+    });
+    if (!ids.has(activeViewId)) throw new Error('Не найдена активная карточка комплекта.');
+    return { views, activeViewId };
+  }
+
   function parseProject(text, normalize) {
     if (typeof text !== 'string' || text.length > MAX_SOURCE_LENGTH * 2 + 65536) {
       throw new Error('Файл проекта слишком большой. Максимум 17 МБ.');
@@ -42,12 +57,14 @@
         !validSource(parsed.photo) || !validSource(parsed.logo)) {
       throw new Error('Неподдерживаемый проект. Используйте файл .satucard.json из редактора.');
     }
-    return { settings: normalize(parsed.settings), photo: parsed.photo, logo: parsed.logo };
+    const set = parseViews(parsed.views, parsed.activeViewId, normalize);
+    return { settings: set.views?.find(view => view.id === set.activeViewId).settings || normalize(parsed.settings), photo: parsed.photo, logo: parsed.logo, ...set };
   }
 
-  function serializeProject(settings, photo, logo) {
+  function serializeProject(settings, photo, logo, set = {}) {
     if (!validSource(photo) || !validSource(logo)) throw new Error('Не удалось сохранить изображения проекта.');
-    return JSON.stringify({ app: 'SatuCard', schemaVersion: 1, savedAt: new Date().toISOString(), settings, photo, logo });
+    const views = parseViews(set.views, set.activeViewId, clone);
+    return JSON.stringify({ app: 'SatuCard', schemaVersion: 1, savedAt: new Date().toISOString(), settings, photo, logo, ...views });
   }
 
   async function openDraftDatabase() {

@@ -1,6 +1,6 @@
 'use strict';
 
-// Editing stays on this device. Publication sends only the finished card.
+// Editing is local. Cloud save and AI requests are separate explicit actions.
 (() => {
   const $ = id => document.getElementById(id);
   const form = $('editor-form'), renderer = window.SATUCARD_RENDERER, project = window.SATUCARD_PROJECT;
@@ -28,6 +28,13 @@
   let historyTimer, draftTimer, thumbTimer, lastPublished = '';
   let photoVersion = 0, logoVersion = 0, projectVersion = 0;
   let draftQueue = Promise.resolve();
+  let revision = 0;
+  function syncActiveView() {
+    if (!model.views) { model.activeViewId = "main"; model.views = [{ id: "main", label: "Главная", settings: clone(model.settings) }]; }
+    const active = model.views.find(view => view.id === model.activeViewId);
+    if (active) active.settings = clone(model.settings);
+  }
+  function notifyChange() { revision++; document.dispatchEvent(new Event("satucard:editor-change")); }
   const clone = value => JSON.parse(JSON.stringify(value));
   const imageAssets = () => ({ photo: assets.get(model.photoId)?.image || null, logo: assets.get(model.logoId)?.image || null });
   const filename = () => (model.settings.title || 'SatuCard').replace(/[<>:"/\\|?*\u0000-\u001f]/g, '').slice(0, 60).trim() || 'SatuCard';
@@ -117,7 +124,7 @@
   function updateHistory() { $('undo-button').disabled = !history?.canUndo; $('redo-button').disabled = !history?.canRedo; }
   function commit() {
     clearTimeout(historyTimer); historyTimer = null; if (!initialized) return;
-    history.push(model); updateHistory();
+    syncActiveView(); history.push(model); updateHistory();
   }
   function releaseUnusedAssets() {
     if (!history) return;
@@ -129,18 +136,25 @@
     if (pendingDraft) { pendingDraft = null; $('draft-restore-banner').hidden = true; }
     clearPublished(); status('download-status', ''); requestRender(thumbs);
     if (immediate) { commit(); releaseUnusedAssets(); } else { clearTimeout(historyTimer); historyTimer = setTimeout(commit, 600); }
-    saveDraftSoon();
+    notifyChange(); saveDraftSoon();
+  }
+  function cancelDrag() {
+    if (!dragging) return;
+    const pointerId = dragging.id; dragging = null; canvas.classList.remove('is-dragging');
+    if (canvas.hasPointerCapture?.(pointerId)) canvas.releasePointerCapture(pointerId);
   }
   function undoRedo(direction) {
+    if (dragging) { cancelDrag(); commit(); }
+    document.dispatchEvent(new Event('satucard:history-navigation'));
     // Flush an in-progress edit before moving the history cursor.
     if (historyTimer) { clearTimeout(historyTimer); historyTimer = null; commit(); }
     ++photoVersion; ++logoVersion; ++projectVersion;
     model = direction === 'undo' ? history.undo() : history.redo();
-    syncForm(); updateHistory(); clearPublished(); requestRender(true); fitPreview(); saveDraftSoon();
+    syncForm(); updateHistory(); clearPublished(); requestRender(true); fitPreview(); notifyChange(); saveDraftSoon();
     status('file-status', model.photoId ? 'Фото из выбранного состояния истории.' : 'Загрузите фото товара.');
     status('brand-logo-status', model.logoId ? 'Логотип из выбранного состояния истории.' : '');
   }
-  function serialized() { return project.serializeProject(model.settings, assets.get(model.photoId)?.source || null, assets.get(model.logoId)?.source || null); }
+  function serialized() { syncActiveView(); return project.serializeProject(model.settings, assets.get(model.photoId)?.source || null, assets.get(model.logoId)?.source || null, model); }
   function saveDraftSoon() {
     if (!initialized) return; clearTimeout(draftTimer); status('draft-status', 'Сохраняем черновик…');
     draftTimer = setTimeout(() => {
@@ -187,14 +201,15 @@
       if (version !== photoVersion) return; if (!initialize) commit();
       model.photoId = id; model.settings = renderer.normalize({ ...model.settings, ...samples[key], oldPrice: null, photo: renderer.normalize({}).photo }); syncForm();
       status('file-status', 'Демонстрационный товар. Загрузите своё фото и укажите его данные.');
-      if (initialize) { initialModel = clone(model); history = project.createHistory(model); initialized = true; updateHistory(); requestRender(true); } else edited(true);
-    } catch (error) { status('file-status', error.message, true); if (initialize) { initialized = true; initialModel = clone(model); history = project.createHistory(model); updateHistory(); requestRender(true); } }
+      if (initialize) { syncActiveView(); initialModel = clone(model); history = project.createHistory(model); initialized = true; updateHistory(); requestRender(true); } else edited(true);
+    } catch (error) { status('file-status', error.message, true); if (initialize) { initialized = true; syncActiveView(); initialModel = clone(model); history = project.createHistory(model); updateHistory(); requestRender(true); } }
   }
-  async function restoreProject(value) {
-    const parsed = project.parseProject(value, renderer.normalize), version = ++projectVersion;
+  async function restoreProject(value, expectedRevision, cancelled = () => false) {
+    const parsed = project.parseProject(value, renderer.normalize), version = ++projectVersion, started = revision;
+    ++photoVersion; ++logoVersion;
     const photoId = parsed.photo ? await registerAsset(parsed.photo) : null, logoId = parsed.logo ? await registerAsset(parsed.logo) : null;
-    if (version !== projectVersion) return; commit(); ++photoVersion; ++logoVersion;
-    model = { settings: parsed.settings, photoId, logoId }; syncForm(); edited(true); fitPreview();
+    if (cancelled() || version !== projectVersion || started !== revision || (expectedRevision !== undefined && expectedRevision !== revision)) throw new Error("Проект изменился во время загрузки. Откройте файл ещё раз."); cancelDrag(); commit(); ++photoVersion; ++logoVersion;
+    model = { settings: parsed.settings, photoId, logoId, views: parsed.views, activeViewId: parsed.activeViewId }; syncActiveView(); syncForm(); edited(true); fitPreview();
     status('file-status', photoId ? 'Фото восстановлено из проекта.' : 'Загрузите фото товара.'); status('brand-logo-status', logoId ? 'Логотип восстановлен из проекта.' : '');
   }
   function activateTab(key, focus = false) {
@@ -228,6 +243,7 @@
       await readyFonts(saved);
       const surface = document.createElement('canvas'); renderer.render(surface, saved, photos, { scale });
       const blob = await blobFromCanvas(surface, jpeg ? 'image/jpeg' : 'image/png', 0.95);
+      window.SATUCARD_WORKFLOW?.showPreflight(saved, photos, surface, blob);
       downloadBlob(blob, `${name}-${renderer.formats[saved.format].file}.${jpeg ? 'jpg' : 'png'}`);
       status('download-status', `Файл готов: ${surface.width} × ${surface.height}, ${(blob.size / 1024 / 1024).toFixed(1)} МБ. Проверьте загрузки браузера.`);
     } catch (error) { status('download-status', error.message, true); } finally { exporting = false; $('download-button').disabled = false; }
@@ -268,8 +284,8 @@
   }
 
   form.addEventListener('submit', event => event.preventDefault());
-  form.addEventListener('input', event => { if (event.target.type === 'file') return; readForm(); edited(false, false); if (event.target.id === 'card-format') fitPreview(); });
-  form.addEventListener('change', event => { if (event.target.type === 'file') return; readForm(); commit(); requestRender(true); if (event.target.id === 'card-format') fitPreview(); if (event.target.id === 'font-family') readyFonts(model.settings).then(() => requestRender(true)).catch(() => status('project-status', 'Шрифт недоступен. Используется запасной шрифт.', true)); });
+  form.addEventListener('input', event => { if (event.target.type === 'file' || event.target.closest('[data-workflow-control]')) return; readForm(); edited(false, false); if (event.target.id === 'card-format') fitPreview(); });
+  form.addEventListener('change', event => { if (event.target.type === 'file' || event.target.closest('[data-workflow-control]')) return; readForm(); commit(); requestRender(true); if (event.target.id === 'card-format') fitPreview(); if (event.target.id === 'font-family') readyFonts(model.settings).then(() => requestRender(true)).catch(() => status('project-status', 'Шрифт недоступен. Используется запасной шрифт.', true)); });
   form.addEventListener('focusout', commit);
   $('photo-input').addEventListener('change', event => { loadFile(event.target.files[0]); event.target.value = ''; });
   $('brand-logo').addEventListener('change', event => { loadFile(event.target.files[0], true); event.target.value = ''; });
@@ -301,18 +317,19 @@
     if (event.target.matches('input[type="text"],textarea,[contenteditable="true"]') || !(event.ctrlKey || event.metaKey) || !initialized) return;
     if (['z', 'y'].includes(event.key.toLowerCase())) { event.preventDefault(); undoRedo(event.shiftKey || event.key.toLowerCase() === 'y' ? 'redo' : 'undo'); }
   });
-  $('reset-button').addEventListener('click', () => { if (!initialModel) return; commit(); ++photoVersion; ++logoVersion; ++projectVersion; model = clone(initialModel); syncForm(); edited(true); fitPreview(); status('file-status', 'Исходный демонстрационный товар. Сброс можно отменить.'); status('brand-logo-status', ''); });
+  $('reset-button').addEventListener('click', () => { if (!initialModel) return; cancelDrag(); commit(); ++photoVersion; ++logoVersion; ++projectVersion; model = clone(initialModel); syncForm(); edited(true); fitPreview(); status('file-status', 'Исходный демонстрационный товар. Сброс можно отменить.'); status('brand-logo-status', ''); });
   $('preview-zoom').addEventListener('input', () => { $('canvas-frame').style.width = Number($('canvas-frame').dataset.baseWidth || 460) * Number($('preview-zoom').value) / 100 + 'px'; $('preview-zoom-value').value = $('preview-zoom').value + '%'; });
   $('preview-fit-button').addEventListener('click', fitPreview); window.addEventListener('resize', fitPreview);
   canvas.addEventListener('pointerdown', event => {
     if (!model.photoId || !geometry?.photoRect || event.button > 0) return;
     const box = canvas.getBoundingClientRect(), scale = 900 / box.width, point = { x: (event.clientX - box.left) * scale, y: (event.clientY - box.top) * scale }, rect = geometry.photoRect;
     if (point.x < rect.x || point.x > rect.x + rect.width || point.y < rect.y || point.y > rect.y + rect.height) return;
-    event.preventDefault(); commit(); canvas.setPointerCapture(event.pointerId);
+    event.preventDefault(); commit(); revision++; canvas.setPointerCapture(event.pointerId);
     dragging = { id: event.pointerId, x: event.clientX, y: event.clientY, startX: model.settings.photo.x, startY: model.settings.photo.y, scale, rect }; canvas.classList.add('is-dragging');
   });
   canvas.addEventListener('pointermove', event => {
     if (!dragging || event.pointerId !== dragging.id) return;
+    revision++;
     model.settings.photo.x = Math.max(0, Math.min(100, dragging.startX + (event.clientX - dragging.x) * dragging.scale / (dragging.rect.width * 0.7) * 100));
     model.settings.photo.y = Math.max(0, Math.min(100, dragging.startY + (event.clientY - dragging.y) * dragging.scale / (dragging.rect.height * 0.7) * 100));
     $('photo-position-x').value = model.settings.photo.x; $('photo-position-y').value = model.settings.photo.y; updateOutputs(); requestRender();
@@ -326,7 +343,13 @@
   $('save-project-button').addEventListener('click', () => { try { readForm(); commit(); downloadBlob(new Blob([serialized()], { type: 'application/json' }), filename() + '.satucard.json'); status('project-status', 'Проект подготовлен: фото, логотип и все настройки.'); } catch (error) { status('project-status', error.message, true); } });
   $('load-project-input').addEventListener('change', async event => {
     const file = event.target.files[0]; event.target.value = ''; if (!file) return;
-    try { if (file.size > 17 * 1024 * 1024) throw new Error('Проект слишком большой. Максимум 17 МБ.'); status('project-status', 'Открываем проект…'); await restoreProject(await file.text()); status('project-status', 'Проект открыт. Предыдущее состояние можно вернуть кнопкой отмены.'); }
+    const selectedRevision = revision, selectedVersion = ++projectVersion;
+    try {
+      if (file.size > 17 * 1024 * 1024) throw new Error('Проект слишком большой. Максимум 17 МБ.');
+      status('project-status', 'Открываем проект…'); const text = await file.text();
+      if (selectedVersion !== projectVersion || selectedRevision !== revision) throw new Error('Проект изменился во время чтения файла. Откройте файл ещё раз.');
+      await restoreProject(text, selectedRevision); status('project-status', 'Проект открыт. Предыдущее состояние можно вернуть кнопкой отмены.');
+    }
     catch (error) { status('project-status', error.message, true); }
   });
   $('restore-draft-button').addEventListener('click', async () => { try { if (!pendingDraft) return; await restoreProject(pendingDraft); pendingDraft = null; $('draft-restore-banner').hidden = true; status('project-status', 'Черновик восстановлен вместе с фотографией.'); } catch (error) { status('project-status', error.message, true); } });
@@ -338,7 +361,7 @@
     document.querySelectorAll('[data-palette]').forEach(button => { const chip = button.querySelector('i'); palettes[button.dataset.palette].forEach((color, index) => chip.style.setProperty('--palette-' + ['a', 'b', 'c'][index], color)); });
     if (renderer.templates[params.get('style')]) model.settings.template = params.get('style'); if (renderer.formats[params.get('format')]) model.settings.format = params.get('format');
     await loadSample(samples[params.get('photo')] ? params.get('photo') : 'headphones', true);
-    if (!initialized) { initialModel = clone(model); history = project.createHistory(model); initialized = true; updateHistory(); requestRender(true); }
+    if (!initialized) { syncActiveView(); initialModel = clone(model); history = project.createHistory(model); initialized = true; updateHistory(); requestRender(true); }
     form.inert = false;
     ['download-button', 'publish-button', 'save-project-button', 'load-project-input'].forEach(id => { $(id).disabled = false; });
     fitPreview();
@@ -348,5 +371,46 @@
     document.dispatchEvent(new Event('satucard:editor-ready'));
     document.fonts?.ready.then(() => requestRender(true));
   }
+  // Small integration surface shared by the workflow UI; model changes remain undoable.
+  window.SATUCARD_EDITOR = {
+    get revision() { return revision; },
+    snapshot(includeProject = false) { readForm(); syncActiveView(); return { model: clone(model), images: imageAssets(), ...(includeProject ? { serialized: serialized() } : {}), filename: filename() }; },
+    readyFonts, blobFromCanvas, downloadBlob, restoreProject,
+    selectView(id) {
+      cancelDrag(); readForm(); commit(); const view = model.views.find(item => item.id === id); if (!view) return;
+      model.activeViewId = id; model.settings = clone(view.settings); syncForm(); edited(true); fitPreview();
+    },
+    addView() {
+      readForm(); commit(); if (model.views.length >= 8) throw new Error('В комплекте не больше 8 карточек.');
+      const id = crypto.randomUUID(); model.views.push({ id, label: 'Карточка ' + (model.views.length + 1), settings: clone(model.settings) });
+      model.activeViewId = id; edited(true);
+    },
+    removeView() {
+      cancelDrag(); commit(); if (model.views.length <= 1) return;
+      model.views = model.views.filter(view => view.id !== model.activeViewId); model.activeViewId = model.views[0].id; model.settings = clone(model.views[0].settings);
+      syncForm(); edited(true); fitPreview();
+    },
+    renameView(label) { commit(); const view = model.views.find(item => item.id === model.activeViewId); view.label = label.trim().slice(0, 60) || 'Карточка'; edited(); },
+    makeSet() {
+      readForm(); commit(); if (model.views.length > 6) throw new Error('Для двух новых карточек нужно освободить место в комплекте.');
+      const base = clone(model.settings);
+      for (const [label, changes] of [
+        ['Преимущества', { subtitle: 'Преимущества', description: '', showPrice: false, badge: '' }],
+        ['Подробности', { subtitle: 'Подробности о товаре', features: [], showPrice: false, badge: '' }]
+      ]) model.views.push({ id: crypto.randomUUID(), label, settings: renderer.normalize({ ...base, ...changes }) });
+      edited(true);
+    },
+    applyCopy(draft, expectedRevision) {
+      if (expectedRevision !== revision) throw new Error('Карточка изменилась. Создайте подсказку заново, чтобы не затереть новые правки.');
+      commit(); model.settings = renderer.normalize({ ...model.settings, title: draft.title, subtitle: draft.subtitle, description: draft.description, features: draft.features });
+      syncForm(); edited(true);
+    },
+    async replacePhoto(source, expectedRevision) {
+      if (expectedRevision !== revision) throw new Error('Фото изменилось. Повторите обработку.');
+      const version = ++photoVersion, id = await registerAsset(source);
+      if (expectedRevision !== revision || version !== photoVersion) { assets.delete(id); throw new Error('Фото изменилось. Повторите обработку.'); }
+      commit(); model.photoId = id; syncForm(); edited(true); status('file-status', 'Однотонный фон удалён локально. Результат можно отменить.');
+    }
+  };
   initialize();
 })();

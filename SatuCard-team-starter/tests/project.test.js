@@ -40,3 +40,15 @@ test('untrusted projects cannot load remote or executable images', () => {
   assert.throws(() => project.parseProject('{bad', copy), /корректный/);
   assert.throws(() => project.parseProject(JSON.stringify({ ...base, schemaVersion: 2 }), copy), /Неподдерживаемый/);
 });
+
+test('multi-card projects round-trip active view and reject malformed sets', () => {
+  const views = [{ id: 'main', label: 'Главная', settings: { title: 'A' } }, { id: 'details', label: 'Толығырақ', settings: { title: 'B' } }];
+  const text = project.serializeProject({ title: 'stale' }, null, null, { views, activeViewId: 'details' });
+  const restored = project.parseProject(text, copy);
+  assert.equal(restored.settings.title, 'B');
+  assert.deepEqual(copy(restored.views), views);
+  for (const set of [{ views: [], activeViewId: 'main' }, { views: [...views, views[0]], activeViewId: 'main' }, { views, activeViewId: 'missing' }, { views }, { views: Array(9).fill(views[0]), activeViewId: 'main' }]) {
+    assert.throws(() => project.serializeProject({}, null, null, set));
+  }
+  assert.equal(project.parseProject(project.serializeProject({ title: 'Legacy' }, null, null), copy).settings.title, 'Legacy');
+});
