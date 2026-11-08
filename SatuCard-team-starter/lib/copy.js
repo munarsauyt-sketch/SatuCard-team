@@ -58,7 +58,7 @@ export function validateOutput(value, input) {
     features: value.features.map(item => item.trim()), template: value.template, source: 'ai' };
 }
 
-const schema = {
+export const schema = {
   type: 'object', additionalProperties: false,
   required: ['title', 'subtitle', 'description', 'features', 'template'],
   properties: {

@@ -123,7 +123,7 @@
       const current = () => inputVersion === copyInputVersion && revision === editor.revision;
       const input = { language: $('copy-language').value, tone: $('copy-tone').value, title: snapshot.model.settings.title, facts: $('copy-facts').value };
       copyBusy = true; $('copy-offline').disabled = true; $('copy-ai').disabled = true; $('copy-cancel').hidden = !ai;
-      message('copy-status', ai ? 'Terra готовит ИИ-черновик…' : 'Собираем текст из ваших фактов…');
+      message('copy-status', ai ? 'ИИ готовит черновик…' : 'Собираем текст из ваших фактов…');
       let timer;
       try {
         window.SATUCARD_COPY.validate(input);
@@ -146,7 +146,7 @@
         [1, 2, 3].forEach(index => { $('copy-edit-feature-' + index).value = draft.features[index - 1] || ''; });
         $('copy-ai-options').hidden = !ai; $('copy-reviewed').checked = false; $('copy-apply-template').checked = false; $('copy-template-colors').checked = false;
         $('copy-apply').disabled = ai;
-        if (ai) { $('copy-template').value = draft.template; $('copy-template-suggestion').textContent = 'Рекомендация Terra: ' + renderer.templates[draft.template].label + '. Оформление изменится только с вашим разрешением.'; previewTemplate(); }
+        if (ai) { $('copy-template').value = draft.template; $('copy-template-suggestion').textContent = 'Рекомендация ИИ: ' + renderer.templates[draft.template].label + '. Оформление изменится только с вашим разрешением.'; previewTemplate(); }
         $('copy-result').hidden = false;
         message('copy-status', ai ? 'ИИ-черновик: проверьте перевод и каждый факт. Применение заменит тексты только выбранной карточки, без публикации.' : 'Шаблон без ИИ. Факты сохранены на исходном языке; длинные факты могли не поместиться. Проверьте текст.');
       } catch (error) { if (current()) message('copy-status', error.name === 'AbortError' ? 'ИИ не ответил вовремя. Можно использовать шаблон.' : error.message, true); }
