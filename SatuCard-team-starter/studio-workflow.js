@@ -9,7 +9,9 @@
     if (!editor || !tools || !window.SATUCARD_COPY || !window.SATUCARD_CLOUD) return;
     let cloudIdentity = null, cloudBusy = false, cloudGeneration = 0, copyDraft = null, copyRevision = -1, copyBusy = false, aiAvailable = false;
     let exportingSet = false, checking = false, removing = false, copyInputVersion = 0;
+    let copyController = null;
     let knownUserId;
+    let copyView = editor.snapshot().model.activeViewId, copyPhoto = editor.snapshot().images.photo;
     window.SATUCARD_AUTH?.getSession().then(session => { if (knownUserId === undefined) knownUserId = session?.user?.id || null; });
     const message = (id, text, error = false) => { $(id).textContent = text; $(id).classList.toggle('error', error); };
     const setBusy = value => { cloudBusy = value; ['cloud-save', 'cloud-copy', 'cloud-refresh'].forEach(id => { $(id).disabled = value; }); };
@@ -90,40 +92,96 @@
     document.addEventListener('satucard:history-navigation', detachCloud);
     document.addEventListener('satucard:authchange', event => {
       const userId = event.detail?.user?.id || null;
-      if (knownUserId !== undefined && userId !== knownUserId) { detachCloud(); $('cloud-project-list').replaceChildren(); copyInputVersion++; copyDraft = null; $('copy-result').hidden = true; }
+      if (knownUserId !== undefined && userId !== knownUserId) { detachCloud(); $('copy-photo').checked = false; $('cloud-project-list').replaceChildren(); invalidateCopy('Аккаунт изменился. Создайте подсказку заново.'); }
       knownUserId = userId;
     });
 
+    function invalidateCopy(text) {
+      copyInputVersion++; copyController?.abort(); copyController = null; copyBusy = false; copyDraft = null;
+      $('copy-result').hidden = true; $('copy-reviewed').checked = false; $('copy-cancel').hidden = true;
+      $('copy-offline').disabled = false; $('copy-ai').disabled = !aiAvailable;
+      if (text) message('copy-status', text);
+    }
+    function photoForAI(photo) {
+      if (!photo || !photo.naturalWidth || !photo.naturalHeight) throw new Error('Добавьте основное фото или снимите разрешение на его отправку.');
+      const scale = Math.min(1, 768 / photo.naturalWidth, 768 / photo.naturalHeight);
+      const canvas = document.createElement('canvas'); canvas.width = Math.max(1, Math.round(photo.naturalWidth * scale)); canvas.height = Math.max(1, Math.round(photo.naturalHeight * scale));
+      const ctx = canvas.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.drawImage(photo, 0, 0, canvas.width, canvas.height);
+      const data = canvas.toDataURL('image/jpeg', 0.8);
+      if (!/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(data) || data.length > 750000) throw new Error('Не удалось подготовить небольшое JPEG-фото. Отключите отправку фото и попробуйте снова.');
+      return data;
+    }
+    for (const [id, template] of Object.entries(renderer.templates)) { const option = document.createElement('option'); option.value = id; option.textContent = template.label; $('copy-template').append(option); }
+    function previewTemplate() {
+      if (!copyDraft) return;
+      const snapshot = editor.snapshot(), template = $('copy-template').value;
+      renderer.render($('copy-template-preview'), { ...snapshot.model.settings, title: $('copy-edit-title').value, subtitle: $('copy-edit-subtitle').value, description: $('copy-edit-description').value, features: [1, 2, 3].map(index => $('copy-edit-feature-' + index).value), template, customColors: !$('copy-template-colors').checked }, snapshot.images, { scale: 0.2 });
+    }
     async function makeCopy(ai) {
       if (copyBusy) return;
+      invalidateCopy();
       const snapshot = editor.snapshot(), revision = editor.revision, inputVersion = copyInputVersion;
+      const current = () => inputVersion === copyInputVersion && revision === editor.revision;
       const input = { language: $('copy-language').value, tone: $('copy-tone').value, title: snapshot.model.settings.title, facts: $('copy-facts').value };
-      copyBusy = true; $('copy-offline').disabled = true; $('copy-ai').disabled = true; $('copy-result').hidden = true; copyDraft = null;
-      message('copy-status', ai ? 'Готовим ИИ-черновик…' : 'Собираем текст из ваших фактов…');
+      copyBusy = true; $('copy-offline').disabled = true; $('copy-ai').disabled = true; $('copy-cancel').hidden = !ai;
+      message('copy-status', ai ? 'Terra готовит ИИ-черновик…' : 'Собираем текст из ваших фактов…');
       let timer;
       try {
         window.SATUCARD_COPY.validate(input);
         let draft;
         if (ai) {
-          const session = await window.SATUCARD_AUTH?.getSession(); if (!session) throw new Error('Для ИИ войдите в аккаунт и завершите профиль. Шаблон доступен без входа.');
-          const controller = new AbortController(); timer = setTimeout(() => controller.abort(), 22000);
+          const controller = new AbortController(); copyController = controller; timer = setTimeout(() => controller.abort(), 35000);
+          if ($('copy-photo').checked) input.imageDataUrl = photoForAI(snapshot.images.photo);
+          const session = await window.SATUCARD_AUTH?.getSession();
+          if (!current()) return;
+          if (!session) throw new Error('Для ИИ войдите в аккаунт и завершите профиль. Шаблон доступен без входа.');
           const response = await fetch('api/copy', { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}`, 'content-type': 'application/json' }, signal: controller.signal, body: JSON.stringify(input) });
           draft = await response.json(); if (!response.ok) throw new Error(draft.error || 'ИИ недоступен. Попробуйте создать шаблон.');
+          if (!draft || !['title', 'subtitle', 'description'].every(key => typeof draft[key] === 'string') || !Array.isArray(draft.features) || !draft.features.every(value => typeof value === 'string') || !Object.hasOwn(renderer.templates, draft.template)) throw new Error('Некорректный ответ ИИ. Попробуйте ещё раз или создайте локальный шаблон.');
+          draft.source = 'ai';
         } else draft = window.SATUCARD_COPY.offline(input);
-        if (inputVersion !== copyInputVersion) { message('copy-status', 'Исходные данные изменились. Создайте подсказку заново.'); return; }
+        if (!current()) return;
         copyDraft = draft; copyRevision = revision;
         $('copy-preview').textContent = [draft.title, draft.subtitle, draft.description, ...draft.features.map(text => '• ' + text)].filter(Boolean).join('\n\n');
         ['title', 'subtitle', 'description'].forEach(key => { $('copy-edit-' + key).value = draft[key]; });
         [1, 2, 3].forEach(index => { $('copy-edit-feature-' + index).value = draft.features[index - 1] || ''; });
+        $('copy-ai-options').hidden = !ai; $('copy-reviewed').checked = false; $('copy-apply-template').checked = false; $('copy-template-colors').checked = false;
+        $('copy-apply').disabled = ai;
+        if (ai) { $('copy-template').value = draft.template; $('copy-template-suggestion').textContent = 'Рекомендация Terra: ' + renderer.templates[draft.template].label + '. Оформление изменится только с вашим разрешением.'; previewTemplate(); }
         $('copy-result').hidden = false;
-        message('copy-status', ai ? 'ИИ-черновик: проверьте перевод и каждый факт. Применение заменит тексты только выбранной карточки.' : 'Шаблон без ИИ. Факты сохранены на исходном языке; длинные факты могли не поместиться. Проверьте текст.');
-      } catch (error) { message('copy-status', error.name === 'AbortError' ? 'ИИ не ответил вовремя. Можно использовать шаблон.' : error.message, true); }
-      finally { clearTimeout(timer); copyBusy = false; $('copy-offline').disabled = false; $('copy-ai').disabled = !aiAvailable; }
+        message('copy-status', ai ? 'ИИ-черновик: проверьте перевод и каждый факт. Применение заменит тексты только выбранной карточки, без публикации.' : 'Шаблон без ИИ. Факты сохранены на исходном языке; длинные факты могли не поместиться. Проверьте текст.');
+      } catch (error) { if (current()) message('copy-status', error.name === 'AbortError' ? 'ИИ не ответил вовремя. Можно использовать шаблон.' : error.message, true); }
+      finally { clearTimeout(timer); if (inputVersion === copyInputVersion) { copyController = null; copyBusy = false; $('copy-cancel').hidden = true; $('copy-offline').disabled = false; $('copy-ai').disabled = !aiAvailable; } }
     }
-    ['copy-language', 'copy-tone', 'copy-facts'].forEach(id => $(id).addEventListener('input', () => { copyInputVersion++; copyDraft = null; $('copy-result').hidden = true; message('copy-status', 'Данные изменены. Создайте новую подсказку.'); }));
+    ['copy-language', 'copy-tone', 'copy-facts', 'copy-photo'].forEach(id => $(id).addEventListener('input', () => invalidateCopy('Данные изменены. Создайте новую подсказку.')));
+    document.addEventListener('satucard:editor-change', () => {
+      const snapshot = editor.snapshot(), changedSource = copyView !== snapshot.model.activeViewId || copyPhoto !== snapshot.images.photo;
+      copyView = snapshot.model.activeViewId; copyPhoto = snapshot.images.photo;
+      if (changedSource) $('copy-photo').checked = false;
+      if (copyBusy || copyDraft || changedSource) invalidateCopy('Карточка изменилась. Создайте подсказку заново.');
+    });
+    ['photo-input', 'load-project-input', 'reset-button', 'restore-draft-button'].forEach(id => $(id).addEventListener(id.includes('input') ? 'change' : 'click', () => {
+      $('copy-photo').checked = false; invalidateCopy('Исходные данные изменились. Создайте подсказку заново.');
+    }));
+    window.addEventListener('pagehide', () => { $('copy-photo').checked = false; invalidateCopy(); });
+    $('copy-facts').closest('details').addEventListener('toggle', event => { if (!event.currentTarget.open && (copyBusy || copyDraft)) invalidateCopy('Помощник закрыт.'); });
+    $('copy-cancel').addEventListener('click', () => invalidateCopy('Ожидание отменено. Уже отправленный запрос может учитываться в лимите.'));
+    $('copy-result').addEventListener('input', event => {
+      if (event.target.id !== 'copy-reviewed') $('copy-reviewed').checked = false;
+      $('copy-apply').disabled = copyDraft?.source === 'ai' && !$('copy-reviewed').checked;
+      if (copyDraft?.source === 'ai' && event.target.id !== 'copy-reviewed') previewTemplate();
+    });
     $('copy-offline').addEventListener('click', () => makeCopy(false)); $('copy-ai').addEventListener('click', () => makeCopy(true));
-    $('copy-apply').addEventListener('click', () => { if (!copyDraft) return; try { const draft = { ...copyDraft, title: $('copy-edit-title').value.trim(), subtitle: $('copy-edit-subtitle').value, description: $('copy-edit-description').value, features: [1, 2, 3].map(index => $('copy-edit-feature-' + index).value) }; if (!draft.title) throw new Error('Введите название перед применением.'); editor.applyCopy(draft, copyRevision); $('copy-result').hidden = true; copyDraft = null; message('copy-status', 'Тексты применены. Можно отменить кнопкой ↶.'); } catch (error) { message('copy-status', error.message, true); } });
-    $('copy-dismiss').addEventListener('click', () => { copyDraft = null; $('copy-result').hidden = true; });
+    $('copy-apply').addEventListener('click', () => {
+      if (!copyDraft || (copyDraft.source === 'ai' && !$('copy-reviewed').checked)) return;
+      try {
+        const draft = { ...copyDraft, title: $('copy-edit-title').value.trim(), subtitle: $('copy-edit-subtitle').value, description: $('copy-edit-description').value, features: [1, 2, 3].map(index => $('copy-edit-feature-' + index).value) };
+        if (!draft.title) throw new Error('Введите название перед применением.');
+        const options = draft.source === 'ai' && $('copy-apply-template').checked ? { template: $('copy-template').value, replaceColors: $('copy-template-colors').checked } : {};
+        editor.applyCopy(draft, copyRevision, options); invalidateCopy(); message('copy-status', 'Тексты' + (options.template ? ' и шаблон' : '') + ' применены. Можно отменить одним нажатием ↶.');
+      } catch (error) { message('copy-status', error.message, true); }
+    });
+    $('copy-dismiss').addEventListener('click', () => invalidateCopy('Черновик закрыт.'));
     if (location.protocol !== 'file:') fetch('api/copy', { cache: 'no-store', ...(typeof AbortSignal.timeout === 'function' ? { signal: AbortSignal.timeout(8000) } : {}) }).then(response => response.ok ? response.json() : {}).then(result => {
       aiAvailable = result.available === true; $('copy-ai').disabled = copyBusy || !aiAvailable;
       if (!copyBusy && !copyDraft) message('copy-status', aiAvailable ? 'ИИ доступен подключённым аккаунтам. Шаблон работает локально.' : 'ИИ пока не подключён владельцем сайта. Шаблон работает без ключей и сети.');
