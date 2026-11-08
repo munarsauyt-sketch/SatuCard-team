@@ -9,7 +9,6 @@
     const editor = window.SATUCARD_EDITOR, renderer = window.SATUCARD_RENDERER;
     let configured = false, busy = false, generation = 0, controller = null, proposal = null, proposalRevision = -1;
     let history = [], applying = false, account, statusGeneration = 0, opener = $('open-ai-chat');
-    let inertBackground = [];
     let activeView = editor.snapshot().model.activeViewId, activePhoto = editor.snapshot().model.photoId;
     const status = (text, error = false) => { $('ai-chat-status').textContent = text; $('ai-chat-status').classList.toggle('error', error); };
     const buttons = () => { $('ai-chat-send').disabled = busy || !configured || !$('ai-chat-input').value.trim(); $('ai-chat-stop').hidden = !busy; $('ai-chat-input').readOnly = busy; };
@@ -28,29 +27,20 @@
     function open(event) {
       if (!$('ai-chat').hidden) { $('ai-chat-input').focus(); return; }
       opener = event?.currentTarget || $('open-ai-chat');
-      $('ai-chat').hidden = false; $('ai-chat-backdrop').hidden = false; document.body.classList.add('ai-chat-open');
+      $('ai-chat').hidden = false; document.body.classList.add('ai-chat-open');
       document.querySelectorAll('[data-open-ai]').forEach(button => button.setAttribute('aria-expanded', 'true'));
-      inertBackground = [...document.querySelectorAll('body > header, body > main, body > footer, body > nav')].filter(element => !element.hasAttribute('inert'));
-      inertBackground.forEach(element => element.setAttribute('inert', ''));
       cardLabel(); $('ai-chat-input').focus();
     }
     function close() {
       const wasBusy = busy; invalidate(wasBusy ? 'Запрос остановлен. Попытка могла учитываться в лимите.' : '');
-      $('ai-chat').hidden = true; $('ai-chat-backdrop').hidden = true; document.body.classList.remove('ai-chat-open');
+      $('ai-chat').hidden = true; document.body.classList.remove('ai-chat-open');
       document.querySelectorAll('[data-open-ai]').forEach(button => button.setAttribute('aria-expanded', 'false'));
-      inertBackground.forEach(element => element.removeAttribute('inert')); inertBackground = [];
       opener.focus();
     }
     document.querySelectorAll('[data-open-ai]').forEach(button => button.addEventListener('click', open));
-    $('ai-chat-close').addEventListener('click', close); $('ai-chat-backdrop').addEventListener('click', close);
+    $('ai-chat-close').addEventListener('click', close);
     $('ai-chat').addEventListener('keydown', event => {
       if (event.key === 'Escape') { event.preventDefault(); close(); }
-      if (event.key === 'Tab') {
-        const controls = [...$('ai-chat').querySelectorAll('button, textarea, input, select, summary, [tabindex="0"]')].filter(element => !element.disabled && !element.closest('[hidden]') && (!element.closest('details:not([open])') || element.tagName === 'SUMMARY'));
-        const first = controls[0], last = controls.at(-1);
-        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
-        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
-      }
     });
     document.querySelectorAll('[data-ai-prompt]').forEach(button => button.addEventListener('click', () => {
       if (busy) return;

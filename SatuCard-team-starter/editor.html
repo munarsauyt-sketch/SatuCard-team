@@ -19,8 +19,8 @@
   <script src="cloud-projects.js?v=workflow-1" defer></script>
   <script src="editor.js?v=workflow-1" defer></script>
   <script src="studio-workflow.js?v=workflow-1" defer></script>
-  <script src="studio-chat.js?v=chat-2" defer></script>
-  <link rel="stylesheet" href="studio-chat.css?v=chat-2">
+  <script src="studio-chat.js?v=chat-3" defer></script>
+  <link rel="stylesheet" href="studio-chat.css?v=chat-3">
   <link rel="stylesheet" href="studio-workflow.css?v=workflow-1">
   <link rel="stylesheet" href="editor-tour.css?v=20261105">
   <script src="editor-tour.js?v=20261105" defer></script>
@@ -73,7 +73,6 @@
 
     <div class="studio-layout">
       <aside id="studio-settings" class="studio-sidebar" aria-label="Настройки карточки">
-        <button class="ai-sidebar-launch" type="button" data-open-ai aria-controls="ai-chat" aria-expanded="false"><svg class="studio-icon" aria-hidden="true"><use href="#i-spark"/></svg><span>Чат с ИИ</span><span aria-hidden="true">↗</span></button>
         <div class="studio-tabs" role="tablist" aria-label="Разделы редактора"><button id="tab-photo" type="button" role="tab" data-editor-tab="photo" aria-controls="panel-photo" aria-selected="true"><svg class="studio-icon"><use href="#i-image"/></svg>Фото</button><button id="tab-content" type="button" role="tab" data-editor-tab="content" aria-controls="panel-content" aria-selected="false" tabindex="-1"><svg class="studio-icon"><use href="#i-text"/></svg>Тексты</button><button id="tab-design" type="button" role="tab" data-editor-tab="design" aria-controls="panel-design" aria-selected="false" tabindex="-1"><svg class="studio-icon"><use href="#i-design"/></svg>Дизайн</button></div>
         <form id="editor-form" class="studio-form" novalidate>
           <section id="panel-photo" data-editor-panel="photo" role="tabpanel" aria-labelledby="tab-photo" tabindex="0">
@@ -154,8 +153,7 @@
   </main>
 
   <button id="open-ai-chat" class="ai-floating-launch" type="button" data-open-ai aria-controls="ai-chat" aria-expanded="false"><svg class="studio-icon" aria-hidden="true"><use href="#i-spark"/></svg>Чат с ИИ</button>
-  <div id="ai-chat-backdrop" class="ai-chat-backdrop" hidden></div>
-  <aside id="ai-chat" class="ai-chat" role="dialog" aria-modal="true" aria-labelledby="ai-chat-title" hidden>
+  <aside id="ai-chat" class="ai-chat" role="dialog" aria-modal="false" aria-labelledby="ai-chat-title" hidden>
     <header class="ai-chat-header"><div class="ai-chat-heading"><h2 id="ai-chat-title">ИИ</h2><p id="ai-chat-connection" class="ai-connection" role="status">Проверяем подключение…</p></div><div class="ai-chat-header-actions"><button id="ai-chat-new" class="ai-quiet-button" type="button">Новый чат</button><button id="ai-chat-close" class="ai-close-button" type="button" aria-label="Закрыть чат ИИ">×</button></div></header>
     <div class="ai-chat-scroll">
       <div id="ai-chat-setup" class="ai-chat-setup" hidden><p><strong>ИИ ещё не подключён.</strong> Ответы появятся после подключения. Редактор работает.</p><details><summary>Как подключить</summary><p>Владелец сайта подключает серверный ключ OpenAI, доступ к модели и лимиты. Не вводите ключи в чат.</p><button id="ai-chat-recheck" type="button" class="ai-quiet-button">Проверить снова</button></details></div>

@@ -144,28 +144,30 @@ test('changing the primary photo via editor API revokes prior consent',async()=>
   }finally{app.dom.window.close();}
 });
 
-test('large chat has persistent and sidebar entries, readable typography and minimal disclosure', async () => {
+test('right chat has one persistent entry, readable typography and no blocking overlay', async () => {
   const app = await chatApp({available:false});
   try {
-    assert.equal(app.w.document.querySelectorAll('[data-open-ai]').length,2);
+    assert.equal(app.w.document.querySelectorAll('[data-open-ai]').length,1);
     assert.equal(app.$('open-ai-chat').textContent.trim(),'Чат с ИИ');
-    assert.equal(app.$('ai-chat').getAttribute('aria-modal'),'true');
-    assert.equal(app.$('ai-chat-backdrop').hidden,false);assert.equal(app.$('main').hasAttribute('inert'),true);
+    assert.equal(app.$('ai-chat').getAttribute('aria-modal'),'false');
+    assert.equal(app.$('ai-chat-backdrop'),null);assert.equal(app.w.document.querySelector('.ai-sidebar-launch'),null);assert.equal(app.$('main').hasAttribute('inert'),false);
     assert.equal(app.w.document.querySelector('.ai-privacy-details').open,false);assert.equal(app.$('ai-chat-welcome').hidden,false);
     assert.doesNotMatch(app.$('ai-chat').textContent,/ПОМОЩНИК В РЕДАКТОРЕ|ТЕКУЩАЯ КАРТОЧКА/);
-    const css=readFileSync(new URL('../studio-chat.css',import.meta.url),'utf8');assert.match(css,/width: min\(1040px/);
+    const css=readFileSync(new URL('../studio-chat.css',import.meta.url),'utf8');assert.match(css,/width: min\(580px/);assert.match(css,/right: 24px/);assert.doesNotMatch(css,/backdrop-filter|body\.ai-chat-open\s*\{\s*overflow/);
     for(const [,size] of css.matchAll(/font-size:\s*(\d+)px/g))assert.ok(Number(size)>=14);
     app.$('ai-chat-input').dispatchEvent(new app.w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
-    assert.equal(app.$('ai-chat').hidden,true);assert.equal(app.$('ai-chat-backdrop').hidden,true);assert.equal(app.$('main').hasAttribute('inert'),false);
+    assert.equal(app.$('ai-chat').hidden,true);assert.equal(app.$('main').hasAttribute('inert'),false);
   }finally{app.dom.window.close();}
 });
-test('sidebar entry restores focus, keyboard stays in modal, backdrop closes',async()=>{
+test('editor remains usable beside the chat, keyboard is not trapped and close restores focus',async()=>{
   const app=await chatApp();
   try{
-    app.$('ai-chat-close').click();const entry=app.w.document.querySelector('.ai-sidebar-launch');entry.click();
-    app.$('ai-chat-new').focus();app.$('ai-chat-new').dispatchEvent(new app.w.KeyboardEvent('keydown',{key:'Tab',shiftKey:true,bubbles:true,cancelable:true}));
-    assert.equal(app.w.document.activeElement.id,'ai-chat-privacy');
-    app.$('ai-chat-backdrop').click();assert.equal(app.w.document.activeElement,entry);assert.equal(app.w.document.body.classList.contains('ai-chat-open'),false);
+    assert.equal(app.$('main').hasAttribute('inert'),false);
+    app.input('product-name','Редактирование рядом с чатом');
+    assert.equal(app.$('ai-chat').hidden,false);assert.equal(app.$('ai-chat-card').textContent,'Редактирование рядом с чатом');
+    const tab=new app.w.KeyboardEvent('keydown',{key:'Tab',shiftKey:true,bubbles:true,cancelable:true});
+    app.$('ai-chat-new').focus();app.$('ai-chat-new').dispatchEvent(tab);assert.equal(tab.defaultPrevented,false);
+    app.$('ai-chat-close').click();assert.equal(app.w.document.activeElement,app.$('open-ai-chat'));assert.equal(app.w.document.body.classList.contains('ai-chat-open'),false);
   }finally{app.dom.window.close();}
 });
 test('Kazakh quick prompt updates language without a fake answer',async()=>{
@@ -178,5 +180,5 @@ test('Kazakh quick prompt updates language without a fake answer',async()=>{
 
 test('repeated open cannot leave the editor inert after close',async()=>{
   const app=await chatApp();
-  try{app.$('open-ai-chat').click();app.$('open-ai-chat').click();app.$('ai-chat-close').click();assert.equal(app.$('main').hasAttribute('inert'),false);assert.equal(app.$('ai-chat-backdrop').hidden,true);}finally{app.dom.window.close();}
+  try{app.$('open-ai-chat').click();app.$('open-ai-chat').click();app.$('ai-chat-close').click();assert.equal(app.$('main').hasAttribute('inert'),false);assert.equal(app.$('ai-chat-backdrop'),null);}finally{app.dom.window.close();}
 });
