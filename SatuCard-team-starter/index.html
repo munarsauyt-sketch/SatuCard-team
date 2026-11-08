@@ -6,10 +6,10 @@
   <meta name="description" content="Превратите фото товара в выразительную карточку: восемь стилей, ваши цвета и логотип, три формата. Скачайте PNG или поделитесь ссылкой.">
   <link rel="icon" href="assets/favicon.svg?v=rebrand-20261012" type="image/svg+xml">
   <script src="theme.js?v=guide-20261105"></script>
-  <link rel="stylesheet" href="brand.css?v=rebrand-20261012"><link rel="stylesheet" href="marketing.css?v=rebrand-20261012">
-  <link rel="stylesheet" href="intro.css?v=guide-20261105"><script src="intro.js?v=20261030" defer></script>
+  <link rel="stylesheet" href="brand.css?v=rebrand-20261012"><link rel="stylesheet" href="marketing.css?v=hero-20261108">
+  <link rel="stylesheet" href="intro.css?v=hero-20261108"><script src="intro.js?v=20261030" defer></script>
   <script src="auth-client.js?v=verified-auth-20261026" defer></script><script src="site.js?v=rebrand-20261012" defer></script>
-  <script src="assets/demo-images.js" defer></script><script src="studio-renderer.js" defer></script><script src="marketing.js?v=rebrand-20261012" defer></script>
+  <script src="assets/demo-images.js" defer></script><script src="assets/demo-ceramics.js" defer></script><script src="assets/demo-bag.js" defer></script><script src="assets/demo-jewelry.js" defer></script><script src="assets/demo-decor.js" defer></script><script src="assets/demo-kitchen.js" defer></script><script src="product-samples.js" defer></script><script src="studio-renderer.js" defer></script><script src="marketing.js?v=rebrand-20261012" defer></script>
 </head>
 <body class="marketing-page home-page">
 <a class="skip-link" href="#main">К содержимому</a>
@@ -22,15 +22,13 @@
 <main id="main">
   <section class="container mark-hero">
     <div class="mark-hero-copy">
-      <p class="eyebrow"><span class="live-dot" aria-hidden="true"></span> ВАША МАЛЕНЬКАЯ ДИЗАЙН-СТУДИЯ</p>
-      <h1>Товар,<br>который хочется<br><span class="hero-word">выбрать<svg aria-hidden="true" viewBox="0 0 450 20" preserveAspectRatio="none"><path d="M3 14Q220 -6 447 11"/></svg></span><span class="orange-point">.</span></h1>
-      <p class="mark-hero-description">Фото с телефона. Пара важных деталей.<br>И карточка с характером вашего магазина.</p>
+      <h1>Товар, который хочется <span class="hero-word">выбрать<svg aria-hidden="true" viewBox="0 0 450 20" preserveAspectRatio="none"><path d="M3 14Q220 -6 447 11"/></svg></span><span class="orange-point">.</span></h1>
+      <p class="mark-hero-description">Фото, цена и ваш стиль.<br>Готовая карточка для вашего магазина.</p>
       <div class="mark-hero-actions"><a class="button button-orange" href="editor.html">Создать карточку <span aria-hidden="true">↗</span></a><a class="text-link" href="examples.html">Выбрать стиль <span aria-hidden="true">→</span></a></div>
-      <div class="mark-hero-notes"><span><span aria-hidden="true">✓</span> PNG без регистрации</span><span><span aria-hidden="true">₸</span> Для продавцов Казахстана</span></div>
     </div>
     <div class="hero-intro">
       <figure class="intro-player">
-        <figcaption><div><h2>Как работает SatuCard</h2><p>Фото, цена, оформление и готовый результат.</p></div></figcaption>
+        <figcaption><h2>Как работает SatuCard</h2><a class="intro-guide-link" href="guide.html">Инструкция <span aria-hidden="true">↗</span></a></figcaption>
         <div class="intro-screen">
           <video data-intro-video controls playsinline preload="none" poster="assets/video/satucard-intro-poster.jpg" aria-label="Знакомство с SatuCard: фото, название, цена, оформление и публикация">
             <source src="assets/video/satucard-intro.mp4" type="video/mp4">
@@ -41,18 +39,16 @@
         </div>
         <p class="intro-error" data-intro-error role="status" hidden>Не удалось запустить видео. Попробуйте кнопки плеера или <a href="assets/video/satucard-intro.mp4">откройте ролик отдельно</a>.</p>
       </figure>
-      <a class="intro-guide-link" href="guide.html"><span>Первый раз здесь? <strong>Полная инструкция</strong></span><span aria-hidden="true">↗</span></a>
-      <details class="hero-example"><summary>Или попробуйте оформление прямо здесь</summary>
+      <details class="hero-example"><summary>Попробовать стили</summary>
     <div class="hero-studio" aria-label="Интерактивный пример готовой карточки">
-      <div class="studio-window-bar"><span><i></i><i></i><i></i></span><p>Ваш товар. Ваша подача.</p><span class="window-mark" aria-hidden="true">✳</span></div>
+      <div class="studio-window-bar"><span><i></i><i></i><i></i></span><span class="window-mark" aria-hidden="true">✳</span></div>
       <div class="hero-stage">
         <span class="stage-registration stage-registration-a" aria-hidden="true">+</span><span class="stage-registration stage-registration-b" aria-hidden="true">+</span>
         <div class="hero-secondary render-wrap"><canvas data-mark-card data-template="bold" data-photo="sneaker" aria-label="Кроссовки в шаблоне Постер"></canvas><img class="canvas-fallback" src="assets/images/sneaker.jpg" alt="Кроссовки Daily"></div>
         <div class="hero-primary render-wrap"><canvas id="hero-card" data-mark-card data-template="neon" data-photo="headphones" aria-label="Наушники в шаблоне Неон"></canvas><img class="canvas-fallback" src="assets/images/headphones.jpg" alt="Беспроводные наушники"></div>
-        <div class="source-photo"><div><img src="assets/images/headphones.jpg" alt="Исходная фотография наушников" fetchpriority="high"><span aria-hidden="true">✓</span></div><p>Всего одно фото</p></div>
-        <div class="canvas-note"><span aria-hidden="true">↗</span> Готово для вашей ленты</div>
+        <div class="source-photo"><div><img src="assets/images/headphones.jpg" alt="Исходная фотография наушников" fetchpriority="high"><span aria-hidden="true">✓</span></div></div>
       </div>
-      <div class="hero-style-picker" role="group" aria-label="Стиль примера"><span>Попробуйте:</span><button type="button" data-hero-style="neon" aria-pressed="true">Неон</button><button type="button" data-hero-style="studio" aria-pressed="false">Студия</button><button type="button" data-hero-style="bold" aria-pressed="false">Постер</button><button type="button" data-hero-style="noir" aria-pressed="false">Нуар</button></div>
+      <div class="hero-style-picker" role="group" aria-label="Стиль примера"><button type="button" data-hero-style="neon" aria-pressed="true">Неон</button><button type="button" data-hero-style="studio" aria-pressed="false">Студия</button><button type="button" data-hero-style="bold" aria-pressed="false">Постер</button><button type="button" data-hero-style="noir" aria-pressed="false">Нуар</button></div>
       <p id="hero-style-status" class="sr-only" role="status">Шаблон Неон</p>
     </div>
       </details>

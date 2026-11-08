@@ -12,11 +12,7 @@
     forest: ['#e1e8d9', '#466343', '#233126'], orange: ['#fff0e5', '#f06435', '#35251f'],
     ocean: ['#dcedf5', '#087da1', '#112c3d'], violet: ['#ece5ff', '#8053df', '#2a2041'], rose: ['#fce5ed', '#c34f7a', '#462232']
   };
-  const samples = {
-    headphones: { title: 'Беспроводные наушники', price: 24990, subtitle: 'Музыка в вашем ритме', description: 'Добавьте точные характеристики вашего товара.', features: ['Беспроводное подключение', 'Мягкие амбушюры', 'Современный дизайн'] },
-    sneaker: { title: 'Кроссовки Daily', price: 32500, subtitle: 'Ваш повседневный стиль', description: 'Укажите доступные размеры и материалы.', features: ['Для повседневных образов', 'Лаконичный силуэт', 'Выберите свой размер'] },
-    skincare: { title: 'Сыворотка для лица', price: 8900, subtitle: 'Время для себя', description: 'Добавьте состав, объём и способ применения.', features: ['Ежедневный уход', 'Удобный флакон', 'Подробнее о составе'] }
-  };
+  const samples = window.SATUCARD_SAMPLES;
   const textFields = { 'product-name': 'title', 'product-subtitle': 'subtitle', 'product-description': 'description', 'product-badge': 'badge', 'brand-name': 'brandName' };
   const selectFields = { 'card-format': 'format', 'font-family': 'font', 'text-align': 'textAlign', 'card-purpose': 'purpose', 'product-category': 'category' };
   const colorFields = { 'background-color': 'background', 'accent-color': 'accent', 'text-color': 'textColor' };
@@ -274,7 +270,7 @@
     try {
       const id = 'sample-' + key; if (!assets.has(id)) await registerAsset(window.SATUCARD_DEMO_IMAGES[key], id);
       pendingAssets.delete(id); if (version !== photoVersion) return; if (!initialize) commit();
-      if (!model.libraryIds.includes(id)) { if (model.libraryIds.length >= 12) throw new Error('В проекте до 12 фото. Удалите ненужный снимок.'); model.libraryIds.push(id); } setPhotoIds([id]); model.settings = renderer.normalize({ ...model.settings, ...samples[key], oldPrice: null, photo: renderer.normalize({}).photo }); syncForm();
+      if (!model.libraryIds.includes(id)) { if (model.libraryIds.length >= 12) throw new Error('В проекте до 12 фото. Удалите ненужный снимок.'); model.libraryIds.push(id); } setPhotoIds([id]); model.settings = renderer.normalize({ ...model.settings, ...samples[key], oldPrice: null, photo: { ...renderer.normalize({}).photo, ...samples[key].photo } }); syncForm();
       status('file-status', 'Демонстрационный товар. Загрузите своё фото и укажите его данные.');
       if (initialize) { syncActiveView(); initialModel = clone(model); history = project.createHistory(model); initialized = true; updateHistory(); requestRender(true); } else edited(true);
     } catch (error) { status('file-status', error.message, true); if (initialize) { initialized = true; syncActiveView(); initialModel = clone(model); history = project.createHistory(model); updateHistory(); requestRender(true); } }

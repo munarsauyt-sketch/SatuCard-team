@@ -6,12 +6,12 @@ import { validateProject } from '../lib/projects.js';
 
 // DOM integration with deterministic raster/network stubs. This does not replace
 // real-browser visual QA or a deployed Supabase/OpenAI acceptance test.
-const files = ['assets/demo-images.js', 'studio-renderer.js', 'studio-project.js', 'studio-tools.js', 'studio-copy.js', 'cloud-projects.js', 'editor.js', 'studio-workflow.js'];
+const files = ['assets/demo-images.js', 'assets/demo-ceramics.js', 'assets/demo-bag.js', 'assets/demo-jewelry.js', 'assets/demo-decor.js', 'assets/demo-kitchen.js',  'product-samples.js', 'studio-renderer.js', 'studio-project.js', 'studio-tools.js', 'studio-copy.js', 'cloud-projects.js', 'editor.js', 'studio-workflow.js'];
 const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jWuoAAAAASUVORK5CYII=';
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function until(predicate) { for (let i = 0; i < 80; i++) { if (predicate()) return; await sleep(5); } throw new Error('UI did not settle'); }
 async function setup(options = {}) {
-  const dom = new JSDOM(readFileSync(new URL('../editor.html', import.meta.url), 'utf8'), { url: 'https://satucard.test/editor.html', runScripts: 'outside-only', pretendToBeVisual: true });
+  const dom = new JSDOM(readFileSync(new URL('../editor.html', import.meta.url), 'utf8'), { url: options.url || 'https://satucard.test/editor.html', runScripts: 'outside-only', pretendToBeVisual: true });
   const { window: w } = dom;
   const context = new Proxy({ measureText: text => ({ width: String(text).length * 12 }), createLinearGradient: () => ({ addColorStop() {} }), createRadialGradient: () => ({ addColorStop() {} }),
     getImageData: () => { const data = new Uint8ClampedArray(10 * 10 * 4).fill(255); for (let y = 3; y < 7; y++) for (let x = 3; x < 7; x++) { const offset = (y * 10 + x) * 4; data[offset] = 20; data[offset + 1] = 40; data[offset + 2] = 70; } return { data, width: 10, height: 10 }; } }, { get: (obj, key) => key in obj ? obj[key] : () => {} });
@@ -242,4 +242,28 @@ test('deleting a shared primary photo resets framing on inactive cards', async (
     assert.equal(editor.snapshot().model.settings.photo.rotation, 0);
     assert.equal(editor.snapshot().images.photos.length, 1);
   } finally { app.dom.window.close(); }
+});
+
+
+test('every gallery example opens with matching data and keeps its product when changing style', async () => {
+  const gallery = new JSDOM(readFileSync(new URL('../examples.html', import.meta.url), 'utf8'));
+  const links = [...gallery.window.document.querySelectorAll('[data-editor-template]')].map(link => link.getAttribute('href'));
+  gallery.window.close();
+  for (const href of links) {
+    const url = new URL(href, 'https://satucard.test/'), key = url.searchParams.get('photo');
+    const app = await setup({ url: url.href });
+    try {
+      const sample = app.w.SATUCARD_SAMPLES[key], editor = app.w.SATUCARD_EDITOR;
+      assert.equal(app.$('product-name').value, sample.title);
+      const before = editor.snapshot().model;
+      assert.equal(before.settings.price, sample.price); assert.equal(before.settings.category, sample.category);
+      assert.equal(before.photoId, 'sample-' + key); assert.equal(before.settings.template, url.searchParams.get('style'));
+      app.w.document.querySelector('[data-template="minimal"]').click();
+      const after = editor.snapshot().model;
+      assert.equal(after.photoId, before.photoId); assert.equal(after.settings.title, sample.title); assert.equal(after.settings.price, sample.price);
+      const payload = JSON.parse(editor.snapshot(true).serialized);
+      assert.doesNotThrow(() => validateProject(payload));
+      assert.equal(payload.photos[0].source, app.w.SATUCARD_DEMO_IMAGES[key]);
+    } finally { app.dom.window.close(); }
+  }
 });
