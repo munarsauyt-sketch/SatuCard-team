@@ -1,0 +1,14 @@
+'use strict';
+
+// Demonstration data, not a shop inventory. Keep the gallery and editor in sync.
+// Prices are illustrative; factual specifications belong to the seller.
+window.SATUCARD_SAMPLES = {
+  headphones: { label: 'Наушники', title: 'Беспроводные наушники', headline: 'Звук без границ', price: 24990, category: 'electronics', subtitle: 'Музыка в вашем ритме', description: 'Добавьте точные характеристики вашего товара.', features: ['Беспроводное подключение', 'Мягкие амбушюры', 'Современный дизайн'], badge: 'Ваш следующий выбор' },
+  sneaker: { label: 'Кроссовки', title: 'Кроссовки Daily', headline: 'Лёгкость в каждом шаге', price: 32500, category: 'clothing', subtitle: 'Ваш повседневный стиль', description: 'Укажите доступные размеры и материалы.', features: ['Для повседневных образов', 'Лаконичный силуэт', 'Выберите свой размер'], badge: 'Новая коллекция' },
+  skincare: { label: 'Косметика', title: 'Сыворотка для лица', headline: 'Время для себя', price: 8900, category: 'beauty', subtitle: 'Ваш ритуал ухода', description: 'Добавьте состав, объём и способ применения.', features: ['Ежедневный уход', 'Удобный флакон', 'Подробнее о составе'], badge: 'Маленький ритуал' },
+  ceramics: { photo: { fit: 'cover', y: 20 }, label: 'Посуда', title: 'Керамическая чашка', headline: 'Пауза со вкусом', price: 4900, category: 'home', subtitle: 'Детали уютного утра', description: 'Укажите материал, объём и правила ухода.', features: ['Для любимого напитка', 'На каждый день', 'Деталь вашего стола'], badge: 'Для дома' },
+  bag: { photo: { fit: 'contain' }, label: 'Сумки', title: 'Сумка на каждый день', headline: 'Всё нужное рядом', price: 18900, category: 'clothing', subtitle: 'Акцент вашего образа', description: 'Укажите материал, размеры и количество отделений.', features: ['Повседневный образ', 'Ваш городской стиль', 'Внимание к деталям'], badge: 'Аксессуары' },
+  jewelry: { label: 'Украшения', title: 'Кулон с цепочкой', headline: 'Особенная деталь', price: 12900, category: 'clothing', subtitle: 'Лаконичный акцент', description: 'Добавьте материал, длину цепочки и размеры кулона.', features: ['Выразительная форма', 'Завершённый образ', 'Для особых моментов'], badge: 'Коллекция деталей' },
+  decor: { label: 'Декор', title: 'Декоративная ваза', headline: 'Дом в деталях', price: 6900, category: 'home', subtitle: 'Настроение вашего пространства', description: 'Укажите размеры, материал и рекомендации по уходу.', features: ['Для вашего интерьера', 'Мягкий акцент', 'Место для вдохновения'], badge: 'Уютная коллекция' },
+  kitchen: { label: 'Для кухни', title: 'Кухонный органайзер', headline: 'Всё на своём месте', price: 5900, category: 'home', subtitle: 'Порядок на вашей кухне', description: 'Добавьте размеры, материал и комплектацию.', features: ['Всё под рукой', 'Для кухонных принадлежностей', 'Порядок на столе'], badge: 'На каждый день' }
+};

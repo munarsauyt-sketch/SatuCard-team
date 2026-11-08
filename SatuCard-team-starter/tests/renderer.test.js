@@ -142,3 +142,95 @@ test('rotated contain keeps the entire photo visible and rotated cover leaves no
     }
   }
 });
+
+test('purpose and category are independent, safe enums and 3:4 is an exact marketplace size', () => {
+  assert.equal(renderer.normalize({ purpose: '__proto__', category: 'constructor' }).purpose, 'cover');
+  assert.equal(renderer.normalize({ category: 'unknown' }).category, 'generic');
+  for (const purpose of Object.keys(renderer.purposes)) {
+    const state = renderer.normalize({ purpose, category: 'electronics', template: 'noir', format: 'portrait34' });
+    assert.equal(state.purpose, purpose);
+    assert.equal(state.category, 'electronics');
+    assert.equal(state.template, 'noir');
+  }
+  assert.equal(renderer.formats.portrait34.width, 900);
+  assert.equal(renderer.formats.portrait34.height, 1200);
+});
+
+test('every purpose keeps RU/KZ text and non-overlapping interactive regions within all formats', () => {
+  const intersects = (a, b) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
+  const photos = [1, 2, 3].map(() => ({ naturalWidth: 1200, naturalHeight: 800 }));
+  for (const purpose of Object.keys(renderer.purposes).filter(key => key !== 'cover')) {
+    for (const template of Object.keys(renderer.templates)) {
+      for (const format of Object.keys(renderer.formats)) {
+        for (const values of [[], ['Үйге арналған ыңғайлы әрі әдемі бұйым', 'Долговечный материал для каждого дня', 'Өлшемдері мен ерекшеліктерін тексеріңіз']]) {
+          const state = { purpose, template, format, features: values, textScale: 120,
+            title: 'Қазақстанға арналған күнделікті ыңғайлы сапалы жаңа тауарлар',
+            subtitle: 'Өнімнің ерекшеліктерін мұқият тексеріңіз. Комфорт и удобство для повседневного использования.',
+            description: 'Қазақстан бойынша тауар туралы нақты мәліметтер. Укажите проверенные характеристики товара: материалы, комплектацию и правила использования. Не добавляйте неподтверждённых обещаний.',
+            price: 999999999.99, oldPrice: 1000000000 };
+          const scene = fakeCanvas();
+          const result = renderer.render(scene.canvas, state, { photo: photos[0], photos });
+          const name = purpose + '/' + template + '/' + format;
+          const regions = [...result.photoRects, ...result.hitAreas];
+          for (const rect of regions) {
+            assert.ok(rect.width > 0 && rect.height > 0 && rect.x >= 0 && rect.y >= 0 && rect.x + rect.width <= 900 && rect.y + rect.height <= result.height, name + ' region fits');
+          }
+          regions.forEach((a, i) => regions.slice(i + 1).forEach(b => assert.ok(!intersects(a, b), name + ' regions do not overlap')));
+          const rendered = scene.text.map(row => row.value).join('').replace(/\s/g, '');
+          const normalized = renderer.normalize(state);
+          for (const value of [normalized.title, normalized.subtitle, normalized.description, ...normalized.features]) {
+            assert.ok(rendered.includes(value.replace(/\s/g, '')), name + ' retains supplied text');
+          }
+          for (const row of scene.text) {
+            const left = row.align === 'center' ? row.x - row.width / 2 : row.x;
+            assert.ok(left >= -1 && left + row.width <= 901 && row.y >= 0 && row.y + row.size <= result.height, name + ' text fits');
+          }
+          assert.equal(scene.stack.length, 0);
+          if (purpose === 'contents') assert.equal(scene.images.length, 3);
+        }
+      }
+    }
+  }
+});
+
+test('all purposes and formats render every selected photo and preserve primary drag geometry', () => {
+  const photos = [1, 2, 3].map(() => ({ naturalWidth: 1200, naturalHeight: 800 }));
+  for (const purpose of Object.keys(renderer.purposes)) {
+    for (const template of ['studio', 'editorial']) {
+      for (const format of Object.keys(renderer.formats)) {
+        const scene = fakeCanvas();
+        const result = renderer.render(scene.canvas, { purpose, template, format,
+          title: 'Ш'.repeat(60), subtitle: 'Ш'.repeat(90), description: 'Ш'.repeat(180),
+          features: ['Ш'.repeat(38), 'Ш'.repeat(38), 'Ш'.repeat(38)], textScale: 120,
+          photo: { x: 100, y: 0, zoom: 1.2 } }, { photo: photos[0], photos });
+        assert.equal(scene.images.length, 3, purpose + '/' + template + '/' + format);
+        assert.equal(result.photoRects.length, 3);
+        assert.equal(result.photoRect, result.photoRects[0]);
+        assert.ok(Array.isArray(result.hitAreas));
+        const main = scene.images[0];
+        assert.equal(main.image, photos[0]);
+        assert.ok(Math.abs(main.transform[4] - result.photoRect.x - result.photoRect.width * 0.85) < 1e-8);
+        assert.ok(Math.abs(main.transform[5] - result.photoRect.y - result.photoRect.height * 0.15) < 1e-8);
+        result.photoRects.forEach(rect => assert.ok(rect.width > 0 && rect.height > 0));
+      }
+    }
+  }
+});
+
+test('every cover template exposes text hit areas and hides unavailable fields', () => {
+  for (const template of Object.keys(renderer.templates)) {
+    for (const format of Object.keys(renderer.formats)) {
+      const scene = fakeCanvas();
+      const result = renderer.render(scene.canvas, { template, format, title: 'Название товара',
+        subtitle: 'Подзаголовок', description: 'Описание товара', features: ['Первое', 'Второе', 'Третье'] });
+      for (const field of ['product-name', 'product-subtitle', 'product-description', 'feature-1', 'feature-2', 'feature-3', 'product-price']) {
+        const hit = result.hitAreas.find(area => area.field === field);
+        assert.ok(hit, template + '/' + format + ' exposes ' + field);
+        assert.ok(hit.x >= 0 && hit.y >= 0 && hit.width > 0 && hit.height > 0);
+        assert.ok(hit.x + hit.width <= 900 && hit.y + hit.height <= result.height);
+      }
+      const minimal = renderer.render(scene.canvas, { template, format, showPrice: false });
+      assert.deepEqual(Array.from(minimal.hitAreas, area => area.field), ['product-name']);
+    }
+  }
+});

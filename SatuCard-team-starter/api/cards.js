@@ -4,7 +4,7 @@ import { readAccount, accountFailure } from '../lib/account.js';
 
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 const STYLES = new Set(['studio', 'accent', 'minimal', 'noir', 'neon', 'editorial', 'bloom', 'bold']);
-const FORMATS = new Set(['portrait', 'square', 'story']);
+const FORMATS = new Set(['portrait', 'portrait34', 'square', 'story']);
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
