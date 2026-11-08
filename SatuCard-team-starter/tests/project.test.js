@@ -52,3 +52,21 @@ test('multi-card projects round-trip active view and reject malformed sets', () 
   }
   assert.equal(project.parseProject(project.serializeProject({ title: 'Legacy' }, null, null), copy).settings.title, 'Legacy');
 });
+
+test('v2 shares multiple photos across views without duplicated legacy media', () => {
+  const photos = [{id:'front',source:'data:image/png;base64,aGVsbG8='},{id:'back',source:'data:image/jpeg;base64,aGVsbG8='}];
+  const views = [{id:'main',label:'Главная',settings:{title:'Front',format:'portrait34',purpose:'cover',category:'home'},photoIds:['front','back']},{id:'details',label:'Details',settings:{title:'Back'},photoIds:['back']}];
+  const text = project.serializeProject({}, null, null, {photos,views,activeViewId:'main'});
+  const payload = JSON.parse(text);
+  assert.equal(payload.schemaVersion,2); assert.equal('photo' in payload,false);
+  const restored = copy(project.parseProject(text,copy));
+  assert.deepEqual(restored,{settings:views[0].settings,photos,logo:null,views,activeViewId:'main'});
+  const empty = {photos:[],views:[{...views[0],photoIds:[]}],activeViewId:'main'};
+  assert.equal(project.parseProject(project.serializeProject({},null,null,empty),copy).photos.length,0);
+  for (const change of [
+    {photos:[photos[0],photos[0]]}, {photos:[{...photos[0],id:'../bad'}]}, {photos:Array.from({length:13},(_,i)=>({...photos[0],id:`p${i}`}))},
+    {photos:[{...photos[0],source:'https://evil.test/image.png'}]}, {photos:[{...photos[0],source:null}]},
+    {views:[{...views[0],photoIds:['missing']}]}, {views:[{...views[0],photoIds:['front','front']}]},
+    {views:[{...views[0],photoIds:['front','back','front','back']}]}, {views:[{...views[0],photoIds:undefined}]}, {views:[]}, {photo:null}
+  ]) assert.throws(()=>project.parseProject(JSON.stringify({...payload,...change}),copy));
+});

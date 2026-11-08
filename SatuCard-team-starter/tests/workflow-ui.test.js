@@ -116,3 +116,129 @@ test('ZIP includes every view and report; preflight and background tools are rea
     app.$('undo-button').click(); assert.equal(app.w.SATUCARD_EDITOR.snapshot().model.photoId, before);
   } finally { app.dom.window.close(); }
 });
+
+test('three-photo selection is per card, ordered, undoable and portable', async () => {
+  const app = await setup(); const { w, $, input } = app;
+  try {
+    const editor = w.SATUCARD_EDITOR, payload = JSON.parse(editor.snapshot(true).serialized);
+    payload.photos.push({ id: 'second', source: png }, { id: 'third', source: png });
+    payload.views[0].photoIds = payload.photos.map(photo => photo.id);
+    payload.views.push({ id: 'other', label: 'Другое фото', settings: { ...payload.settings, title: 'Другая карточка' }, photoIds: ['third'] });
+    await editor.restoreProject(JSON.stringify(payload));
+    assert.equal($('photo-library').children.length, 3); assert.equal($('selected-photos').children.length, 3);
+    let current = editor.snapshot(); const originalIds = [...current.model.photoIds];
+    $('selected-photos').children[1].querySelector('button').click();
+    assert.equal(editor.snapshot().model.photoId, originalIds[1]);
+    $('undo-button').click(); assert.equal(editor.snapshot().model.photoId, originalIds[0]);
+    $('redo-button').click(); assert.equal(editor.snapshot().model.photoId, originalIds[1]);
+    $('product-views').children[1].click(); assert.equal(editor.snapshot().images.photos.length, 1); assert.equal(editor.snapshot().model.photoId, originalIds[2]);
+    $('product-views').children[0].click(); assert.equal(editor.snapshot().images.photos.length, 3);
+    $('photo-library').children[0].querySelector('.photo-choice').click(); assert.equal(editor.snapshot().images.photos.length, 2);
+    const saved = editor.snapshot(true).serialized; assert.doesNotThrow(() => validateProject(JSON.parse(saved)));
+    await editor.restoreProject(saved); assert.equal(editor.snapshot().images.photos.length, 2);
+    input('card-purpose', 'contents'); input('card-format', 'portrait34');
+    const after = JSON.parse(editor.snapshot(true).serialized); assert.equal(after.settings.format, 'portrait34'); assert.equal(after.settings.purpose, 'contents');
+    assert.doesNotThrow(() => validateProject(after));
+    // Global removal is reflected in every view; undo restores references and assets.
+    $('photo-library').lastElementChild.querySelector('.photo-delete').click();
+    assert.equal(editor.snapshot().model.libraryIds.length, 2);
+    $('product-views').children[1].click(); assert.equal(editor.snapshot().images.photos.length, 0);
+    $('undo-button').click(); $('undo-button').click(); assert.equal(editor.snapshot().model.libraryIds.length, 3);
+  } finally { app.dom.window.close(); }
+});
+
+test('card thumbnails reorder ZIP and brand application preserves content and purpose', async () => {
+  const app = await setup(); const { w, $, input } = app;
+  try {
+    $('make-set').click(); const editor = w.SATUCARD_EDITOR;
+    assert.ok($('product-views').querySelector('canvas')); assert.equal(editor.snapshot().model.views[1].settings.purpose, 'advantages');
+    $('product-views').children[1].click(); const active = editor.snapshot().model.activeViewId;
+    input('brand-name', 'Aru Store'); input('product-category', 'clothing');
+    $('view-earlier').click(); assert.equal(editor.snapshot().model.views[0].id, active); assert.equal($('view-earlier').disabled, true);
+    $('apply-brand').click();
+    const views = editor.snapshot().model.views;
+    assert.ok(views.every(view => view.settings.brandName === 'Aru Store' && view.settings.customColors));
+    assert.equal(views[0].settings.purpose, 'advantages'); assert.equal(views[1].settings.purpose, 'cover');
+    $('download-set').click(); await until(() => !$('download-set').disabled);
+    const bytes = new Uint8Array(await app.downloads.at(-1).arrayBuffer()); const nameLength = new DataView(bytes.buffer).getUint16(26, true);
+    assert.equal(new TextDecoder().decode(bytes.slice(30, 30 + nameLength)), '01-Преимущества.png');
+    $('undo-button').click(); assert.notEqual(editor.snapshot().model.views[1].settings.brandName, 'Aru Store');
+  } finally { app.dom.window.close(); }
+});
+
+test('edited Kazakh copy applies only after explicit approval and phone dialog can reopen', async () => {
+  const app = await setup(); const { $, input } = app;
+  try {
+    input('copy-facts', 'Материал: мақта\nӨлшем: M'); input('copy-language', 'kk'); $('copy-offline').click();
+    input('copy-edit-title', 'Өзім өңдеген атау'); input('copy-edit-feature-1', 'Мақтадан жасалған');
+    assert.notEqual($('product-name').value, 'Өзім өңдеген атау'); $('copy-apply').click();
+    assert.equal($('product-name').value, 'Өзім өңдеген атау'); assert.equal($('feature-1').value, 'Мақтадан жасалған');
+    input('card-format', 'portrait34'); $('phone-preview-button').click();
+    assert.equal($('phone-dialog').open, true); assert.equal($('phone-canvas').height, 1200);
+    $('phone-close').click(); assert.equal($('phone-dialog').open, false);
+    $('phone-preview-button').click(); assert.equal($('phone-dialog').open, true); $('phone-close').click();
+  } finally { app.dom.window.close(); }
+});
+
+test('photo batch upload respects file limit and switching cards cancels stale images', async () => {
+  const app = await setup({ imageDelay: 15 }); const { w, $ } = app;
+  try {
+    const picker = $('photo-input');
+    const choose = files => { Object.defineProperty(picker, 'files', { configurable: true, value: files }); picker.dispatchEvent(new w.Event('change', { bubbles: true })); };
+    const photo = name => new w.File([new Uint8Array([1, 2, 3])], name, { type: 'image/png' });
+    choose([photo('a.png'), photo('b.png')]); await until(() => w.SATUCARD_EDITOR.snapshot().model.libraryIds.length === 3);
+    assert.equal(w.SATUCARD_EDITOR.snapshot().images.photos.length, 3);
+    const before = w.SATUCARD_EDITOR.snapshot(true).serialized;
+    choose(Array.from({ length: 10 }, (_, i) => photo(`${i}.png`))); assert.match($('file-status').textContent, /до 12/);
+    assert.equal(w.SATUCARD_EDITOR.snapshot(true).serialized, before);
+    $('make-set').click(); choose([photo('late.png')]); $('product-views').children[1].click(); await sleep(80);
+    assert.equal(w.SATUCARD_EDITOR.snapshot().model.libraryIds.length, 3);
+  } finally { app.dom.window.close(); }
+});
+
+test('ZIP snapshots use each view photo selection even after current-card edits', async () => {
+  const app = await setup(); const { w, $ } = app;
+  try {
+    const payload = JSON.parse(w.SATUCARD_EDITOR.snapshot(true).serialized);
+    payload.photos.push({ id: 'secondary', source: png });
+    payload.views.push({ id: 'second', label: 'Вторая', settings: payload.settings, photoIds: ['secondary'] });
+    await w.SATUCARD_EDITOR.restoreProject(JSON.stringify(payload));
+    const snapshot = w.SATUCARD_EDITOR.snapshot(), rendered = [], render = w.SATUCARD_RENDERER.render;
+    w.SATUCARD_RENDERER.render = function(canvas, settings, images, options) { if (options?.scale === 1) rendered.push(images.photo); return render(canvas, settings, images, options); };
+    $('download-set').click(); await until(() => !$('download-set').disabled);
+    assert.equal(rendered[0], snapshot.viewImages[snapshot.model.views[0].id].photo);
+    assert.equal(rendered[1], snapshot.viewImages.second.photo); assert.notEqual(rendered[0], rendered[1]);
+  } finally { app.dom.window.close(); }
+});
+
+test('editing between decoded upload files keeps pending photo assets alive', async () => {
+  const app = await setup({ imageDelay: 10 }); const { w, $ } = app;
+  try {
+    let decoded = 0, release;
+    w.Image = class { naturalWidth = 10; naturalHeight = 10; set src(value) { this.value = value; decoded++; if (decoded === 3) release = () => this.onload?.(); else setTimeout(() => this.onload?.(), 1); } };
+    const files = ['one.png', 'two.png'].map(name => new w.File([new Uint8Array([1])], name, { type: 'image/png' }));
+    Object.defineProperty($('photo-input'), 'files', { configurable: true, value: files });
+    $('photo-input').dispatchEvent(new w.Event('change', { bubbles: true }));
+    await until(() => Boolean(release)); // First photo registered, second decoding.
+    $('apply-brand').click(); release();
+    await until(() => w.SATUCARD_EDITOR.snapshot().model.libraryIds.length === 3);
+    assert.equal(w.SATUCARD_EDITOR.snapshot().images.photos.length, 3);
+    assert.equal($('photo-library').children.length, 3);
+    assert.doesNotThrow(() => validateProject(JSON.parse(w.SATUCARD_EDITOR.snapshot(true).serialized)));
+  } finally { app.dom.window.close(); }
+});
+
+test('deleting a shared primary photo resets framing on inactive cards', async () => {
+  const app = await setup(); const { w, $ } = app;
+  try {
+    const editor = w.SATUCARD_EDITOR, payload = JSON.parse(editor.snapshot(true).serialized), first = payload.photos[0].id;
+    payload.photos.push({ id: 'second', source: png });
+    payload.views.push({ id: 'other', label: 'Другой ракурс', settings: { ...payload.settings, photo: { ...payload.settings.photo, zoom: 2.5, x: 0, rotation: 90 } }, photoIds: [first, 'second'] });
+    await editor.restoreProject(JSON.stringify(payload));
+    $('photo-library').children[0].querySelector('.photo-delete').click();
+    $('product-views').children[1].click();
+    assert.equal(editor.snapshot().model.settings.photo.zoom, 1);
+    assert.equal(editor.snapshot().model.settings.photo.rotation, 0);
+    assert.equal(editor.snapshot().images.photos.length, 1);
+  } finally { app.dom.window.close(); }
+});

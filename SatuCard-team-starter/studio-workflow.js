@@ -15,16 +15,20 @@
     const setBusy = value => { cloudBusy = value; ['cloud-save', 'cloud-copy', 'cloud-refresh'].forEach(id => { $(id).disabled = value; }); };
     const safeName = value => String(value).replace(/[<>:"/\\|?*\u0000-\u001f]/g, '').trim().slice(0, 60) || 'Карточка';
     function renderViews() {
-      const { model } = editor.snapshot();
+      const { model, viewImages } = editor.snapshot();
       $('product-views').replaceChildren();
       for (const view of model.views) {
-        const button = document.createElement('button'); button.type = 'button'; button.textContent = view.label;
+        const button = document.createElement('button'); button.type = 'button'; button.className = 'view-thumbnail';
+        const preview = document.createElement('canvas'), label = document.createElement('span'); preview.setAttribute('aria-hidden', 'true'); label.textContent = `${model.views.indexOf(view) + 1}. ${view.label}`;
+        renderer.render(preview, view.settings, viewImages[view.id], { scale: 0.12 }); button.append(preview, label);
+        button.setAttribute('aria-label', `${view.label}. ${renderer.purposes[view.settings.purpose || 'cover'].label}`);
         button.setAttribute('aria-pressed', String(view.id === model.activeViewId));
         button.addEventListener('click', () => editor.selectView(view.id)); $('product-views').append(button);
       }
-      $('view-label').value = model.views.find(view => view.id === model.activeViewId).label;
+      if (document.activeElement !== $('view-label')) $('view-label').value = model.views.find(view => view.id === model.activeViewId).label;
       $('remove-view').disabled = model.views.length <= 1; $('add-view').disabled = model.views.length >= 8; $('make-set').disabled = model.views.length > 6;
       $('remove-background').disabled = removing || !model.photoId;
+      const index = model.views.findIndex(view => view.id === model.activeViewId); $('view-earlier').disabled = index === 0; $('view-later').disabled = index === model.views.length - 1;
       if (cloudIdentity) message('cloud-status', `Открыт «${cloudIdentity.title}». Изменения сохраняются в облако только по кнопке.`);
       if ($('preflight-results').children.length) message('preflight-status', 'Карточка изменилась. Повторите проверку перед экспортом.');
     }
@@ -32,6 +36,9 @@
     renderViews();
     ['cloud-save', 'cloud-copy', 'cloud-refresh', 'copy-offline', 'download-set', 'check-export'].forEach(id => { $(id).disabled = false; });
     const actOnSet = action => { try { action(); message('set-status', 'Изменение комплекта можно отменить. Тексты и оформление каждой карточки редактируются отдельно.'); } catch (error) { message('set-status', error.message, true); } };
+    $('view-earlier').addEventListener('click', () => actOnSet(() => editor.moveView(-1)));
+    $('view-later').addEventListener('click', () => actOnSet(() => editor.moveView(1)));
+    $('apply-brand').addEventListener('click', () => actOnSet(() => editor.applyBrand()));
     $('make-set').addEventListener('click', () => actOnSet(() => editor.makeSet()));
     $('add-view').addEventListener('click', () => actOnSet(() => editor.addView()));
     $('remove-view').addEventListener('click', () => actOnSet(() => editor.removeView()));
@@ -106,6 +113,8 @@
         if (inputVersion !== copyInputVersion) { message('copy-status', 'Исходные данные изменились. Создайте подсказку заново.'); return; }
         copyDraft = draft; copyRevision = revision;
         $('copy-preview').textContent = [draft.title, draft.subtitle, draft.description, ...draft.features.map(text => '• ' + text)].filter(Boolean).join('\n\n');
+        ['title', 'subtitle', 'description'].forEach(key => { $('copy-edit-' + key).value = draft[key]; });
+        [1, 2, 3].forEach(index => { $('copy-edit-feature-' + index).value = draft.features[index - 1] || ''; });
         $('copy-result').hidden = false;
         message('copy-status', ai ? 'ИИ-черновик: проверьте перевод и каждый факт. Применение заменит тексты только выбранной карточки.' : 'Шаблон без ИИ. Факты сохранены на исходном языке; длинные факты могли не поместиться. Проверьте текст.');
       } catch (error) { message('copy-status', error.name === 'AbortError' ? 'ИИ не ответил вовремя. Можно использовать шаблон.' : error.message, true); }
@@ -113,7 +122,7 @@
     }
     ['copy-language', 'copy-tone', 'copy-facts'].forEach(id => $(id).addEventListener('input', () => { copyInputVersion++; copyDraft = null; $('copy-result').hidden = true; message('copy-status', 'Данные изменены. Создайте новую подсказку.'); }));
     $('copy-offline').addEventListener('click', () => makeCopy(false)); $('copy-ai').addEventListener('click', () => makeCopy(true));
-    $('copy-apply').addEventListener('click', () => { if (!copyDraft) return; try { editor.applyCopy(copyDraft, copyRevision); $('copy-result').hidden = true; copyDraft = null; message('copy-status', 'Тексты применены. Можно отменить кнопкой ↶.'); } catch (error) { message('copy-status', error.message, true); } });
+    $('copy-apply').addEventListener('click', () => { if (!copyDraft) return; try { const draft = { ...copyDraft, title: $('copy-edit-title').value.trim(), subtitle: $('copy-edit-subtitle').value, description: $('copy-edit-description').value, features: [1, 2, 3].map(index => $('copy-edit-feature-' + index).value) }; if (!draft.title) throw new Error('Введите название перед применением.'); editor.applyCopy(draft, copyRevision); $('copy-result').hidden = true; copyDraft = null; message('copy-status', 'Тексты применены. Можно отменить кнопкой ↶.'); } catch (error) { message('copy-status', error.message, true); } });
     $('copy-dismiss').addEventListener('click', () => { copyDraft = null; $('copy-result').hidden = true; });
     if (location.protocol !== 'file:') fetch('api/copy', { cache: 'no-store', ...(typeof AbortSignal.timeout === 'function' ? { signal: AbortSignal.timeout(8000) } : {}) }).then(response => response.ok ? response.json() : {}).then(result => {
       aiAvailable = result.available === true; $('copy-ai').disabled = copyBusy || !aiAvailable;
@@ -172,10 +181,10 @@
         const files = [], reports = [];
         for (const [index, view] of snapshot.model.views.entries()) {
           message('set-status', `Готовим ${index + 1} из ${snapshot.model.views.length}: ${view.label}…`);
-          const { surface, blob } = await renderFile(view.settings, snapshot.images, jpeg, scale);
+          const { surface, blob } = await renderFile(view.settings, snapshot.viewImages[view.id], jpeg, scale);
           const name = `${String(index + 1).padStart(2, '0')}-${safeName(view.label)}.${jpeg ? 'jpg' : 'png'}`;
           files.push({ name, bytes: new Uint8Array(await blob.arrayBuffer()) });
-          reports.push({ file: name, report: getReport(view.settings, snapshot.images, surface, blob, marketplace) });
+          reports.push({ file: name, report: getReport(view.settings, snapshot.viewImages[view.id], surface, blob, marketplace) });
           await new Promise(resolve => setTimeout(resolve, 0));
         }
         const reportText = 'SatuCard: проверка комплекта\nНе гарантия приёма площадкой. Проверьте актуальные правила категории.\n\n' + reports.map(({ file, report }) => file + '\n' + report.checks.map(check => `[${check.severity}] ${check.message}`).join('\n')).join('\n\n');

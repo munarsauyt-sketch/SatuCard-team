@@ -98,6 +98,23 @@ test('publishes a neon story card and keeps its verified owner', async () => {
   assert.equal(stored.user_id, 'aaac8be7-1386-45b8-8d49-3f9d7f5c9fb6');
 });
 
+test('publishes a 3:4 portrait card and keeps its verified owner', async () => {
+  configure();
+  let stored;
+  globalThis.fetch = async (url, options) => {
+    if (String(url).endsWith('/auth/v1/user')) return Response.json({ id: 'aaac8be7-1386-45b8-8d49-3f9d7f5c9fb6', email_confirmed_at: '2026-10-26T00:00:00Z' });
+    if (String(url).includes('/rest/v1/profiles?')) return Response.json([readyProfile]);
+    if (String(url).endsWith('/rest/v1/cards')) stored = JSON.parse(options.body);
+    return new Response(null, { status: 201 });
+  };
+
+  const response = await POST(uploadRequest({ style: 'neon', format: 'portrait34' }));
+  assert.equal(response.status, 201);
+  assert.equal(stored.style, 'neon');
+  assert.equal(stored.format, 'portrait34');
+  assert.equal(stored.user_id, 'aaac8be7-1386-45b8-8d49-3f9d7f5c9fb6');
+});
+
 test('rejects unknown templates and formats before uploading any image', async () => {
   configure();
   let backendCalls = 0;

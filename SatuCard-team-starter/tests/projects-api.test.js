@@ -116,3 +116,31 @@ test('migration keeps cloud payloads private and guards ownership/version', () =
   assert.match(sql, /force row level security/); assert.match(sql, /revoke all on public.editable_projects from public, anon, authenticated/);
   assert.match(sql, /auth.uid\(\) = user_id/); assert.match(sql, /new.version <> old.version \+ 1/); assert.match(sql, /new.user_id is distinct from old.user_id/);
 });
+
+test('cloud v2 preserves media references and validates strict fields and bounds', async () => {
+  const calls = setup();
+  const source = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aAkoAAAAASUVORK5CYII=';
+  const p = {app:'SatuCard',schemaVersion:2,settings:{format:'portrait34',purpose:'dimensions',category:'electronics'},photos:[{id:'front',source}],logo:null,views:[{id:'main',label:'Main',settings:{format:'portrait34',purpose:'dimensions',category:'electronics'},photoIds:['front']}],activeViewId:'main'};
+  assert.equal((await POST(req({title:'Test',payload:p}))).status,201);
+  assert.deepEqual(JSON.parse(calls[0].body).payload,p);
+  for (const change of [
+    {photo:null}, {photos:[p.photos[0],p.photos[0]]}, {photos:[{id:'bad id',source}]}, {photos:[{id:'front',source,extra:true}]},
+    {photos:[{id:'front',source:null}]}, {photos:[{id:'front',source:'data:image/png;base64,aGVsbG8='}]},
+    {photos:Array.from({length:13},(_,i)=>({id:`p${i}`,source}))},
+    {views:[{...p.views[0],photoIds:['unknown']}]}, {views:[{...p.views[0],photoIds:['front','front']}]},
+    {views:[{...p.views[0],photoIds:['front','front','front','front']}]}, {views:[{...p.views[0],photoIds:undefined}]},
+    {views:undefined}, {settings:{purpose:'unknown'}}, {settings:{category:'unknown'}}, {settings:{unknown:'bad'}}
+  ]) assert.equal((await POST(req({title:'Test',payload:{...p,...change}}))).status,400);
+  p.photos=[];p.views[0].photoIds=[];
+  assert.equal((await POST(req({title:'Empty',payload:p}))).status,201);
+});
+
+test('multi-photo migration preserves legacy projects and permits private v2 payloads', () => {
+  const sql = readFileSync(new URL('../database/multi-photo-studio.sql', import.meta.url), 'utf8');
+  assert.match(sql,/cards_format_check check \(format in \('portrait', 'portrait34'/);
+  assert.match(sql,/drop constraint if exists editable_projects_payload_check/);
+  assert.match(sql,/"schemaVersion":1/); assert.match(sql,/"schemaVersion":2/);
+  assert.match(sql,/not \(payload \? 'photo'\)/);
+  assert.match(sql,/octet_length\(payload::text\) <= 3565536/);
+  assert.doesNotMatch(sql,/disable row level security|grant .*anon/i);
+});
