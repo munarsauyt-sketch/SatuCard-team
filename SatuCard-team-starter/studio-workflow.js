@@ -11,6 +11,7 @@
     let exportingSet = false, checking = false, removing = false, copyInputVersion = 0;
     let copyController = null;
     let knownUserId;
+    let copyView = editor.snapshot().model.activeViewId, copyPhoto = editor.snapshot().images.photo;
     window.SATUCARD_AUTH?.getSession().then(session => { if (knownUserId === undefined) knownUserId = session?.user?.id || null; });
     const message = (id, text, error = false) => { $(id).textContent = text; $(id).classList.toggle('error', error); };
     const setBusy = value => { cloudBusy = value; ['cloud-save', 'cloud-copy', 'cloud-refresh'].forEach(id => { $(id).disabled = value; }); };
@@ -91,7 +92,7 @@
     document.addEventListener('satucard:history-navigation', detachCloud);
     document.addEventListener('satucard:authchange', event => {
       const userId = event.detail?.user?.id || null;
-      if (knownUserId !== undefined && userId !== knownUserId) { detachCloud(); $('cloud-project-list').replaceChildren(); invalidateCopy('Аккаунт изменился. Создайте подсказку заново.'); }
+      if (knownUserId !== undefined && userId !== knownUserId) { detachCloud(); $('copy-photo').checked = false; $('cloud-project-list').replaceChildren(); invalidateCopy('Аккаунт изменился. Создайте подсказку заново.'); }
       knownUserId = userId;
     });
 
@@ -153,9 +154,16 @@
       finally { clearTimeout(timer); if (inputVersion === copyInputVersion) { copyController = null; copyBusy = false; $('copy-cancel').hidden = true; $('copy-offline').disabled = false; $('copy-ai').disabled = !aiAvailable; } }
     }
     ['copy-language', 'copy-tone', 'copy-facts', 'copy-photo'].forEach(id => $(id).addEventListener('input', () => invalidateCopy('Данные изменены. Создайте новую подсказку.')));
-    document.addEventListener('satucard:editor-change', () => { if (copyBusy || copyDraft) invalidateCopy('Карточка изменилась. Создайте подсказку заново.'); });
-    $('photo-input').addEventListener('change', () => invalidateCopy('Фото изменилось. Создайте подсказку заново.'));
-    window.addEventListener('pagehide', () => invalidateCopy());
+    document.addEventListener('satucard:editor-change', () => {
+      const snapshot = editor.snapshot(), changedSource = copyView !== snapshot.model.activeViewId || copyPhoto !== snapshot.images.photo;
+      copyView = snapshot.model.activeViewId; copyPhoto = snapshot.images.photo;
+      if (changedSource) $('copy-photo').checked = false;
+      if (copyBusy || copyDraft || changedSource) invalidateCopy('Карточка изменилась. Создайте подсказку заново.');
+    });
+    ['photo-input', 'load-project-input', 'reset-button', 'restore-draft-button'].forEach(id => $(id).addEventListener(id.includes('input') ? 'change' : 'click', () => {
+      $('copy-photo').checked = false; invalidateCopy('Исходные данные изменились. Создайте подсказку заново.');
+    }));
+    window.addEventListener('pagehide', () => { $('copy-photo').checked = false; invalidateCopy(); });
     $('copy-facts').closest('details').addEventListener('toggle', event => { if (!event.currentTarget.open && (copyBusy || copyDraft)) invalidateCopy('Помощник закрыт.'); });
     $('copy-cancel').addEventListener('click', () => invalidateCopy('Ожидание отменено. Уже отправленный запрос может учитываться в лимите.'));
     $('copy-result').addEventListener('input', event => {

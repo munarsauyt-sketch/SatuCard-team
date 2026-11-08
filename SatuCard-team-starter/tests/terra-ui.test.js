@@ -155,3 +155,21 @@ for (const navigation of ['accordion-collapse', 'pagehide']) test(`${navigation}
     const title = app.$('product-name').value; app.$('copy-apply').click(); assert.equal(app.$('product-name').value, title);
   } finally { app.dom.window.close(); }
 });
+
+
+for (const boundary of ['view', 'account', 'replace-photo', 'upload', 'import', 'reset', 'restore', 'pagehide']) test(`photo consent is revoked at ${boundary} boundary`, async () => {
+  const app = await aiApp();
+  try {
+    check(app, 'copy-photo'); assert.equal(app.$('copy-photo').checked, true);
+    if (boundary === 'view') app.$('add-view').click();
+    if (boundary === 'account') app.authChange(null);
+    if (boundary === 'replace-photo') await app.w.SATUCARD_EDITOR.replacePhoto(png, app.w.SATUCARD_EDITOR.revision);
+    if (boundary === 'upload') app.$('photo-input').dispatchEvent(new app.w.Event('change'));
+    if (boundary === 'import') app.$('load-project-input').dispatchEvent(new app.w.Event('change'));
+    if (boundary === 'reset') app.$('reset-button').click();
+    if (boundary === 'restore') app.$('restore-draft-button').click();
+    if (boundary === 'pagehide') app.w.dispatchEvent(new app.w.Event('pagehide'));
+    assert.equal(app.$('copy-photo').checked, false); assert.equal(app.requests.length, 0);
+    await sleep(20);
+  } finally { app.dom.window.close(); }
+});
