@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { configuration } from '../lib/supabase.js';
 import { readAccount, accountFailure } from '../lib/account.js';
+import { readBoundedBody } from '../lib/request-body.js';
 
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 const STYLES = new Set(['studio', 'accent', 'minimal', 'noir', 'neon', 'editorial', 'bloom', 'bold']);
@@ -37,8 +38,10 @@ export async function POST(request) {
 
   let form;
   try {
-    form = await request.formData();
-  } catch {
+    const bytes = await readBoundedBody(request, MAX_IMAGE_BYTES + 64 * 1024);
+    form = await new Response(bytes, { headers: { 'content-type': request.headers.get('content-type') } }).formData();
+  } catch (error) {
+    if (error.status === 413) return accountFailure(error);
     return json({ error: 'Не удалось прочитать данные карточки.' }, 400);
   }
 

@@ -1,0 +1,9 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Supabase publishable browser key, protected by server authorization and RLS"
+condition = "AND"
+paths = ['''^SatuCard-team-starter/auth-client\.js$''']
+regexTarget = "secret"
+regexes = ['''^sb_publishable_[A-Za-z0-9_-]+$''']

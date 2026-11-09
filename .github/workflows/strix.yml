@@ -1,0 +1,55 @@
+name: Strix security scan
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  strix:
+    # Enable after adding separate scanner credentials. Forks never receive them.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (vars.STRIX_ENABLED == 'true' && github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check scanner credentials
+        env:
+          STRIX_LLM: ${{ secrets.STRIX_LLM }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+        run: |
+          test -n "$STRIX_LLM" || { echo "::error::Add the STRIX_LLM repository secret."; exit 1; }
+          test -n "$LLM_API_KEY" || { echo "::error::Add a separate LLM_API_KEY repository secret for Strix."; exit 1; }
+      - name: Install Strix
+        run: |
+          curl --fail --silent --show-error --location https://strix.ai/install -o "$RUNNER_TEMP/strix-install.sh"
+          bash "$RUNNER_TEMP/strix-install.sh"
+      - name: Scan pull request or full main branch
+        env:
+          STRIX_LLM: ${{ secrets.STRIX_LLM }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          PR_BASE: ${{ github.base_ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "$PR_BASE" ]; then
+            git rev-parse --verify "origin/$PR_BASE"
+            strix -n -t ./ --scan-mode quick --scope-mode diff --diff-base "origin/$PR_BASE" --max-budget 10
+          else
+            strix -n -t ./ --scan-mode standard --scope-mode full --max-budget 10
+          fi
+      - name: Require a completed scan
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_json=$(find strix_runs -name run.json -type f -print -quit)
+          test -n "$run_json"
+          test "$(jq -r .status "$run_json")" = completed

@@ -154,6 +154,31 @@ test('refuses publication without a verified account', async () => {
   assert.equal(response.status, 401);
 });
 
+test('publication cancels oversized multipart data before parsing or writing', async () => {
+  configure();
+  globalThis.fetch = async url => {
+    if (String(url).endsWith('/auth/v1/user')) return Response.json({ id: readyProfile.id, email_confirmed_at: 'today' });
+    if (String(url).includes('/rest/v1/profiles?')) return Response.json([readyProfile]);
+    throw new Error('Oversized data must not reach Storage or Postgres');
+  };
+  let cancelled = false;
+  let pulls = 0;
+  const body = new ReadableStream({
+    pull(controller) {
+      pulls++;
+      controller.enqueue(new Uint8Array(2 * 1024 * 1024 + 64 * 1024 + 1));
+    },
+    cancel() { cancelled = true; }
+  }, { highWaterMark: 0 });
+  const response = await POST(new Request('https://satucard.example/api/cards', {
+    method: 'POST', body, duplex: 'half',
+    headers: { Authorization: 'Bearer test.jwt.token', 'content-type': 'multipart/form-data; boundary=test' }
+  }));
+  assert.equal(response.status, 413);
+  assert.equal(cancelled, true);
+  assert.equal(pulls, 1);
+});
+
 test('lists only cards belonging to the verified user', async () => {
   configure();
   const id = 'aaac8be7-1386-45b8-8d49-3f9d7f5c9fb6';

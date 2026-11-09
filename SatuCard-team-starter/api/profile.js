@@ -1,5 +1,6 @@
 import { configuration } from '../lib/supabase.js';
 import { accountJson, accountFailure, AccountError, readAccount, normalName, publicProfile } from '../lib/account.js';
+import { readBoundedBody } from '../lib/request-body.js';
 
 export async function GET(request) {
   const config = configuration();
@@ -13,9 +14,8 @@ export async function POST(request) {
   if (!config) return accountJson({ error: 'Сервер пока не настроен.' }, 503);
   try {
     const { user } = await readAccount(request, config);
-    if (!request.headers.get('content-type')?.startsWith('application/json')) throw new AccountError('Нужны данные JSON.', 415, 'invalid_format');
-    const raw = await request.text();
-    if (raw.length > 4096) throw new AccountError('Слишком много данных.', 413, 'invalid_profile');
+    if (!/^application\/json(?:\s*;|$)/i.test(request.headers.get('content-type') || '')) throw new AccountError('Нужны данные JSON.', 415, 'invalid_format');
+    const raw = (await readBoundedBody(request, 4096)).toString('utf8');
     let body;
     try { body = JSON.parse(raw); } catch { throw new AccountError('Не удалось прочитать данные.', 400, 'invalid_profile'); }
     const firstName = normalName(body?.firstName), lastName = normalName(body?.lastName);
