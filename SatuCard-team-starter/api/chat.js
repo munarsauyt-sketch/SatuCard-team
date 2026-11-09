@@ -99,12 +99,14 @@ export async function POST(request) {
   const wantsSol = input?.selectedProvider === 'anymodel';
   const sol = wantsSol && geminiSelected() ? configuredSol() : null;
   if (wantsSol && !sol) return accountJson({ error: 'Sol сейчас недоступен. Выберите Gemini в чате.', code: 'sol_unavailable' }, 503);
-  if (sol && process.env.VERCEL_ENV === 'production' && !isGeminiOwner(user)) {
+  const isProduction = process.env.VERCEL_ENV === 'production';
+  const isOwner = geminiSelected() && isGeminiOwner(user);
+  if (sol && isProduction && !isOwner) {
     return accountJson({ error: 'Sol доступен только владельцу сайта. Выберите Gemini в чате.', code: 'sol_access_required' }, 403);
   }
-  // Only the verified, allowlisted Gemini administrator skips SatuCard's quota.
-  const isGeminiAdmin = geminiSelected() && !sol && isGeminiOwner(user);
-  if (evaluation || !isGeminiAdmin) {
+  // Owner chat uses provider limits. Preview Sol and evaluations use the shared quota.
+  const usesSiteQuota = Boolean(evaluation) || !isOwner || Boolean(sol && !isProduction);
+  if (usesSiteQuota) {
     let allowed;
     try { allowed = await reserveCopyQuota(config, user.id); }
     catch { return accountJson({ error: 'Общий лимит ИИ недоступен. Используйте локальный шаблон.', code: 'ai_quota_unavailable' }, 503); }
@@ -161,6 +163,6 @@ export async function POST(request) {
     const errorMessage = error.message === 'Unsupported numeric claim'
       ? 'В ответе sAI появилось неподтверждённое число. Укажите нужные характеристики в «Проверенных фактах о товаре» или попросите вариант без них.'
       : 'Не удалось получить корректный ответ ИИ. Используйте шаблон или повторите позже.';
-    return accountJson({ error: errorMessage + (isGeminiAdmin ? '' : ' Попытка учтена в лимите SatuCard.'), code: 'ai_failed' }, 502);
+    return accountJson({ error: errorMessage + (usesSiteQuota ? ' Попытка учтена в лимите SatuCard.' : ''), code: 'ai_failed' }, 502);
   }
 }
