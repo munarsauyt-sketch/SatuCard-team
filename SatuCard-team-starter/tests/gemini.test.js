@@ -5,7 +5,7 @@ import { GET, POST } from '../api/chat.js';
 const input = { message:'Сократи текст',history:[],card:{title:'Чашка',subtitle:'',description:'Керамика',features:[],template:'minimal'},facts:'Керамика',language:'ru',tone:'neutral' };
 const result = {reply:'Предлагаю лаконичный вариант.',proposal:input.card};
 const answer = (value=result, finishReason='STOP') => ({candidates:[{finishReason,content:{role:'model',parts:[{text:JSON.stringify(value)}]}}]});
-const keys=['SATUCARD_AI_PROVIDER','GEMINI_CHAT_ENABLED','GEMINI_CHAT_MODEL','GEMINI_API_KEY','GEMINI_ALLOWED_USER_IDS','SUPABASE_URL','SUPABASE_SECRET_KEY'];
+const keys=['SATUCARD_AI_PROVIDER','GEMINI_CHAT_ENABLED','GEMINI_CHAT_MODEL','GEMINI_API_KEY','GEMINI_ALLOWED_USER_IDS','GEMINI_ADMIN_USER_ID','SUPABASE_URL','SUPABASE_SECRET_KEY'];
 const saved=Object.fromEntries(keys.map(k=>[k,process.env[k]])), oldFetch=globalThis.fetch;
 afterEach(()=>{globalThis.fetch=oldFetch;for(const k of keys){if(saved[k]===undefined)delete process.env[k];else process.env[k]=saved[k]}});
 test('Gemini uses only its endpoint, header key, bounded schema and shared output validation',async()=>{
@@ -31,4 +31,39 @@ test('Gemini activation requires explicit model key allowlist and database quota
  globalThis.fetch=async(url)=>{if(url.endsWith('/auth/v1/user'))return Response.json({id,email_confirmed_at:'today'});if(url.includes('/rest/v1/profiles?'))return Response.json([{id,profile_completed_at:'today',mail_proof_required:false}]);if(url.includes('/rpc/'))return new Response('',{status:404});providerCalls++;throw Error('Must not call model')};
  const response=await POST(new Request('https://example.com/api/chat',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer test.token.signature'},body:JSON.stringify(input)}));assert.equal(response.status,503);assert.equal(providerCalls,0);
  process.env.GEMINI_ALLOWED_USER_IDS='*';assert.equal((await GET().json()).available,false);
+});
+
+test('only the verified and allowlisted Gemini administrator skips the SatuCard quota', async () => {
+ const adminId = '11111111-1111-4111-8111-111111111111';
+ const memberId = '22222222-2222-4222-8222-222222222222';
+ Object.assign(process.env, {
+  SATUCARD_AI_PROVIDER: 'gemini', GEMINI_CHAT_ENABLED: 'true', GEMINI_CHAT_MODEL: 'gemini-3.1-flash-lite', GEMINI_API_KEY: 'test',
+  GEMINI_ALLOWED_USER_IDS: [adminId, memberId].join(','), GEMINI_ADMIN_USER_ID: adminId,
+  SUPABASE_URL: 'https://example.supabase.co', SUPABASE_SECRET_KEY: 'private'
+ });
+ let signedInId = adminId;
+ let quotaCalls = 0, modelCalls = 0;
+ globalThis.fetch = async url => {
+  if (url.endsWith('/auth/v1/user')) return Response.json({ id: signedInId, email_confirmed_at: 'today' });
+  if (url.includes('/rest/v1/profiles?')) return Response.json([{ id: signedInId, profile_completed_at: 'today', mail_proof_required: false }]);
+  if (url.includes('/rpc/')) { quotaCalls++; return Response.json({ allowed: false }); }
+  assert.match(url, /^https:\/\/generativelanguage\.googleapis\.com\//);
+  modelCalls++;
+  return Response.json(answer());
+ };
+ const request = () => new Request('https://example.com/api/chat', {
+  method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer test.token.signature' },
+  body: JSON.stringify({ ...input, userId: adminId })
+ });
+ const response = await POST(request());
+ assert.equal(response.status, 200);
+ assert.deepEqual(await response.json(), result);
+ assert.equal(quotaCalls, 0);
+ signedInId = memberId;
+ assert.equal((await POST(request())).status, 429);
+ assert.equal(quotaCalls, 1);
+ signedInId = adminId;
+ process.env.GEMINI_ALLOWED_USER_IDS = memberId;
+ assert.equal((await POST(request())).status, 403);
+ assert.equal(modelCalls, 1);
 });

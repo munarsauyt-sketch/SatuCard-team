@@ -49,10 +49,15 @@ export async function POST(request) {
     } finally { reader.releaseLock(); }
     input = validateInput(JSON.parse(Buffer.concat(parts).toString('utf8')));
   } catch { return accountJson({ error: 'Проверьте сообщение, историю, карточку, язык и согласие на фото.', code: 'invalid_input' }, 400); }
-  let allowed;
-  try { allowed = await reserveCopyQuota(config, user.id); }
-  catch { return accountJson({ error: 'Общий лимит ИИ недоступен. Используйте локальный шаблон.', code: 'ai_quota_unavailable' }, 503); }
-  if (!allowed) return accountJson({ error: 'Лимит ИИ-запросов достигнут. Подождите не менее минуты или используйте локальный шаблон.', code: 'ai_rate_limited' }, 429);
+  // Only the verified, allowlisted Gemini administrator skips SatuCard's quota.
+  const adminId = process.env.GEMINI_ADMIN_USER_ID?.trim().toLowerCase();
+  const isGeminiAdmin = geminiSelected() && user.id.toLowerCase() === adminId;
+  if (!isGeminiAdmin) {
+    let allowed;
+    try { allowed = await reserveCopyQuota(config, user.id); }
+    catch { return accountJson({ error: 'Общий лимит ИИ недоступен. Используйте локальный шаблон.', code: 'ai_quota_unavailable' }, 503); }
+    if (!allowed) return accountJson({ error: 'Лимит ИИ-запросов достигнут. Подождите не менее минуты или используйте локальный шаблон.', code: 'ai_rate_limited' }, 429);
+  }
   try {
     return accountJson(await generateCopy(input, { key, provider: geminiSelected() ? 'gemini' : 'openai', timeoutMs: geminiSelected() ? 60000 : 25000 }));
   } catch (error) {
