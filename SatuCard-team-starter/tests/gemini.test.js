@@ -7,7 +7,8 @@ const input = { message:'Сократи текст',history:[],card:{title:'Ча
 const result = {reply:'Предлагаю лаконичный вариант.',proposal:input.card};
 const answer = (value=result, finishReason='STOP') => ({candidates:[{finishReason,content:{role:'model',parts:[{text:JSON.stringify(value)}]}}]});
 const keys=['SATUCARD_AI_PROVIDER','GEMINI_CHAT_ENABLED','GEMINI_CHAT_MODEL','GEMINI_API_KEY','GEMINI_ALLOWED_USER_IDS','GEMINI_ADMIN_USER_ID','GROQ_CHAT_FALLBACK_ENABLED','GROQ_API_KEY','SUPABASE_URL','SUPABASE_SECRET_KEY',
- 'VERCEL_ENV','SAI_PREVIEW_FALLBACKS','SAI_PREVIEW_EVALUATION','MISTRAL_API_KEY','CLOUDFLARE_API_TOKEN','CLOUDFLARE_ACCOUNT_ID','COHERE_API_KEY','ALIBABA_API_KEY','SCALEWAY_API_KEY'];
+ 'VERCEL_ENV','SAI_PREVIEW_FALLBACKS','SAI_PREVIEW_EVALUATION','MISTRAL_API_KEY','CLOUDFLARE_API_TOKEN','CLOUDFLARE_ACCOUNT_ID','COHERE_API_KEY','ALIBABA_API_KEY','SCALEWAY_API_KEY',
+ 'SAI_PREVIEW_ANYMODEL_ENABLED','SAI_PRODUCTION_ANYMODEL_ENABLED','ANYMODEL_API_KEY'];
 const saved=Object.fromEntries(keys.map(k=>[k,process.env[k]])), oldFetch=globalThis.fetch;
 afterEach(()=>{globalThis.fetch=oldFetch;for(const k of keys){if(saved[k]===undefined)delete process.env[k];else process.env[k]=saved[k]}});
 test('Gemini uses only its endpoint, header key, bounded schema and shared output validation',async()=>{
@@ -22,17 +23,17 @@ test('Gemini never retries or falls back to paid OpenAI',async()=>{
 });
 test('Gemini activation requires explicit model key allowlist and database quota before generation',async()=>{
  const id='3f5a04c4-15e4-467a-9dc8-78c1409531ec';Object.assign(process.env,{SATUCARD_AI_PROVIDER:'gemini',GEMINI_CHAT_ENABLED:'true',GEMINI_API_KEY:'test',GEMINI_ALLOWED_USER_IDS:id,SUPABASE_URL:'https://example.supabase.co',SUPABASE_SECRET_KEY:'private'});
- const pilot = await GET().json();
+ const pilot = await (await GET()).json();
  assert.equal(pilot.available, true);
  assert.equal(pilot.singleUserPilot, true);
  process.env.GEMINI_ALLOWED_USER_IDS = id + ',11111111-1111-4111-8111-111111111111';
- assert.equal((await GET().json()).singleUserPilot, false);
+ assert.equal((await (await GET()).json()).singleUserPilot, false);
  process.env.GEMINI_ALLOWED_USER_IDS = id;
- process.env.GEMINI_CHAT_MODEL='unknown';assert.equal((await GET().json()).available,false);delete process.env.GEMINI_CHAT_MODEL;
+ process.env.GEMINI_CHAT_MODEL='unknown';assert.equal((await (await GET()).json()).available,false);delete process.env.GEMINI_CHAT_MODEL;
  let providerCalls=0;
  globalThis.fetch=async(url)=>{if(url.endsWith('/auth/v1/user'))return Response.json({id,email_confirmed_at:'today'});if(url.includes('/rest/v1/profiles?'))return Response.json([{id,profile_completed_at:'today',mail_proof_required:false}]);if(url.includes('/rpc/'))return new Response('',{status:404});providerCalls++;throw Error('Must not call model')};
  const response=await POST(new Request('https://example.com/api/chat',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer test.token.signature'},body:JSON.stringify(input)}));assert.equal(response.status,503);assert.equal(providerCalls,0);
- process.env.GEMINI_ALLOWED_USER_IDS='*';assert.equal((await GET().json()).available,false);
+ process.env.GEMINI_ALLOWED_USER_IDS='*';assert.equal((await (await GET()).json()).available,false);
 });
 
 test('only the verified and allowlisted Gemini administrator skips the SatuCard quota', async () => {
@@ -78,7 +79,7 @@ test('Groq requires opt-in and a Gemini 429, uses one quota reservation and rece
   SUPABASE_URL:'https://example.supabase.co', SUPABASE_SECRET_KEY:'private'
  });
  delete process.env.GEMINI_ADMIN_USER_ID;
- assert.equal((await GET().json()).groqFallbackAvailable, true);
+ assert.equal((await (await GET()).json()).groqFallbackAvailable, true);
  const calls = [];
  let primaryStatus = 429, groqStatus = 200, allowed = true;
  globalThis.fetch = async (url, options) => {
@@ -121,7 +122,7 @@ test('Groq requires opt-in and a Gemini 429, uses one quota reservation and rece
  assert.equal((await (await POST(request(true))).json()).code, 'ai_rate_limited');
  assert.deepEqual(calls, ['quota']);
  delete process.env.GROQ_API_KEY;
- assert.equal((await GET().json()).groqFallbackAvailable, undefined);
+ assert.equal((await (await GET()).json()).groqFallbackAvailable, undefined);
 });
 
 test('only the chosen Preview reserve receives the chat after a Gemini 429', async () => {
@@ -135,7 +136,7 @@ test('only the chosen Preview reserve receives the chat after a Gemini 429', asy
   SAI_PREVIEW_EVALUATION:'alibaba', ALIBABA_API_KEY:'alibaba-test'
  });
  delete process.env.GEMINI_ADMIN_USER_ID;
- const options = await GET().json();
+ const options = await (await GET()).json();
  assert.deepEqual(options.fallbackProviders.map(p => p.id), ['groq','mistral','cohere']);
  assert.deepEqual(options.evaluationProviders, [{ id:'alibaba', label:'Alibaba Cloud' }]);
  const calls = [];
@@ -169,8 +170,8 @@ test('only the chosen Preview reserve receives the chat after a Gemini 429', asy
  assert.equal((await (await POST(request('mistral'))).json()).code, 'fallback_quota');
  assert.deepEqual(calls.splice(0), ['quota', 'gemini', 'mistral']);
  process.env.VERCEL_ENV = 'production';
- assert.deepEqual((await GET().json()).fallbackProviders.map(p => p.id), ['groq']);
- assert.equal((await GET().json()).evaluationProviders, undefined);
+ assert.deepEqual((await (await GET()).json()).fallbackProviders.map(p => p.id), ['groq']);
+ assert.equal((await (await GET()).json()).evaluationProviders, undefined);
  assert.equal((await (await POST(request('mistral'))).json()).code, 'gemini_quota');
  assert.deepEqual(calls, ['quota', 'gemini']);
 });
@@ -216,4 +217,42 @@ test('a trial evaluation is authenticated, quota-limited, and sends only the bui
  process.env.VERCEL_ENV = 'production';
  assert.equal((await POST(request())).status, 404);
  assert.deepEqual(calls, []);
+});
+
+test('production only offers and accepts Sol for the verified owner', async () => {
+ const owner = '11111111-1111-4111-8111-111111111111';
+ const member = '22222222-2222-4222-8222-222222222222';
+ Object.assign(process.env, {
+  SATUCARD_AI_PROVIDER:'gemini', GEMINI_CHAT_ENABLED:'true', GEMINI_CHAT_MODEL:'gemini-3.1-flash-lite', GEMINI_API_KEY:'test',
+  GEMINI_ALLOWED_USER_IDS:[owner, member].join(','), GEMINI_ADMIN_USER_ID:owner,
+  SUPABASE_URL:'https://example.supabase.co', SUPABASE_SECRET_KEY:'private',
+  VERCEL_ENV:'production', SAI_PREVIEW_ANYMODEL_ENABLED:'true', SAI_PRODUCTION_ANYMODEL_ENABLED:'false', ANYMODEL_API_KEY:'test'
+ });
+ const unexpected = [];
+ globalThis.fetch = async (url, init) => {
+  if (url.endsWith('/auth/v1/user')) {
+   const id = init.headers.Authorization === 'Bearer owner' ? owner : member;
+   return Response.json({ id, email_confirmed_at:'today' });
+  }
+  if (url.includes('/rest/v1/profiles?')) return Response.json([{ profile_completed_at:'today', mail_proof_required:false }]);
+  if (url.includes('/rpc/')) return Response.json({ allowed:false });
+  unexpected.push(url);
+  throw new Error('Unexpected network request');
+ };
+ const request = (token, method = 'GET') => new Request('https://example.com/api/chat', {
+  method, headers:{ authorization:'Bearer ' + token, 'content-type':'application/json' },
+  ...(method === 'POST' ? { body:JSON.stringify({ ...input, selectedProvider:'anymodel' }) } : {})
+ });
+ assert.equal((await (await GET(request('owner'))).json()).selectableProviders, undefined);
+ process.env.SAI_PRODUCTION_ANYMODEL_ENABLED = 'true';
+ const publicStatus = await (await GET()).json();
+ assert.equal(publicStatus.available, true);
+ assert.equal(publicStatus.selectableProviders, undefined);
+ assert.equal((await (await GET(request('member'))).json()).selectableProviders, undefined);
+ assert.deepEqual((await (await GET(request('owner'))).json()).selectableProviders.map(p => p.id), ['anymodel']);
+ const denied = await POST(request('member', 'POST'));
+ assert.equal(denied.status, 403);
+ assert.equal((await denied.json()).code, 'sol_access_required');
+ assert.equal((await (await POST(request('owner', 'POST'))).json()).code, 'ai_rate_limited');
+ assert.deepEqual(unexpected, []);
 });

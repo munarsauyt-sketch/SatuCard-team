@@ -109,7 +109,11 @@
       const token = ++statusGeneration; $('ai-chat-recheck').disabled = true;
       try {
         if (location.protocol === 'file:') throw new Error('Local mode');
-        const response = await fetch('api/chat', { cache: 'no-store', ...(typeof AbortSignal.timeout === 'function' ? { signal: AbortSignal.timeout(8000) } : {}) });
+        const session = await window.SATUCARD_AUTH?.getSession().catch(() => null);
+        if (token !== statusGeneration) return;
+        if (account === undefined) account = session?.user?.id || null;
+        const headers = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
+        const response = await fetch('api/chat', { cache: 'no-store', headers, ...(typeof AbortSignal.timeout === 'function' ? { signal: AbortSignal.timeout(8000) } : {}) });
         const result = response.ok ? await response.json() : {};
         if (token !== statusGeneration) return;
         const nextProvider = result.provider === 'gemini' ? 'gemini' : 'openai';
@@ -397,10 +401,14 @@
     }));
     document.addEventListener('satucard:authchange', event => {
       const next = event.detail?.user?.id || null;
-      if (account !== undefined && next !== account) resetProduct('Аккаунт изменился. Переписка очищена.');
+      if (next === account) return;
+      if (account !== undefined) {
+        modelProviders = providerOptions('model', [], []);
+        resetProduct('Аккаунт изменился. Переписка очищена.');
+      }
       account = next;
+      checkConnection();
     });
-    window.SATUCARD_AUTH?.getSession().then(session => { if (account === undefined) account = session?.user?.id || null; }).catch(() => {});
     window.addEventListener('pagehide', () => resetProduct(''));
     checkConnection();
   }

@@ -43,12 +43,22 @@ function enabled() {
   return process.env.OPENAI_COPY_ENABLED === 'true' && (!process.env.OPENAI_COPY_MODEL?.trim() || process.env.OPENAI_COPY_MODEL.trim() === COPY_MODEL);
 }
 function apiKey() { return (geminiSelected() ? process.env.GEMINI_API_KEY : process.env.OPENAI_API_KEY)?.trim(); }
-export function GET() {
-  const userCount = allowedUsers().size;
-  const available = Boolean(enabled() && configuration() && apiKey() && userCount);
+function isGeminiOwner(user) { return user.id.toLowerCase() === process.env.GEMINI_ADMIN_USER_ID?.trim().toLowerCase(); }
+
+export async function GET(request) {
+  const config = configuration();
+  const users = allowedUsers();
+  const userCount = users.size;
+  const available = Boolean(enabled() && config && apiKey() && userCount);
   const fallbackProviders = available && geminiSelected() ? availableFallbacks() : [];
   const evaluationProviders = available && geminiSelected() ? availableEvaluations() : [];
-  const sol = available && geminiSelected() ? configuredSol() : null;
+  let sol = available && geminiSelected() ? configuredSol() : null;
+  if (sol && process.env.VERCEL_ENV === 'production') {
+    try {
+      const { user } = request?.headers.get('authorization') ? await readAccount(request, config, { complete: true }) : {};
+      if (!user || !users.has(user.id.toLowerCase()) || !isGeminiOwner(user)) sol = null;
+    } catch { sol = null; }
+  }
   return accountJson({ available, modelVerified: false,
     ...(geminiSelected() ? { provider: 'gemini', model: geminiModel(), singleUserPilot: available && userCount === 1 } : {}),
     ...(fallbackProviders.length ? { fallbackProviders } : {}),
@@ -88,10 +98,12 @@ export async function POST(request) {
   } catch { return accountJson({ error: 'Проверьте сообщение, историю, карточку, язык и согласие на фото.', code: 'invalid_input' }, 400); }
   const wantsSol = input?.selectedProvider === 'anymodel';
   const sol = wantsSol && geminiSelected() ? configuredSol() : null;
-  if (wantsSol && !sol) return accountJson({ error: 'Sol сейчас недоступен в этом Preview. Выберите Gemini в настройках чата.', code: 'sol_unavailable' }, 503);
+  if (wantsSol && !sol) return accountJson({ error: 'Sol сейчас недоступен. Выберите Gemini в чате.', code: 'sol_unavailable' }, 503);
+  if (sol && process.env.VERCEL_ENV === 'production' && !isGeminiOwner(user)) {
+    return accountJson({ error: 'Sol доступен только владельцу сайта. Выберите Gemini в чате.', code: 'sol_access_required' }, 403);
+  }
   // Only the verified, allowlisted Gemini administrator skips SatuCard's quota.
-  const adminId = process.env.GEMINI_ADMIN_USER_ID?.trim().toLowerCase();
-  const isGeminiAdmin = geminiSelected() && !sol && user.id.toLowerCase() === adminId;
+  const isGeminiAdmin = geminiSelected() && !sol && isGeminiOwner(user);
   if (evaluation || !isGeminiAdmin) {
     let allowed;
     try { allowed = await reserveCopyQuota(config, user.id); }

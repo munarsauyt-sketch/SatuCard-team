@@ -49,8 +49,9 @@ export function configuredEvaluation(id, env = process.env) {
 }
 
 export function configuredSol(env = process.env) {
-  if (env.VERCEL_ENV !== 'preview' || env.SAI_PREVIEW_ANYMODEL_ENABLED !== 'true') return null;
-  return getTextProvider('anymodel', env);
+  const enabled = (env.VERCEL_ENV === 'preview' && env.SAI_PREVIEW_ANYMODEL_ENABLED === 'true') ||
+    (env.VERCEL_ENV === 'production' && env.SAI_PRODUCTION_ANYMODEL_ENABLED === 'true');
+  return enabled ? getTextProvider('anymodel', env) : null;
 }
 
 function available(ids, lookup) {

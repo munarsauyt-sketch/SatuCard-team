@@ -34,13 +34,13 @@ function request(body = input, auth = true, type = 'application/json') {
   return new Request('https://example.com/api/copy', { method: 'POST', headers: { 'content-type': type, ...(auth ? { authorization: 'Bearer test.token.signature' } : {}) }, body: JSON.stringify(body) });
 }
 test('availability is config only, never calls provider or exposes secrets', async () => {
-  const calls = setup(); assert.deepEqual(await GET().json(), { available: true, modelVerified: false }); assert.equal(calls.length, 0);
-  delete process.env.OPENAI_API_KEY; assert.deepEqual(await GET().json(), { available: false, modelVerified: false });
+  const calls = setup(); assert.deepEqual(await (await GET()).json(), { available: true, modelVerified: false }); assert.equal(calls.length, 0);
+  delete process.env.OPENAI_API_KEY; assert.deepEqual(await (await GET()).json(), { available: false, modelVerified: false });
 });
 test('AI requires explicit activation and exact Terra model; no automatic expensive migration', async () => {
   for (const patch of [{ OPENAI_COPY_ENABLED: '' }, { OPENAI_COPY_ENABLED: 'false' }, { OPENAI_COPY_MODEL: 'gpt-4.1-mini' }, { OPENAI_COPY_MODEL: 'gpt-6.1' }]) {
     const calls = setup(); Object.assign(process.env, patch);
-    assert.deepEqual(await GET().json(), { available: false, modelVerified: false }); assert.equal((await POST(request())).status, 503); assert.equal(calls.length, 0);
+    assert.deepEqual(await (await GET()).json(), { available: false, modelVerified: false }); assert.equal((await POST(request())).status, 503); assert.equal(calls.length, 0);
   }
 });
 test('full account verification precedes quota and provider', async () => {

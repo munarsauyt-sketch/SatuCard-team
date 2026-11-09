@@ -86,8 +86,10 @@ Gemini остаётся основным провайдером. Если он �
 
 Список сценариев выводит `node scripts/evaluate-sai.mjs`. Для живого сравнения запустите `node scripts/evaluate-sai.mjs --live <провайдер> [case-id]` с серверными переменными выбранного провайдера. Сценарии содержат демонстрационные карточки на русском и казахском. Для Alibaba и Scaleway нужны `VERCEL_ENV=preview` и запись в `SAI_PREVIEW_EVALUATION`. Один запуск отправляет до пяти запросов напрямую провайдеру. Чтобы отправить один, укажите ID сценария. Скрипт показывает время, ответ и критерий ручной проверки. API-тесты отдельно проверяют доступ и переключение резервов на заглушках.
 
-## GPT‑6.1 Sol по выбору в Preview
+## GPT‑6.1 Sol по выбору в чате
 
-В Vercel для ветки `feat/sai-studio-draft` добавьте новый ключ AnyModel как Secret `ANYMODEL_API_KEY` и настройку `SAI_PREVIEW_ANYMODEL_ENABLED=true`, обе только для Preview. После нового развёртывания откройте sAI и выберите GPT‑6.1 Sol в поле «Модель ответа». Отправка сообщения после этого выбора выполняет один запрос к `cx/gpt-6.1-sol` и расходует токены AnyModel. Gemini выбран по умолчанию.
+В Vercel для ветки `feat/sai-studio-draft` добавьте ключ AnyModel как Secret `ANYMODEL_API_KEY` и настройку `SAI_PREVIEW_ANYMODEL_ENABLED=true` для Preview. Для Production задайте ключ как отдельный Secret и включите `SAI_PRODUCTION_ANYMODEL_ENABLED=true`. В Production Sol доступен только вошедшему аккаунту `GEMINI_ADMIN_USER_ID` из `GEMINI_ALLOWED_USER_IDS`.
+
+После развёртывания откройте sAI и выберите GPT‑6.1 Sol в поле «Модель ответа». Отправка сообщения после этого выбора выполняет один запрос к `cx/gpt-6.1-sol` и расходует токены AnyModel. Gemini выбран по умолчанию.
 
 Sol получает только текст и до четырёх последних реплик. Действуют проверка аккаунта пилота, общая квота SatuCard и ограничения ответа. Запрос к Sol учитывается в квоте SatuCard и для администратора Gemini. [Документация и каталог AnyModel](https://anymodel.org/en/pricing)
