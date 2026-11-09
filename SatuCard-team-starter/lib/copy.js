@@ -1,21 +1,10 @@
 import '../studio-copy.js';
+import { numericEvidence } from './numeric-claims.js';
 
 export const COPY_MODEL = 'gpt-6.1-terra';
 export const MAX_IMAGE_DATA_LENGTH = 750000;
 export const MAX_REQUEST_BYTES = 770000;
 export const TEMPLATE_IDS = Object.freeze(['studio', 'accent', 'minimal', 'noir', 'neon', 'editorial', 'bloom', 'bold']);
-const modelCodePattern = /(?<![\p{L}\p{N}_-])[a-z]{1,12}-?\d+[a-z0-9]*(?:-[a-z0-9]+)*(?![\p{L}\p{N}_-])/giu;
-
-export function modelCodesIn(text) {
-  return new Set((text.match(modelCodePattern) || []).map(code => code.toLowerCase()));
-}
-
-export function numericClaims(text, modelCodes) {
-  const content = modelCodes?.size
-    ? text.replace(modelCodePattern, code => modelCodes.has(code.toLowerCase()) ? ' ' : code)
-    : text;
-  return content.match(/\d+(?:[.,]\d+)?/g) || [];
-}
 
 // Only the locally re-encoded thumbnail may leave the browser, never a URL,
 // original file, SVG, arbitrary attachment or a server-side fetch target.
@@ -64,9 +53,9 @@ export function validateOutput(value, input, titleModelCodes) {
   if (/[\u0000-\u001f<>]/.test(output)) throw new Error('Invalid text');
   // Defense in depth, NOT semantic verification. Seller review remains mandatory.
   // Image/OCR is deliberately not an approved source of specifications/numbers.
-  const suppliedNumbers = new Set(numericClaims(input.title + ' ' + input.facts));
-  const claims = [...numericClaims(value.title, titleModelCodes), ...numericClaims([value.subtitle, value.description, ...value.features].join(' '))];
-  if (claims.some(number => !suppliedNumbers.has(number))) throw new Error('Unsupported numeric claim');
+  const checkNumbers = numericEvidence([input.title, input.facts]);
+  checkNumbers(value.title, { modelCodes: titleModelCodes });
+  checkNumbers([value.subtitle, value.description, ...value.features].join('\n'));
   return { title: value.title.trim(), subtitle: value.subtitle.trim(), description: value.description.trim(),
     features: value.features.map(item => item.trim()), template: value.template, source: 'ai' };
 }

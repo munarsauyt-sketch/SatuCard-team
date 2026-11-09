@@ -18,6 +18,7 @@
 .workflow-project-list button { flex-shrink: 0; }
 .workflow-project-list span { overflow-wrap: anywhere; }
 .workflow-panel li { font-size: 12px; line-height: 1.7; }
+.preflight-action { display: flex; color: inherit; text-decoration: underline; }
 .workflow-panel [data-severity="error"],.workflow-panel [data-severity="warning"] { color: #9d3e17; }
 .workflow-export { padding: 0 22px; }
 .workflow-panel .error,.workflow-set .error,.workflow-copy .error { color: #b33728; }

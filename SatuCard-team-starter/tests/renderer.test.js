@@ -34,6 +34,32 @@ function fakeCanvas() {
   return { canvas: { width: 0, height: 0, getContext: () => context }, context, operations, text, images, stack };
 }
 
+test('render reports the actual fitted title font size at either export scale', () => {
+  const title = 'Ш'.repeat(60);
+  for (const settings of [
+    { template: 'studio', format: 'square' },
+    { template: 'editorial', format: 'portrait' },
+    { template: 'minimal', purpose: 'advantages', textScale: 80 }
+  ]) {
+    const preview = fakeCanvas(), exportImage = fakeCanvas();
+    const layout = renderer.render(preview.canvas, { ...settings, title });
+    const exportLayout = renderer.render(exportImage.canvas, { ...settings, title }, {}, { scale: 2 });
+    const titleRows = preview.text.filter(row => /^Ш+$/.test(row.value));
+    assert.equal(titleRows.map(row => row.value).join(''), title);
+    assert.ok(titleRows.every(row => row.size === layout.titleFontSize));
+    assert.equal(exportLayout.titleFontSize, layout.titleFontSize);
+    if (settings.purpose) assert.ok(layout.titleFontSize * 360 / layout.width < 16);
+  }
+});
+
+test('title contrast reflects the solid background in Minimal only', () => {
+  const scene = fakeCanvas();
+  const palette = { customColors: true, background: '#444444', textColor: '#444444' };
+  assert.equal(renderer.render(scene.canvas, { template: 'minimal', ...palette }).titleContrast, 1);
+  assert.ok(renderer.render(scene.canvas, { template: 'minimal' }).titleContrast > 3);
+  assert.equal(renderer.render(scene.canvas, { template: 'neon', ...palette }).titleContrast, undefined);
+});
+
 test('normalizes imported or restored settings without mutating them', () => {
   const input = {
     title: '  Длинный товар '.repeat(12), description: 'я'.repeat(250), subtitle: 'я'.repeat(130), badge: 'я'.repeat(40),
