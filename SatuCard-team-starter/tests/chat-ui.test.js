@@ -41,7 +41,7 @@ const reply = { reply: 'Предлагаю короче. Можно уточни
 async function chatApp(options = {}) {
   const requests = [];
   const app = await setup({ ...options, fetch: async (url, init = {}) => {
-    if (!init.method) return Response.json({ available: options.available !== false, modelVerified: false, provider: options.provider });
+    if (!init.method) return Response.json({ available: options.available !== false, modelVerified: false, provider: options.provider, singleUserPilot: options.singleUserPilot });
     requests.push(JSON.parse(init.body)); return options.reply ? options.reply(init) : Response.json(reply);
   }});
   await until(() => !app.$('ai-chat-recheck').disabled && app.$('ai-chat-setup').hidden === (options.available !== false));
@@ -293,5 +293,18 @@ test('Enter submits through consent and Shift+Enter or composition do not send',
     assert.equal(pressEnter(), false);
     await until(() => app.requests.length === 2 && app.$('ai-chat-stop').hidden);
     assert.equal(app.requests[1].message, 'Вторая строка\nПродолжение');
+  } finally { app.dom.window.close(); }
+});
+
+test('single-user Gemini pilot sends with Enter without asking again or attaching a photo', async () => {
+  const app = await chatApp({ provider: 'gemini', singleUserPilot: true });
+  try {
+    app.input('ai-chat-input', 'Первый запрос');
+    app.$('ai-chat-input').dispatchEvent(new app.w.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    await until(() => app.requests.length === 1 && app.$('ai-chat-stop').hidden);
+    assert.equal(app.$('ai-data-consent').hidden, true);
+    assert.equal(app.requests[0].message, 'Первый запрос');
+    assert.equal(app.requests[0].imageDataUrl, undefined);
+    assert.equal(app.requests[0].imageConsent, undefined);
   } finally { app.dom.window.close(); }
 });

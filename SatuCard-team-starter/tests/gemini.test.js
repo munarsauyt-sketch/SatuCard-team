@@ -20,7 +20,13 @@ test('Gemini never retries or falls back to paid OpenAI',async()=>{
 });
 test('Gemini activation requires explicit model key allowlist and database quota before generation',async()=>{
  const id='3f5a04c4-15e4-467a-9dc8-78c1409531ec';Object.assign(process.env,{SATUCARD_AI_PROVIDER:'gemini',GEMINI_CHAT_ENABLED:'true',GEMINI_API_KEY:'test',GEMINI_ALLOWED_USER_IDS:id,SUPABASE_URL:'https://example.supabase.co',SUPABASE_SECRET_KEY:'private'});
- assert.equal((await GET().json()).available,true);process.env.GEMINI_CHAT_MODEL='unknown';assert.equal((await GET().json()).available,false);delete process.env.GEMINI_CHAT_MODEL;
+ const pilot = await GET().json();
+ assert.equal(pilot.available, true);
+ assert.equal(pilot.singleUserPilot, true);
+ process.env.GEMINI_ALLOWED_USER_IDS = id + ',11111111-1111-4111-8111-111111111111';
+ assert.equal((await GET().json()).singleUserPilot, false);
+ process.env.GEMINI_ALLOWED_USER_IDS = id;
+ process.env.GEMINI_CHAT_MODEL='unknown';assert.equal((await GET().json()).available,false);delete process.env.GEMINI_CHAT_MODEL;
  let providerCalls=0;
  globalThis.fetch=async(url)=>{if(url.endsWith('/auth/v1/user'))return Response.json({id,email_confirmed_at:'today'});if(url.includes('/rest/v1/profiles?'))return Response.json([{id,profile_completed_at:'today',mail_proof_required:false}]);if(url.includes('/rpc/'))return new Response('',{status:404});providerCalls++;throw Error('Must not call model')};
  const response=await POST(new Request('https://example.com/api/chat',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer test.token.signature'},body:JSON.stringify(input)}));assert.equal(response.status,503);assert.equal(providerCalls,0);
