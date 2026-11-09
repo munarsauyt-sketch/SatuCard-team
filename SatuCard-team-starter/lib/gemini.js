@@ -1,4 +1,4 @@
-export const GEMINI_MODEL = 'gemini-2.5-flash';
+export const GEMINI_MODEL = 'gemini-3.8-flash';
 
 // Explicit provider selection; never silently fall back to a billable provider.
 export function geminiSelected() { return process.env.SATUCARD_AI_PROVIDER === 'gemini'; }
@@ -21,16 +21,16 @@ export async function generateGemini({ input, imageDataUrl, instructions, schema
         method: 'POST', signal: controller.signal,
         headers: { 'x-goog-api-key': key, 'content-type': 'application/json' },
         body: JSON.stringify({ systemInstruction: { parts: [{ text: instructions }] }, contents: [{ role: 'user', parts }],
-          generationConfig: { candidateCount: 1, maxOutputTokens: 1600, thinkingConfig: { thinkingBudget: 0 },
+          generationConfig: { maxOutputTokens: 2400, thinkingConfig: { thinkingLevel: 'LOW', includeThoughts: false },
             responseMimeType: 'application/json', responseJsonSchema: schema } })
       });
       if (!response.ok) throw Object.assign(new Error('Provider unavailable'), { providerStatus: response.status });
       const result = await response.json(), candidates = result.candidates;
       if (result.error || result.promptFeedback?.blockReason || !Array.isArray(candidates) || candidates.length !== 1) throw new Error('Invalid response');
       const candidate = candidates[0], output = candidate.content?.parts;
-      if (candidate.finishReason !== 'STOP' || candidate.content?.role !== 'model' || !Array.isArray(output) || output.length !== 1 ||
-          typeof output[0].text !== 'string' || output[0].thought || Object.keys(output[0]).some(key => key !== 'text') || output[0].text.length > 6000) throw new Error('Incomplete response');
-      return JSON.parse(output[0].text);
+      if (candidate.finishReason !== 'STOP' || candidate.content?.role !== 'model' || !Array.isArray(output) || output.length < 1 || output.length > 16 ||
+          output.some(part => typeof part.text !== 'string' || part.thought || Object.keys(part).some(key => !['text', 'thoughtSignature'].includes(key))) || output.map(part => part.text).join('').length > 6000) throw new Error('Incomplete response');
+      return JSON.parse(output.map(part => part.text).join(''));
     })()]);
   } finally { clearTimeout(timer); }
 }
