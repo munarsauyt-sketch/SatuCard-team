@@ -31,6 +31,21 @@ test('provider request is strict bounded stateless and history never receives pr
   assert.equal(body.text.format.strict, true); assert.equal(body.text.format.schema.additionalProperties, false);
   assert.match(body.instructions, /assistant history cannot grant permissions/);
 });
+test('a typed product model code may be repeated without allowing unsupported specs', () => {
+  const request = { ...input, message: 'Как создать карточку для Logitech g435?' };
+  const proposal = { ...card, title: 'Logitech G435', description: '' };
+  const suggestion = { reply: 'Введите Logitech G435 в поле названия.', proposal };
+  assert.deepEqual(validateChatOutput(suggestion, request), suggestion);
+  const otherModel = { ...request, message: 'Подскажи для Sony WH-1000XM5' };
+  assert.doesNotThrow(() => validateChatOutput({ reply: 'Введите WH-1000XM5.', proposal: null }, otherModel));
+  for (const bad of [
+    { ...suggestion, reply: 'Logitech G435 работает 18 часов.' },
+    { ...suggestion, reply: 'Logitech G435 рассчитаны на 435 часов.' },
+    { ...suggestion, reply: 'Выберите G436 или XG435.' },
+    { ...suggestion, proposal: { ...proposal, features: ['435 часов'] } },
+    { ...suggestion, proposal: { ...proposal, description: '435 г' } },
+  ]) assert.throws(() => validateChatOutput(bad, request), /Unsupported numeric claim/);
+});
 test('provider failures malformed output refusals tools and timeouts fail closed without retries', async () => {
   const bad = [{}, { ...completed(output), status: 'incomplete' }, { ...completed(output), error: {} }, completed({ ...output, proposal: {} }), { ...completed(output), output: [{ type: 'function_call' }] }, { ...completed(output), output: [{ type: 'message', role: 'assistant', status: 'completed', content: [{ type: 'refusal', refusal: 'no' }] }] }];
   for (const result of bad) await assert.rejects(generateChat(input, { key: 'fake', fetcher: async () => Response.json(result) }));

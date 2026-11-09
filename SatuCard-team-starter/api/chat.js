@@ -62,12 +62,15 @@ export async function POST(request) {
     return accountJson(await generateCopy(input, { key, provider: geminiSelected() ? 'gemini' : 'openai', timeoutMs: geminiSelected() ? 60000 : 25000 }));
   } catch (error) {
     if (geminiSelected()) {
-      const known = ['Invalid response', 'Incomplete response', 'Invalid response', 'Invalid draft', 'Invalid text', 'Unsupported numeric claim', 'Unsafe reply', 'Unsafe proposal', 'Invalid features', 'Provider timeout'];
+      const known = ['Invalid response', 'Incomplete response', 'Invalid draft', 'Invalid text', 'Unsupported numeric claim', 'Unsafe reply', 'Unsafe proposal', 'Invalid features', 'Provider timeout'];
       console.warn('Gemini request failed', { status: Number.isInteger(error.providerStatus) ? error.providerStatus : null, reason: known.includes(error.message) ? error.message : 'provider_or_output_error' });
       if (error.message === 'Provider timeout') return accountJson({ error: 'Google Gemini не ответил за минуту. Попробуйте позже; автоматических повторов нет.', code: 'gemini_timeout' }, 504);
       if (error.providerStatus === 429) return accountJson({ error: 'Бесплатный лимит Google Gemini сейчас недоступен или исчерпан. Попробуйте позже. Платный тариф автоматически не включается.', code: 'gemini_quota' }, 429);
       if ([401, 403].includes(error.providerStatus)) return accountJson({ error: 'Google не принял серверный ключ Gemini или доступ проекта. Владелец сайта должен проверить настройки Google.', code: 'gemini_access' }, 503);
     }
-    return accountJson({ error: 'Не удалось получить корректный ответ ИИ. Попытка учтена в лимите. Используйте шаблон или повторите позже.', code: 'ai_failed' }, 502);
+    const errorMessage = error.message === 'Unsupported numeric claim'
+      ? 'В ответе sAI появилось неподтверждённое число. Укажите нужные характеристики в «Проверенных фактах о товаре» или попросите вариант без них.'
+      : 'Не удалось получить корректный ответ ИИ. Используйте шаблон или повторите позже.';
+    return accountJson({ error: errorMessage + (isGeminiAdmin ? '' : ' Попытка учтена в лимите SatuCard.'), code: 'ai_failed' }, 502);
   }
 }
