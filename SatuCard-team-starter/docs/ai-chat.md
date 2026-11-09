@@ -45,7 +45,7 @@
 
 ## Gemini: бесплатный пилот
 
-Чат поддерживает явный выбор `SATUCARD_AI_PROVIDER=gemini`. Настройки сервера: `GEMINI_API_KEY`, `GEMINI_CHAT_ENABLED=true`, `GEMINI_CHAT_MODEL=gemini-3.8-flash`, `GEMINI_ALLOWED_USER_IDS` (UUID подтверждённых участников пилота). Настройки OpenAI не используются этим маршрутом и автоматического платного fallback нет. `/api/copy` остаётся отдельным помощником Terra; бесплатный шаблон работает локально.
+Чат поддерживает явный выбор `SATUCARD_AI_PROVIDER=gemini`. Настройки сервера: `GEMINI_API_KEY`, `GEMINI_CHAT_ENABLED=true`, `GEMINI_CHAT_MODEL=gemini-3.1-flash-lite`, `GEMINI_ALLOWED_USER_IDS` (UUID подтверждённых участников пилота). Настройки OpenAI не используются этим маршрутом и автоматического платного fallback нет. `/api/copy` остаётся отдельным помощником Terra; бесплатный шаблон работает локально.
 
 Gemini использует тот же `/api/chat`, проверку аккаунта, PostgreSQL-квоту, схему ответа и явное применение/отмену предложений. Это пилот, не биллинг пользователей. Бесплатные лимиты задаёт Google; без подключения Cloud Billing достижение лимита не должно автоматически переводить проект на оплату. SatuCard не управляет тарифом Google: проверяйте Free tier в AI Studio.
 

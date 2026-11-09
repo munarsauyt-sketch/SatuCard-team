@@ -11,7 +11,7 @@ afterEach(()=>{globalThis.fetch=oldFetch;for(const k of keys){if(saved[k]===unde
 test('Gemini uses only its endpoint, header key, bounded schema and shared output validation',async()=>{
  let body;const calls=[];const fetcher=async(url,o)=>{calls.push(url);assert.equal(o.headers['x-goog-api-key'],'test-key');assert.ok(!url.includes('test-key'));body=JSON.parse(o.body);return Response.json(answer())};
  assert.deepEqual(await generateChat(input,{key:'test-key',provider:'gemini',fetcher}),result);
- assert.equal(calls.length,1);assert.match(calls[0],/generativelanguage.googleapis.com/);assert.equal(body.generationConfig.maxOutputTokens,2400);assert.equal(body.generationConfig.thinkingConfig.thinkingLevel,'LOW');assert.equal(body.contents[0].parts.length,1);assert.equal(body.tools,undefined);
+ assert.equal(calls.length,1);assert.match(calls[0],/generativelanguage.googleapis.com/);assert.equal(body.generationConfig.maxOutputTokens,2400);assert.equal(body.generationConfig.thinkingConfig.thinkingLevel,'MINIMAL');assert.equal(body.contents[0].parts.length,1);assert.equal(body.tools,undefined);
  for(const bad of [answer(result,'MAX_TOKENS'),answer({reply:'300 мл',proposal:null}),{error:{message:'private'}}, {candidates:[]}])await assert.rejects(generateChat(input,{key:'test',provider:'gemini',fetcher:async()=>Response.json(bad)}));
 });
 test('Gemini never retries or falls back to paid OpenAI',async()=>{

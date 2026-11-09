@@ -1,4 +1,4 @@
-import { geminiSelected, geminiEnabled, geminiUsers } from '../lib/gemini.js';
+import { geminiSelected, geminiEnabled, geminiUsers, geminiModel } from '../lib/gemini.js';
 import { configuration } from '../lib/supabase.js';
 import { readAccount, accountFailure, accountJson } from '../lib/account.js';
 import { validateChatInput as validateInput, generateChat as generateCopy, MAX_CHAT_REQUEST_BYTES as MAX_REQUEST_BYTES } from '../lib/chat.js';
@@ -18,7 +18,7 @@ function enabled() {
 }
 function apiKey() { return (geminiSelected() ? process.env.GEMINI_API_KEY : process.env.OPENAI_API_KEY)?.trim(); }
 export function GET() {
-  return accountJson({ available: Boolean(enabled() && configuration() && apiKey() && allowedUsers().size), modelVerified: false, ...(geminiSelected() ? { provider: 'gemini', model: 'gemini-3.8-flash' } : {}) });
+  return accountJson({ available: Boolean(enabled() && configuration() && apiKey() && allowedUsers().size), modelVerified: false, ...(geminiSelected() ? { provider: 'gemini', model: geminiModel() } : {}) });
 }
 export async function POST(request) {
   const config = configuration();
