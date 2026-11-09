@@ -24,7 +24,7 @@ export async function generateGemini({ input, imageDataUrl, instructions, schema
           generationConfig: { candidateCount: 1, maxOutputTokens: 1600, thinkingConfig: { thinkingBudget: 0 },
             responseMimeType: 'application/json', responseJsonSchema: schema } })
       });
-      if (!response.ok) throw new Error('Provider unavailable');
+      if (!response.ok) throw Object.assign(new Error('Provider unavailable'), { providerStatus: response.status });
       const result = await response.json(), candidates = result.candidates;
       if (result.error || result.promptFeedback?.blockReason || !Array.isArray(candidates) || candidates.length !== 1) throw new Error('Invalid response');
       const candidate = candidates[0], output = candidate.content?.parts;
