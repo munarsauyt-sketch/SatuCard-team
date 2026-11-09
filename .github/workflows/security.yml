@@ -26,6 +26,7 @@ jobs:
           cache-dependency-path: SatuCard-team-starter/package-lock.json
       - run: npm ci --ignore-scripts
       - run: npm audit --audit-level=low
+      - run: npm run build
       - run: npm test
 
   secrets:
