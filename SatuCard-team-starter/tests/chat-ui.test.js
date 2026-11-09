@@ -255,3 +255,15 @@ test('first-send data consent is contextual, cancelable and never implies photo 
     send(app,'Новый запрос',false);app.input('ai-chat-input','Исправленный запрос');assert.equal(app.$('ai-data-consent').hidden,true);
   }finally{app.dom.window.close();}
 });
+
+test('Gemini chat discloses Google free-tier processing and still requires text/photo consent', async () => {
+  const ui = await setup({fetch:async()=>Response.json({available:true,provider:'gemini'})});
+  try {
+    await until(()=>ui.$('ai-chat-connection').textContent.includes('Gemini'));
+    assert.match(ui.$('ai-data-question').textContent,/Google Gemini/);
+    assert.match(ui.$('ai-data-question').textContent,/улучшения продуктов/);
+    assert.match(ui.$('ai-photo-consent').parentElement.textContent,/Google Gemini/);
+    assert.equal(ui.$('ai-photo-consent').checked,false);
+    assert.equal(ui.$('ai-chat-messages').children.length,0);
+  } finally {ui.dom.window.close();}
+});
