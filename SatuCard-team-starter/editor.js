@@ -18,16 +18,19 @@
   const colorFields = { 'background-color': 'background', 'accent-color': 'accent', 'text-color': 'textColor' };
   const checkFields = { 'show-price': 'showPrice', 'show-brand': 'showBrand', 'custom-colors': 'customColors' };
   const photoRanges = { 'photo-zoom': 'zoom', 'photo-position-x': 'x', 'photo-position-y': 'y', 'photo-rotation': 'rotation', 'photo-brightness': 'brightness', 'photo-contrast': 'contrast', 'photo-saturation': 'saturation', 'photo-radius': 'radius' };
-  let model = { settings: renderer.normalize({ ...samples.headphones, brandName: 'SatuCard.', template: 'neon', format: 'portrait' }), photoId: null, photoIds: [], libraryIds: [], logoId: null };
+  const copyFields = ['title', 'subtitle', 'description', 'features'];
+  let model = { settings: renderer.normalize({ ...samples.headphones, brandName: 'SatuCard.', template: 'neon', format: 'portrait' }), photoId: null, photoIds: [], libraryIds: [], logoId: null, productContextId: 0 };
   let initialModel, history, geometry, dragging, pendingDraft;
   let framePending = false, initialized = false, publishing = false, exporting = false;
   let historyTimer, draftTimer, thumbTimer, lastPublished = '';
   let photoVersion = 0, logoVersion = 0, projectVersion = 0;
   let draftQueue = Promise.resolve();
-  let revision = 0;
+  let revision = 0, productContextVersion = 0;
+  const activeView = () => model.views.find(view => view.id === model.activeViewId);
+  function changeProductContext() { model.productContextId = ++productContextVersion; }
   function syncActiveView() {
-    if (!model.views) { model.activeViewId = "main"; model.views = [{ id: "main", label: "Главная", settings: clone(model.settings) }]; }
-    const active = model.views.find(view => view.id === model.activeViewId);
+    if (!model.views) { model.activeViewId = "main"; model.views = [{ id: "main", label: "Главная", settings: clone(model.settings), sampleKey: 'headphones' }]; }
+    const active = activeView();
     if (active) { active.settings = clone(model.settings); active.photoIds = [...model.photoIds]; }
   }
   function notifyChange() { revision++; document.dispatchEvent(new Event("satucard:editor-change")); }
@@ -38,9 +41,37 @@
   };
   function setPhotoIds(ids) { model.photoIds = [...ids]; model.photoId = ids[0] || null; }
   function photoSources() { return model.libraryIds.map(id => ({ id, source: assets.get(id).source })); }
+  const demoPhoto = id => assets.get(id)?.sampleKey;
+  function withoutSampleSettings(settings, sampleKey) {
+    if (!sampleKey) return settings;
+    const sample = renderer.normalize(samples[sampleKey]);
+    const result = { ...settings, features: settings.features.filter(value => !sample.features.includes(value)) };
+    for (const key of ['title', 'subtitle', 'description', 'badge']) {
+      if (settings[key] === sample[key]) result[key] = '';
+    }
+    if (settings.category === sample.category) result.category = 'generic';
+    if (settings.price === sample.price && settings.oldPrice === null) result.price = null;
+    return result;
+  }
+  function clearDemoContext(view, ids) {
+    if (!view.sampleKey || ids.some(demoPhoto)) return false;
+    view.settings = withoutSampleSettings(view.settings, view.sampleKey);
+    delete view.sampleKey;
+    return true;
+  }
+  function replaceSelectedPhotos(ids) {
+    const view = activeView();
+    const newProduct = clearDemoContext(view, ids);
+    if (newProduct) {
+      model.settings = view.settings;
+      changeProductContext();
+    }
+    if (ids[0] !== model.photoId) model.settings.photo = renderer.normalize({}).photo;
+    setPhotoIds(ids);
+    return newProduct;
+  }
   function selectPhotos(ids) {
-    cancelDrag(); ++photoVersion; commit(); const changedPrimary = ids[0] !== model.photoId;
-    setPhotoIds(ids); if (changedPrimary) model.settings.photo = renderer.normalize({}).photo;
+    cancelDrag(); ++photoVersion; commit(); replaceSelectedPhotos(ids);
     syncForm(); edited(true);
   }
   function renderPhotoLibrary() {
@@ -60,9 +91,14 @@
       remove.type = 'button'; remove.className = 'photo-delete'; remove.textContent = '×'; remove.setAttribute('aria-label', `Удалить фото ${index + 1} из проекта`);
       remove.addEventListener('click', () => {
         cancelDrag(); ++photoVersion; commit(); model.libraryIds = model.libraryIds.filter(value => value !== id);
-        model.views.forEach(view => { if (view.photoIds[0] === id) view.settings.photo = renderer.normalize({}).photo; view.photoIds = view.photoIds.filter(value => value !== id); });
-        const wasPrimary = model.photoId === id; setPhotoIds(model.photoIds.filter(value => value !== id));
-        if (wasPrimary) model.settings.photo = renderer.normalize({}).photo;
+        for (const view of model.views) {
+          if (view.id === model.activeViewId) continue;
+          const remaining = view.photoIds.filter(value => value !== id);
+          if (view.photoIds[0] === id) view.settings.photo = renderer.normalize({}).photo;
+          clearDemoContext(view, remaining);
+          view.photoIds = remaining;
+        }
+        replaceSelectedPhotos(model.photoIds.filter(value => value !== id));
         syncForm(); edited(true); status('file-status', 'Фото удалено из всех карточек. Действие можно отменить.');
       });
       item.className = 'photo-library-item'; item.append(button, remove); library.append(item);
@@ -143,7 +179,8 @@
     framePending = false; geometry = renderer.render(canvas, model.settings, imageAssets());
     const size = renderer.formats[model.settings.format];
     $('format-description').textContent = `${size.label} · ${size.width} × ${size.height}`;
-    $('preview-caption').textContent = `Карточка: ${model.settings.title}. Шаблон ${renderer.templates[model.settings.template].label}.`;
+    const cardName = model.settings.title ? 'Карточка: ' + model.settings.title : 'Карточка без названия';
+    $('preview-caption').textContent = cardName + '. Шаблон ' + renderer.templates[model.settings.template].label + '.';
     canvas.setAttribute('aria-label', $('preview-caption').textContent);
     $('download-button').querySelector('span').textContent = $('export-format').value === 'jpeg' ? 'Скачать JPEG' : 'Скачать PNG';
     document.querySelectorAll('[data-template]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.template === model.settings.template)));
@@ -203,7 +240,12 @@
     status('file-status', model.photoId ? 'Фото из выбранного состояния истории.' : 'Загрузите фото товара.');
     status('brand-logo-status', model.logoId ? 'Логотип из выбранного состояния истории.' : '');
   }
-  function serialized() { syncActiveView(); return project.serializeProject(model.settings, assets.get(model.photoId)?.source || null, assets.get(model.logoId)?.source || null, { ...model, photos: photoSources() }); }
+  function serialized() {
+    syncActiveView();
+    const views = model.views.map(({ id, label, settings, photoIds }) => ({ id, label, settings, photoIds }));
+    return project.serializeProject(model.settings, assets.get(model.photoId)?.source || null, assets.get(model.logoId)?.source || null,
+      { views, activeViewId: model.activeViewId, photos: photoSources() });
+  }
   function saveDraftSoon() {
     if (!initialized) return; clearTimeout(draftTimer); status('draft-status', 'Сохраняем черновик…');
     draftTimer = setTimeout(() => {
@@ -219,7 +261,11 @@
       image.onerror = () => reject(new Error('Не удалось прочитать изображение. Выберите другой файл.')); image.src = source;
     });
   }
-  async function registerAsset(source, id = 'asset-' + crypto.randomUUID()) { const image = await decodeImage(source); assets.set(id, { image, source }); pendingAssets.add(id); return id; }
+  async function registerAsset(source, id = 'asset-' + crypto.randomUUID()) {
+    const image = await decodeImage(source);
+    const sampleKey = Object.keys(samples).find(key => window.SATUCARD_DEMO_IMAGES?.[key] === source);
+    assets.set(id, { image, source, sampleKey }); pendingAssets.add(id); return id;
+  }
   function readFile(file) {
     return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = () => reject(new Error('Файл недоступен.')); reader.readAsDataURL(file); });
   }
@@ -257,20 +303,24 @@
       }
       commit(); model.libraryIds.push(...added);
       // A first real upload must not quietly export the demo product alongside it.
-      const selected = model.photoIds.filter(id => !id.startsWith('sample-'));
-      const photoIds = [...selected, ...added].slice(0, 3);
-      if (photoIds[0] !== model.photoId) model.settings.photo = renderer.normalize({}).photo;
-      setPhotoIds(photoIds);
-      syncForm(); edited(true); status('file-status', `Добавлено фото: ${added.length}. Нажимайте миниатюры, чтобы выбрать до 3 для этой карточки.`);
+      const selected = model.photoIds.filter(id => !demoPhoto(id));
+      const newProduct = replaceSelectedPhotos([...selected, ...added].slice(0, 3));
+      syncForm(); edited(true);
+      status('file-status', newProduct
+        ? 'Фото загружено. Укажите название и данные своего товара.'
+        : 'Добавлено фото: ' + added.length + '. Нажимайте миниатюры, чтобы выбрать до 3 для этой карточки.');
     } catch (error) { added.forEach(id => assets.delete(id)); if (version === photoVersion) status('file-status', error.message, true); }
     finally { added.forEach(id => pendingAssets.delete(id)); releaseUnusedAssets(); }
   }
   async function loadSample(key, initialize = false) {
-    if (!samples[key]) return; const version = ++photoVersion; status('file-status', 'Загружаем пример…');
+    if (!Object.hasOwn(samples, key)) return; const version = ++photoVersion; status('file-status', 'Загружаем пример…');
     try {
       const id = 'sample-' + key; if (!assets.has(id)) await registerAsset(window.SATUCARD_DEMO_IMAGES[key], id);
       pendingAssets.delete(id); if (version !== photoVersion) return; if (!initialize) commit();
-      if (!model.libraryIds.includes(id)) { if (model.libraryIds.length >= 12) throw new Error('В проекте до 12 фото. Удалите ненужный снимок.'); model.libraryIds.push(id); } setPhotoIds([id]); model.settings = renderer.normalize({ ...model.settings, ...samples[key], oldPrice: null, photo: { ...renderer.normalize({}).photo, ...samples[key].photo } }); syncForm();
+      if (!model.libraryIds.includes(id)) { if (model.libraryIds.length >= 12) throw new Error('В проекте до 12 фото. Удалите ненужный снимок.'); model.libraryIds.push(id); }
+      setPhotoIds([id]);
+      model.settings = renderer.normalize({ ...model.settings, ...samples[key], oldPrice: null, photo: { ...renderer.normalize({}).photo, ...samples[key].photo } });
+      syncActiveView(); activeView().sampleKey = key; changeProductContext(); syncForm();
       status('file-status', 'Демонстрационный товар. Загрузите своё фото и укажите его данные.');
       if (initialize) { syncActiveView(); initialModel = clone(model); history = project.createHistory(model); initialized = true; updateHistory(); requestRender(true); } else edited(true);
     } catch (error) { status('file-status', error.message, true); if (initialize) { initialized = true; syncActiveView(); initialModel = clone(model); history = project.createHistory(model); updateHistory(); requestRender(true); } }
@@ -286,10 +336,13 @@
       const logoId = parsed.logo ? await registerAsset(parsed.logo) : null; if (logoId) loaded.push(logoId);
       if (cancelled() || version !== projectVersion || started !== revision || (expectedRevision !== undefined && expectedRevision !== revision)) throw new Error("Проект изменился во время загрузки. Откройте файл ещё раз.");
       cancelDrag(); commit(); ++photoVersion; ++logoVersion;
-      const views = (parsed.views || [{ id: 'main', label: 'Главная', settings: parsed.settings }]).map(view => ({ ...view, photoIds: parsed.photos ? view.photoIds.map(id => refs.get(id)) : legacyPhoto ? [legacyPhoto] : [] }));
+      const views = (parsed.views || [{ id: 'main', label: 'Главная', settings: parsed.settings }]).map(view => {
+        const photoIds = parsed.photos ? view.photoIds.map(id => refs.get(id)) : legacyPhoto ? [legacyPhoto] : [];
+        return { ...view, photoIds, sampleKey: demoPhoto(photoIds[0]) };
+      });
       const activeViewId = parsed.activeViewId || 'main', active = views.find(view => view.id === activeViewId);
       model = { settings: parsed.settings, photoId: active.photoIds[0] || null, photoIds: [...active.photoIds], libraryIds: parsed.photos ? [...refs.values()] : legacyPhoto ? [legacyPhoto] : [], logoId, views, activeViewId };
-      syncActiveView(); syncForm(); edited(true); fitPreview();
+      changeProductContext(); syncActiveView(); syncForm(); edited(true); fitPreview();
       status('file-status', model.libraryIds.length ? 'Фотографии восстановлены из проекта.' : 'Загрузите фото товара.'); status('brand-logo-status', logoId ? 'Логотип восстановлен из проекта.' : '');
     } catch (error) { loaded.forEach(id => assets.delete(id)); throw error; }
     finally { loaded.forEach(id => pendingAssets.delete(id)); releaseUnusedAssets(); }
@@ -324,9 +377,9 @@
       const saved = clone(model.settings), name = filename(), jpeg = $('export-format').value === 'jpeg';
       const photos = imageAssets(), scale = Number($('export-scale').value);
       await readyFonts(saved);
-      const surface = document.createElement('canvas'); renderer.render(surface, saved, photos, { scale });
+      const surface = document.createElement('canvas'); const layout = renderer.render(surface, saved, photos, { scale });
       const blob = await blobFromCanvas(surface, jpeg ? 'image/jpeg' : 'image/png', 0.95);
-      window.SATUCARD_WORKFLOW?.showPreflight(saved, photos, surface, blob);
+      window.SATUCARD_WORKFLOW?.showPreflight(saved, photos, surface, blob, layout);
       downloadBlob(blob, `${name}-${renderer.formats[saved.format].file}.${jpeg ? 'jpg' : 'png'}`);
       status('download-status', `Файл готов: ${surface.width} × ${surface.height}, ${(blob.size / 1024 / 1024).toFixed(1)} МБ. Проверьте загрузки браузера.`);
     } catch (error) { status('download-status', error.message, true); } finally { exporting = false; $('download-button').disabled = false; }
@@ -400,7 +453,7 @@
     if (event.target.matches('input[type="text"],textarea,[contenteditable="true"]') || !(event.ctrlKey || event.metaKey) || !initialized) return;
     if (['z', 'y'].includes(event.key.toLowerCase())) { event.preventDefault(); undoRedo(event.shiftKey || event.key.toLowerCase() === 'y' ? 'redo' : 'undo'); }
   });
-  $('reset-button').addEventListener('click', () => { if (!initialModel) return; cancelDrag(); commit(); ++photoVersion; ++logoVersion; ++projectVersion; model = clone(initialModel); syncForm(); edited(true); fitPreview(); status('file-status', 'Исходный демонстрационный товар. Сброс можно отменить.'); status('brand-logo-status', ''); });
+  $('reset-button').addEventListener('click', () => { if (!initialModel) return; cancelDrag(); commit(); ++photoVersion; ++logoVersion; ++projectVersion; model = clone(initialModel); changeProductContext(); syncForm(); edited(true); fitPreview(); status('file-status', 'Исходный демонстрационный товар. Сброс можно отменить.'); status('brand-logo-status', ''); });
   $('preview-zoom').addEventListener('input', () => { $('canvas-frame').style.width = Number($('canvas-frame').dataset.baseWidth || 460) * Number($('preview-zoom').value) / 100 + 'px'; $('preview-zoom-value').value = $('preview-zoom').value + '%'; });
   $('preview-fit-button').addEventListener('click', fitPreview); window.addEventListener('resize', fitPreview);
   canvas.addEventListener('pointerdown', event => {
@@ -450,7 +503,7 @@
     buildTemplates(); activateTab('photo'); syncForm(); fitPreview(); const params = new URLSearchParams(location.search);
     document.querySelectorAll('[data-palette]').forEach(button => { const chip = button.querySelector('i'); palettes[button.dataset.palette].forEach((color, index) => chip.style.setProperty('--palette-' + ['a', 'b', 'c'][index], color)); });
     if (renderer.templates[params.get('style')]) model.settings.template = params.get('style'); if (renderer.formats[params.get('format')]) model.settings.format = params.get('format');
-    await loadSample(samples[params.get('photo')] ? params.get('photo') : 'headphones', true);
+    await loadSample(Object.hasOwn(samples, params.get('photo')) ? params.get('photo') : 'headphones', true);
     if (!initialized) { syncActiveView(); initialModel = clone(model); history = project.createHistory(model); initialized = true; updateHistory(); requestRender(true); }
     form.inert = false;
     ['download-button', 'publish-button', 'save-project-button', 'load-project-input'].forEach(id => { $(id).disabled = false; });
@@ -464,7 +517,15 @@
   // Small integration surface shared by the workflow UI; model changes remain undoable.
   window.SATUCARD_EDITOR = {
     get revision() { return revision; },
-    snapshot(includeProject = false) { readForm(); syncActiveView(); return { model: clone(model), images: imageAssets(), viewImages: Object.fromEntries(model.views.map(view => [view.id, imageAssets(view)])), ...(includeProject ? { serialized: serialized() } : {}), filename: filename() }; },
+    snapshot(includeProject = false) {
+      readForm(); syncActiveView();
+      const sampleKey = activeView().sampleKey || null;
+      return { model: clone(model), productContextId: model.productContextId, sampleKey,
+        productSettings: clone(withoutSampleSettings(model.settings, sampleKey)),
+        productImages: imageAssets({ photoIds: model.photoIds.filter(id => !demoPhoto(id)) }),
+        images: imageAssets(), viewImages: Object.fromEntries(model.views.map(view => [view.id, imageAssets(view)])),
+        ...(includeProject ? { serialized: serialized() } : {}), filename: filename() };
+    },
     readyFonts, blobFromCanvas, downloadBlob, restoreProject,
     selectView(id) {
       cancelDrag(); ++photoVersion; readForm(); commit(); const view = model.views.find(item => item.id === id); if (!view) return;
@@ -472,7 +533,8 @@
     },
     addView() {
       readForm(); commit(); if (model.views.length >= 8) throw new Error('В комплекте не больше 8 карточек.');
-      const id = crypto.randomUUID(); model.views.push({ id, label: 'Карточка ' + (model.views.length + 1), settings: clone(model.settings), photoIds: [...model.photoIds] });
+      const id = crypto.randomUUID();
+      model.views.push({ id, label: 'Карточка ' + (model.views.length + 1), settings: clone(model.settings), photoIds: [...model.photoIds], sampleKey: activeView().sampleKey });
       model.activeViewId = id; syncForm(); edited(true);
     },
     removeView() {
@@ -487,7 +549,7 @@
       for (const [label, changes] of [
         ['Преимущества', { purpose: 'advantages', subtitle: 'Преимущества', description: '', showPrice: false, badge: '' }],
         ['Подробности', { purpose: 'specifications', subtitle: 'Подробности о товаре', features: [], showPrice: false, badge: '' }]
-      ]) model.views.push({ id: crypto.randomUUID(), label, settings: renderer.normalize({ ...base, ...changes }), photoIds: [...model.photoIds] });
+      ]) model.views.push({ id: crypto.randomUUID(), label, settings: renderer.normalize({ ...base, ...changes }), photoIds: [...model.photoIds], sampleKey: activeView().sampleKey });
       edited(true);
     },
     moveView(delta) {
@@ -502,19 +564,41 @@
     },
     applyCopy(draft, expectedRevision, options = {}) {
       if (expectedRevision !== revision) throw new Error('Карточка изменилась. Создайте подсказку заново, чтобы не затереть новые правки.');
+      if (options.duplicate && model.views.length >= 8) throw new Error('В комплекте не больше 8 карточек. Освободите место для перевода.');
+      const fields = options.fields ?? copyFields;
+      if (!Array.isArray(fields) || fields.some(key => !copyFields.includes(key))) throw new Error('Выберите поля для применения.');
       const styling = {};
       if (options.template && Object.hasOwn(renderer.templates, options.template)) {
         styling.template = options.template;
         if (options.replaceColors) { const palette = renderer.templates[options.template]; Object.assign(styling, { customColors: false, background: palette.background, accent: palette.accent, textColor: palette.textColor }); }
         else styling.customColors = true;
       }
-      commit(); model.settings = renderer.normalize({ ...model.settings, ...styling, title: draft.title, subtitle: draft.subtitle, description: draft.description, features: draft.features });
+      const copy = Object.fromEntries(fields.map(key => [key, draft[key]]));
+      const source = activeView(), startingProduct = options.newProduct === true && Boolean(source.sampleKey);
+      const photoIds = startingProduct ? model.photoIds.filter(id => !demoPhoto(id)) : [...model.photoIds];
+      const base = startingProduct ? withoutSampleSettings(model.settings, source.sampleKey) : model.settings;
+      const settings = renderer.normalize({ ...base, ...styling, ...copy,
+        photo: photoIds[0] !== model.photoIds[0] ? renderer.normalize({}).photo : base.photo });
+      cancelDrag(); commit();
+      if (options.duplicate) {
+        const suffix = ' · Қазақша';
+        const id = crypto.randomUUID(), label = source.label.slice(0, 60 - suffix.length) + suffix;
+        model.views.push({ id, label, settings, photoIds, sampleKey: startingProduct ? undefined : source.sampleKey });
+        model.activeViewId = id;
+      } else if (startingProduct) delete source.sampleKey;
+      if (startingProduct) {
+        setPhotoIds(photoIds); changeProductContext();
+        status('file-status', model.photoId ? 'Фото своего товара выбраны.' : 'Загрузите фото своего товара.');
+      }
+      model.settings = settings;
       syncForm(); edited(true);
     },
     async replacePhoto(source, expectedRevision) {
       if (expectedRevision !== revision) throw new Error('Фото изменилось. Повторите обработку.');
+      const sampleKey = demoPhoto(model.photoId);
       const version = ++photoVersion, id = await registerAsset(source); pendingAssets.delete(id);
       if (expectedRevision !== revision || version !== photoVersion) { assets.delete(id); throw new Error('Фото изменилось. Повторите обработку.'); }
+      if (sampleKey) assets.get(id).sampleKey = sampleKey;
       commit();
       // Replace only this card's primary image. Other cards keep their original photo.
       if (model.libraryIds.length >= 12) { assets.delete(id); throw new Error('Для обработанной копии освободите место: в проекте до 12 фото.'); }

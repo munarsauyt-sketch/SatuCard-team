@@ -20,6 +20,15 @@ body.ai-chat-open .ai-floating-launch { visibility: hidden; }
 .ai-chat-setup summary { font-size: 14px; color: var(--ai-muted); cursor: pointer; }
 .ai-chat-setup details p { margin: 12px 0 4px; }
 .ai-chat-messages { display: flex; flex-direction: column; gap: 24px; }
+.ai-editor-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+.ai-editor-actions .ai-quiet-button { border: 1px solid var(--ai-line); }
+.ai-build-panel { padding: 16px; margin-bottom: 20px; border: 1px solid var(--ai-line); border-radius: 14px; }
+.ai-build-panel h3,.ai-build-panel p { margin: 0 0 8px; }
+.ai-build-panel button { margin-top: 12px; }
+.ai-field-diff { min-width: 0; margin: 0; padding: 0; border: 0; }
+.ai-field-diff legend { font-weight: 700; }
+.ai-chat .ai-before { color: var(--ai-muted); font-size: 14px; margin: 0 0 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ai-field-diff [id^="ai-edit-feature-"] + input { margin-top: 6px; }
 .ai-message { max-width: 88%; align-self: flex-start; padding: 0; }
 .ai-message[data-role="user"] { padding: 14px 20px; border-radius: 20px 20px 5px 20px; background: var(--ai-input); align-self: flex-end; }
 .ai-message strong { display: none; }

@@ -14,6 +14,12 @@
     let copyView = editor.snapshot().model.activeViewId, copyPhoto = editor.snapshot().images.photo;
     window.SATUCARD_AUTH?.getSession().then(session => { if (knownUserId === undefined) knownUserId = session?.user?.id || null; });
     const message = (id, text, error = false) => { $(id).textContent = text; $(id).classList.toggle('error', error); };
+    const invalidatePreflight = reason => {
+      const list = $('preflight-results');
+      if (!list.children.length) return;
+      list.replaceChildren();
+      message('preflight-status', reason);
+    };
     const setBusy = value => { cloudBusy = value; ['cloud-save', 'cloud-copy', 'cloud-refresh'].forEach(id => { $(id).disabled = value; }); };
     const safeName = value => String(value).replace(/[<>:"/\\|?*\u0000-\u001f]/g, '').trim().slice(0, 60) || 'Карточка';
     function renderViews() {
@@ -32,7 +38,7 @@
       $('remove-background').disabled = removing || !model.photoId;
       const index = model.views.findIndex(view => view.id === model.activeViewId); $('view-earlier').disabled = index === 0; $('view-later').disabled = index === model.views.length - 1;
       if (cloudIdentity) message('cloud-status', `Открыт «${cloudIdentity.title}». Изменения сохраняются в облако только по кнопке.`);
-      if ($('preflight-results').children.length) message('preflight-status', 'Карточка изменилась. Повторите проверку перед экспортом.');
+      invalidatePreflight('Карточка изменилась. Повторите проверку перед экспортом.');
     }
     document.addEventListener('satucard:editor-change', renderViews);
     renderViews();
@@ -76,7 +82,7 @@
       try {
         const { model, serialized } = editor.snapshot(true);
         const identity = asCopy ? null : cloudIdentity;
-        const body = { title: model.settings.title, payload: JSON.parse(serialized), ...(identity ? { id: identity.id, version: identity.version } : {}) };
+        const body = { title: model.settings.title || 'Новый товар', payload: JSON.parse(serialized), ...(identity ? { id: identity.id, version: identity.version } : {}) };
         if (new Blob([JSON.stringify(body)]).size > 3500000) throw new Error('Для облака проект должен быть меньше 3,5 МБ. Уменьшите фото или скачайте файл проекта, он сохранит всё без потерь.');
         const { project } = await window.SATUCARD_CLOUD.save(body); if (generation !== cloudGeneration) return;
         cloudIdentity = { id: project.id, version: project.version, title: project.title };
@@ -206,32 +212,70 @@
       finally { removing = false; $('remove-background').disabled = !editor.snapshot().model.photoId; }
     });
 
-    function getReport(settings, images, surface, blob, marketplace = $('marketplace').value) {
+    function getReport(settings, images, surface, blob, layout, marketplace = $('marketplace').value) {
       return tools.preflight(settings, { width: surface.width, height: surface.height, bytes: blob.size, mime: blob.type,
-        photoWidth: images.photo?.naturalWidth, photoHeight: images.photo?.naturalHeight, hasPhoto: Boolean(images.photo), hasLogo: Boolean(images.logo) }, marketplace);
+        photoWidth: images.photo?.naturalWidth, photoHeight: images.photo?.naturalHeight, hasPhoto: Boolean(images.photo), hasLogo: Boolean(images.logo),
+        titlePreviewSize: layout ? layout.titleFontSize * 360 / layout.width : undefined, titleContrast: layout?.titleContrast }, marketplace);
     }
-    function showPreflight(settings, images, surface, blob) {
-      const report = getReport(settings, images, surface, blob); $('preflight-results').replaceChildren();
-      for (const check of report.checks) { const li = document.createElement('li'); li.dataset.severity = check.severity; li.textContent = ({ pass: '✓ ', warning: 'Внимание: ', error: 'Ошибка: ', info: '' })[check.severity] + check.message; $('preflight-results').append(li); }
+    function showPreflight(settings, images, surface, blob, layout) {
+      const report = getReport(settings, images, surface, blob, layout);
+      const list = $('preflight-results');
+      list.replaceChildren();
+      for (const check of report.checks) {
+        const li = document.createElement('li');
+        li.dataset.severity = check.severity;
+        li.textContent = ({ pass: '✓ ', warning: 'Внимание: ', error: 'Ошибка: ', info: '' })[check.severity] + check.message;
+        if (check.id === 'title-missing' || check.id === 'title-size' || check.id === 'title-contrast') {
+          const contrast = check.id === 'title-contrast';
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'studio-text-button preflight-action';
+          button.textContent = contrast ? 'Перейти к цвету текста' : 'Перейти к заголовку';
+          button.addEventListener('click', () => {
+            $(contrast ? 'tab-design' : 'tab-content').click();
+            $(contrast ? 'text-color' : 'product-name').focus();
+          });
+          li.append(button);
+        }
+        list.append(li);
+      }
       message('preflight-status', `${report.label}: ${surface.width} × ${surface.height}, ${(blob.size / 1024 / 1024).toFixed(2)} МБ. ${report.ok ? 'Техническая проверка завершена.' : 'Есть ошибки.'} ${report.disclaimer}`);
       $('preflight-panel').open = true; return report;
     }
     window.SATUCARD_WORKFLOW = { showPreflight };
     async function renderFile(settings, images, jpeg, scale) {
-      await editor.readyFonts(settings); const surface = document.createElement('canvas'); renderer.render(surface, settings, images, { scale });
-      return { surface, blob: await editor.blobFromCanvas(surface, jpeg ? 'image/jpeg' : 'image/png', 0.95) };
+      await editor.readyFonts(settings);
+      const surface = document.createElement('canvas');
+      const layout = renderer.render(surface, settings, images, { scale });
+      return { surface, layout, blob: await editor.blobFromCanvas(surface, jpeg ? 'image/jpeg' : 'image/png', 0.95) };
     }
-    $('check-export').addEventListener('click', async () => {
-      if (checking) return; checking = true; $('check-export').disabled = true;
+    async function checkExport() {
+      if (checking) return;
+      checking = true;
+      $('check-export').disabled = true;
       const snapshot = editor.snapshot(), revision = editor.revision;
-      message('preflight-status', 'Проверяем размер готового файла…');
+      const format = $('export-format').value, scale = $('export-scale').value, marketplace = $('marketplace').value;
+      $('preflight-results').replaceChildren();
+      message('preflight-status', 'Проверяем макет и размер файла…');
       try {
-        const { surface, blob } = await renderFile(snapshot.model.settings, snapshot.images, $('export-format').value === 'jpeg', Number($('export-scale').value));
-        showPreflight(snapshot.model.settings, snapshot.images, surface, blob);
-        if (revision !== editor.revision) message('preflight-status', 'Проверена предыдущая версия. Карточка изменилась: повторите проверку.');
+        const { surface, blob, layout } = await renderFile(snapshot.model.settings, snapshot.images, format === 'jpeg', Number(scale));
+        if (revision !== editor.revision || format !== $('export-format').value || scale !== $('export-scale').value || marketplace !== $('marketplace').value) {
+          message('preflight-status', 'Карточка или параметры экспорта изменились. Повторите проверку.');
+          return;
+        }
+        showPreflight(snapshot.model.settings, snapshot.images, surface, blob, layout);
       } catch (error) { message('preflight-status', error.message, true); } finally { checking = false; $('check-export').disabled = false; }
+    }
+    $('check-export').addEventListener('click', checkExport);
+    $('ai-check-card')?.addEventListener('click', () => {
+      document.dispatchEvent(new CustomEvent('satucard:preflight-open'));
+      $('preflight-panel').open = true;
+      checkExport();
+      const status = $('preflight-status');
+      status.tabIndex = -1;
+      status.focus();
     });
-    ['export-format', 'export-scale', 'marketplace'].forEach(id => $(id).addEventListener('change', () => { if ($('preflight-results').children.length) message('preflight-status', 'Параметры экспорта изменились. Повторите проверку.'); }));
+    ['export-format', 'export-scale', 'marketplace'].forEach(id => $(id).addEventListener('change', () => invalidatePreflight('Параметры экспорта изменились. Повторите проверку.')));
     $('download-set').addEventListener('click', async () => {
       if (exportingSet) return; exportingSet = true; $('download-set').disabled = true;
       const snapshot = editor.snapshot(), jpeg = $('export-format').value === 'jpeg', scale = Number($('export-scale').value), marketplace = $('marketplace').value;
@@ -239,10 +283,10 @@
         const files = [], reports = [];
         for (const [index, view] of snapshot.model.views.entries()) {
           message('set-status', `Готовим ${index + 1} из ${snapshot.model.views.length}: ${view.label}…`);
-          const { surface, blob } = await renderFile(view.settings, snapshot.viewImages[view.id], jpeg, scale);
+          const { surface, blob, layout } = await renderFile(view.settings, snapshot.viewImages[view.id], jpeg, scale);
           const name = `${String(index + 1).padStart(2, '0')}-${safeName(view.label)}.${jpeg ? 'jpg' : 'png'}`;
           files.push({ name, bytes: new Uint8Array(await blob.arrayBuffer()) });
-          reports.push({ file: name, report: getReport(view.settings, snapshot.viewImages[view.id], surface, blob, marketplace) });
+          reports.push({ file: name, report: getReport(view.settings, snapshot.viewImages[view.id], surface, blob, layout, marketplace) });
           await new Promise(resolve => setTimeout(resolve, 0));
         }
         const reportText = 'SatuCard: проверка комплекта\nНе гарантия приёма площадкой. Проверьте актуальные правила категории.\n\n' + reports.map(({ file, report }) => file + '\n' + report.checks.map(check => `[${check.severity}] ${check.message}`).join('\n')).join('\n\n');

@@ -117,6 +117,29 @@ test('ZIP includes every view and report; preflight and background tools are rea
   } finally { app.dom.window.close(); }
 });
 
+test('the assistant opens the local report and a title warning focuses the editor field', async () => {
+  const requests = [];
+  const app = await setup({ fetch: async url => { requests.push(url); return Response.json({ available: false }); } });
+  const { w, $, input } = app;
+  try {
+    input('product-name', '');
+    const previousRequests = requests.length;
+    $('ai-check-card').click();
+    await until(() => !$('check-export').disabled);
+    assert.equal(requests.length, previousRequests);
+    assert.equal($('preflight-panel').open, true);
+    assert.equal(w.document.activeElement, $('preflight-status'));
+    assert.match($('preflight-status').textContent, /Есть ошибки/);
+    const fixTitle = $('preflight-results').querySelector('button');
+    assert.equal(fixTitle.textContent, 'Перейти к заголовку');
+    fixTitle.click();
+    assert.equal($('tab-content').getAttribute('aria-selected'), 'true');
+    assert.equal(w.document.activeElement, $('product-name'));
+    input('product-name', 'Чашка');
+    assert.equal($('preflight-results').children.length, 0);
+  } finally { app.dom.window.close(); }
+});
+
 test('three-photo selection is per card, ordered, undoable and portable', async () => {
   const app = await setup(); const { w, $, input } = app;
   try {
@@ -194,6 +217,80 @@ test('photo batch upload respects file limit and switching cards cancels stale i
     assert.equal(w.SATUCARD_EDITOR.snapshot(true).serialized, before);
     $('make-set').click(); choose([photo('late.png')]); $('product-views').children[1].click(); await sleep(80);
     assert.equal(w.SATUCARD_EDITOR.snapshot().model.libraryIds.length, 3);
+  } finally { app.dom.window.close(); }
+});
+
+test('a real product drops untouched demo content, preserves edits, and stays blank after reopening', async () => {
+  const app = await setup(); const { w, $, input } = app;
+  try {
+    const editor = w.SATUCARD_EDITOR, sample = editor.snapshot();
+    input('brand-name', 'Aru Store');
+    input('feature-2', 'Мой подтверждённый факт');
+    input('card-format', 'square');
+    const choose = name => {
+      const file = new w.File([new Uint8Array([1, 2, 3])], name, { type: 'image/png' });
+      Object.defineProperty($('photo-input'), 'files', { configurable: true, value: [file] });
+      $('photo-input').dispatchEvent(new w.Event('change', { bubbles: true }));
+    };
+    choose('product.png');
+    await until(() => editor.snapshot().model.libraryIds.length === 2);
+    const real = editor.snapshot(true);
+    assert.notEqual(real.productContextId, sample.productContextId);
+    assert.equal(real.sampleKey, null);
+    assert.equal($('product-name').value, '');
+    assert.equal($('product-description').value, '');
+    assert.equal($('product-badge').value, '');
+    assert.equal($('product-price').value, '');
+    assert.deepEqual(Array.from(real.model.settings.features), ['Мой подтверждённый факт']);
+    assert.equal(real.model.settings.brandName, 'Aru Store');
+    assert.equal(real.model.settings.format, 'square');
+    assert.equal(real.images.photos.length, 1);
+
+    $('undo-button').click();
+    assert.equal(editor.snapshot().productContextId, sample.productContextId);
+    assert.equal($('product-name').value, 'Беспроводные наушники');
+    $('redo-button').click();
+    assert.equal(editor.snapshot().productContextId, real.productContextId);
+    choose('detail.png');
+    await until(() => editor.snapshot().images.photos.length === 2);
+    assert.equal(editor.snapshot().productContextId, real.productContextId);
+    assert.equal(JSON.parse(real.serialized).settings.title, '');
+    assert.doesNotThrow(() => validateProject(JSON.parse(real.serialized)));
+    await editor.restoreProject(real.serialized);
+    assert.equal(editor.snapshot().model.activeViewId, real.model.activeViewId);
+    assert.notEqual(editor.snapshot().productContextId, real.productContextId);
+    assert.equal($('product-name').value, '');
+  } finally { app.dom.window.close(); }
+});
+
+test('selective copy and a translated duplicate preserve original fields, assets, and undo', async () => {
+  const app = await setup(); const { w, $ } = app;
+  try {
+    const editor = w.SATUCARD_EDITOR, original = editor.snapshot();
+    const draft = { title: 'Құлаққап', subtitle: 'Қысқа тақырып', description: 'Расталған сипаттама', features: ['Ыңғайлы'] };
+    editor.applyCopy(draft, editor.revision, { fields: ['description'] });
+    assert.equal($('product-description').value, draft.description);
+    assert.equal($('product-name').value, original.model.settings.title);
+    assert.equal($('product-subtitle').value, original.model.settings.subtitle);
+    assert.equal($('feature-1').value, original.model.settings.features[0]);
+
+    const beforeTranslation = editor.snapshot();
+    editor.applyCopy(draft, editor.revision, { fields: ['title', 'subtitle'], duplicate: true });
+    const translated = editor.snapshot(true);
+    assert.equal(translated.model.views.length, 2);
+    assert.match(translated.model.views[1].label, /Қазақша$/);
+    assert.equal(translated.model.settings.title, draft.title);
+    assert.equal(translated.model.settings.description, draft.description);
+    assert.equal(translated.model.settings.price, beforeTranslation.model.settings.price);
+    assert.equal(translated.model.settings.brandName, beforeTranslation.model.settings.brandName);
+    assert.equal(translated.images.photo, beforeTranslation.images.photo);
+    assert.deepEqual(translated.model.views[0], beforeTranslation.model.views[0]);
+    assert.doesNotThrow(() => validateProject(JSON.parse(translated.serialized)));
+    $('undo-button').click();
+    assert.equal(editor.snapshot().model.views.length, 1);
+    assert.equal($('product-name').value, beforeTranslation.model.settings.title);
+    $('redo-button').click();
+    assert.equal($('product-name').value, draft.title);
   } finally { app.dom.window.close(); }
 });
 

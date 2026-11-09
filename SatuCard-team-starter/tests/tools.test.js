@@ -86,3 +86,12 @@ test('hidden prices and branding do not trigger warnings', () => {
   const result = tools.preflight({ price: 100, showPrice: false, brandName: 'Brand', showBrand: false }, metadata);
   assert.ok(!result.checks.some(c => ['price', 'brand'].includes(c.id)));
 });
+
+test('title recommendations use measured preview size and contrast', () => {
+  const shortTitle = { title: 'Чашка' };
+  const issues = report => report.checks.filter(check => check.id.startsWith('title-')).map(check => check.id);
+  assert.equal(issues(tools.preflight(shortTitle, metadata)).length, 0);
+  assert.equal(issues(tools.preflight(shortTitle, { ...metadata, titlePreviewSize: 20, titleContrast: 4 })).length, 0);
+  assert.equal(issues(tools.preflight(shortTitle, { ...metadata, titlePreviewSize: 14.5, titleContrast: 1.2 })).join(','), 'title-size,title-contrast');
+  assert.equal(issues(tools.preflight({ title: '' }, { ...metadata, titlePreviewSize: 14.5, titleContrast: 1.2 })).join(','), 'title-missing');
+});

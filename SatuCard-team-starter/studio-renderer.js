@@ -40,7 +40,7 @@
     const price = amount(source.price);
     const old = amount(source.oldPrice);
     return {
-      title: text(source.title, 60) || 'Название вашего товара',
+      title: source.title == null ? 'Название вашего товара' : text(source.title, 60),
       subtitle: text(source.subtitle, 90), description: text(source.description, 180),
       price, oldPrice: price !== null && old !== null && old > price ? old : null,
       badge: text(source.badge, 24),
@@ -112,7 +112,7 @@
     return result;
   }
   function fitText(ctx, state, value, rect, options = {}) {
-    if (!value || rect.height <= 0) return 0;
+    if (!value || rect.height <= 0) return { height: 0, fontSize: 0 };
     let size = (options.size || 28) * state.textScale / 100;
     const minSize = options.minSize || 14;
     const weight = options.weight || 600;
@@ -133,7 +133,15 @@
     const y = rect.y + (options.verticalCenter ? (rect.height - height) / 2 : 0);
     wrapped.forEach((row, index) => ctx.fillText(row, x, y + index * size * spacing));
     ctx.textAlign = 'left';
-    return height;
+    return { height, fontSize: size };
+  }
+
+  function luminance(color) {
+    const [red, green, blue] = [1, 3, 5].map(index => {
+      const channel = parseInt(color.slice(index, index + 2), 16) / 255;
+      return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
   }
   function label(ctx, state, value, x, y, color, size = 16) {
     font(ctx, state, size, 750); ctx.fillStyle = color || state.textColor; ctx.textBaseline = 'top'; ctx.textAlign = 'left'; ctx.fillText(value, x, y);
@@ -341,10 +349,10 @@
     const titleHeight = isSquare ? 139 : isStory ? 214 : 173;
     const titleSize = state.template === 'bold' ? (isSquare ? 59 : 78) : state.template === 'minimal' ? 56 : isStory ? 75 : 64;
     const title = state.template === 'bold' || state.template === 'neon' ? state.title.toLocaleUpperCase('ru-RU') : state.title;
-    const titleUsed = fitText(ctx, state, title, { x: padding, y: titleY, width, height: titleHeight }, { size: titleSize, minSize: 30, weight: state.template === 'bold' ? 900 : 800, spacing: 1.08 });
+    const { height: titleUsed, fontSize: titleFontSize } = fitText(ctx, state, title, { x: padding, y: titleY, width, height: titleHeight }, { size: titleSize, minSize: 30, weight: state.template === 'bold' ? 900 : 800, spacing: 1.08 });
     hitAreas.push({ field: 'product-name', x: padding, y: titleY, width, height: titleUsed });
     const subtitleY = titleY + titleUsed + 13;
-    const subtitleUsed = state.subtitle ? fitText(ctx, state, state.subtitle, { x: padding, y: subtitleY, width, height: isSquare ? 52 : 69 }, { size: 23, minSize: 17, weight: 500, color: rgba(state.textColor, 0.76) }) : 0;
+    const subtitleUsed = fitText(ctx, state, state.subtitle, { x: padding, y: subtitleY, width, height: isSquare ? 52 : 69 }, { size: 23, minSize: 17, weight: 500, color: rgba(state.textColor, 0.76) }).height;
     if (state.subtitle) hitAreas.push({ field: 'product-subtitle', x: padding, y: subtitleY, width, height: subtitleUsed });
     const top = subtitleY + subtitleUsed + 22;
     const descHeight = state.description ? (isSquare ? 72 : 78) : 0;
@@ -383,7 +391,7 @@
       }
       price(ctx, state, { x: padding + width - priceWidth, y, width: priceWidth, height: priceHeight }, { plain: state.template === 'minimal', size: state.template === 'bold' ? 45 : 38 });
     }
-    return { ...gallery, hitAreas };
+    return { ...gallery, hitAreas, titleFontSize };
   }
 
   function editorialLayout(ctx, state, assets, height) {
@@ -392,11 +400,11 @@
     const x = 54, leftWidth = 350, rightX = 444, rightWidth = 402;
     label(ctx, state, 'ВЫБОР РЕДАКЦИИ', x, 122, state.accent, 14);
     const titleY = 164, titleHeight = square ? 221 : story ? 345 : 285;
-    const titleUsed = fitText(ctx, state, state.title, { x, y: titleY, width: leftWidth, height: titleHeight }, { size: story ? 68 : 60, minSize: 27, weight: 850, spacing: 1.08 });
+    const { height: titleUsed, fontSize: titleFontSize } = fitText(ctx, state, state.title, { x, y: titleY, width: leftWidth, height: titleHeight }, { size: story ? 68 : 60, minSize: 27, weight: 850, spacing: 1.08 });
     hitAreas.push({ field: 'product-name', x, y: titleY, width: leftWidth, height: titleUsed });
     let y = titleY + titleUsed + 23;
     if (state.subtitle) {
-      const used = fitText(ctx, state, state.subtitle, { x, y, width: leftWidth, height: square ? 84 : 111 }, { size: 22, minSize: 16, weight: 650, align: 'left', color: rgba(state.textColor, 0.8) });
+      const { height: used } = fitText(ctx, state, state.subtitle, { x, y, width: leftWidth, height: square ? 84 : 111 }, { size: 22, minSize: 16, weight: 650, align: 'left', color: rgba(state.textColor, 0.8) });
       hitAreas.push({ field: 'product-subtitle', x, y, width: leftWidth, height: used });
       y += used + 23;
     }
@@ -420,7 +428,7 @@
     if (state.showPrice) price(ctx, state, { x, y: footerY, width: leftWidth, height: priceHeight }, { plain: true, size: 39 });
     const photoRect = { x: rightX, y: 122, width: rightWidth, height: height - 182 };
     const gallery = photoGallery(ctx, state, assets, photoRect);
-    return { ...gallery, hitAreas };
+    return { ...gallery, hitAreas, titleFontSize };
   }
 
 
@@ -429,11 +437,12 @@
     const hitAreas = [], photoRects = [];
     const area = (field, value, rect, options = {}) => {
       if (!value) return;
-      fitText(ctx, state, value, rect, options);
+      const metrics = fitText(ctx, state, value, rect, options);
       hitAreas.push({ field, ...rect });
+      return metrics;
     };
     label(ctx, state, purposes[state.purpose].label.toLocaleUpperCase('ru-RU'), 54, 111, state.accent, 16);
-    area('product-name', state.title, { x: 54, y: 145, width: 792, height: 110 }, { size: 49, weight: 850, spacing: 1.08 });
+    const { fontSize: titleFontSize } = area('product-name', state.title, { x: 54, y: 145, width: 792, height: 110 }, { size: 49, weight: 850, spacing: 1.08 });
     area('product-subtitle', state.subtitle, { x: 54, y: 268, width: 792, height: 57 }, { size: 23, weight: 500 });
     const top = state.subtitle ? 348 : 280;
     const footer = height - 145;
@@ -496,11 +505,12 @@
       price(ctx, state, { x: 451, y: footer + 15, width: 395, height: 91 });
       hitAreas.push({ field: 'product-price', x: 451, y: footer + 15, width: 395, height: 91 });
     }
-    return { photoRect: photoRects[0], photoRects, hitAreas };
+    return { photoRect: photoRects[0], photoRects, hitAreas, titleFontSize };
   }
 
   function render(canvas, input, assets = {}, options = {}) {
     const state = normalize(input);
+    if (!state.title) state.title = 'Название вашего товара';
     const format = formats[state.format];
     const scale = clamp(options.scale, 0.25, 4, 1);
     const ctx = canvas.getContext('2d');
@@ -516,7 +526,13 @@
       ? (state.template === 'editorial' ? editorialLayout(ctx, state, assets, format.height) : stackedLayout(ctx, state, assets, format.height))
       : purposeLayout(ctx, state, assets, format.height);
     ctx.restore();
-    return { ...layout, photoRects: layout.photoRects || [layout.photoRect], hitAreas: layout.hitAreas || [], width: format.width, height: format.height };
+    let titleContrast;
+    // Measure Minimal's solid title background. Other templates can vary under the letters.
+    if (state.template === 'minimal') {
+      const foreground = luminance(state.textColor), background = luminance(state.background);
+      titleContrast = (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05);
+    }
+    return { ...layout, photoRects: layout.photoRects || [layout.photoRect], hitAreas: layout.hitAreas || [], width: format.width, height: format.height, titleContrast };
   }
   root.SATUCARD_RENDERER = { templates, formats, purposes, categories, normalize, render };
 })();

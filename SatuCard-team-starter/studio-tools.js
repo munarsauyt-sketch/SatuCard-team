@@ -104,7 +104,7 @@
     const preset = presets[key];
     const checks = [];
     const add = (id, severity, message) => checks.push({ id, severity, message });
-    const { width, height, bytes, mime, photoWidth, photoHeight, hasPhoto, hasLogo } = metadata;
+    const { width, height, bytes, mime, photoWidth, photoHeight, hasPhoto, hasLogo, titlePreviewSize, titleContrast } = metadata;
     const validDimensions = Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0;
     add('dimensions', !validDimensions ? 'error' : Math.min(width, height) < 900 ? 'warning' : 'pass', !validDimensions ? 'Не удалось определить размер экспорта.' : `Размер: ${width}×${height}. Рекомендация для макета: ${preset.suggested}.`);
     if (validDimensions && preset.ratio) add('aspect', Math.abs(width / height - preset.ratio) > 0.025 ? 'warning' : 'pass', `Предлагаемый формат для ${preset.label}: ${preset.suggested}. Уточните требования категории.`);
@@ -116,6 +116,14 @@
     if (settings.showPrice !== false && settings.price !== null && settings.price !== undefined && settings.price !== '') add('price', 'warning', 'Цена на изображении может устареть или быть запрещена правилами категории. Для главного фото рассмотрите вариант без цены.');
     if (settings.badge) add('badge', 'warning', 'Проверьте допустимость плашек, скидок и рекламных обещаний на главном фото.');
     if (settings.showBrand !== false && (settings.brandName || hasLogo)) add('brand', 'warning', 'Убедитесь, что имеете право на бренд/логотип и площадка допускает его размещение.');
+    const title = typeof settings.title === 'string' ? settings.title.trim() : undefined;
+    if (title === '') add('title-missing', 'error', 'Введите название товара. Сейчас в макете отображается подсказка.');
+    if (title && titlePreviewSize > 0 && titlePreviewSize < 16) {
+      add('title-size', 'warning', `При ширине карточки 360 пикселей размер заголовка будет около ${titlePreviewSize.toFixed(1).replace('.', ',')} пикселя. Попробуйте сократить название или выбрать другой шаблон.`);
+    }
+    if (title && titleContrast >= 1 && titleContrast < 3) {
+      add('title-contrast', 'warning', 'Заголовок сливается с фоном. Выберите более контрастный цвет текста или фона.');
+    }
     if ((settings.title || '').length > 45 || (settings.description || '').length > 120 || (settings.features || []).some(value => String(value).length > 32)) add('text', 'warning', 'Много текста: проверьте переносы, обрезку и читаемость в мобильном превью.');
     add('category-review', 'info', 'Это рекомендации по подготовке, не официальная проверка и не гарантия приёма. Перед загрузкой проверьте действующие правила площадки и категории, фон, кадрирование и достоверность описания.');
     return { marketplace: key, label: preset.label, disclaimer: 'Рекомендации, а не официальные требования маркетплейса.', checks, ok: !checks.some(check => check.severity === 'error') };
