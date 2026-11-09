@@ -38,6 +38,12 @@ export function validateChatInput(value) {
     if (!isFallbackProvider(value.fallbackProvider)) throw new Error('Invalid fallback provider');
     input.fallbackProvider = value.fallbackProvider;
   }
+  if (value.selectedProvider !== undefined) {
+    if (value.selectedProvider !== 'anymodel' || value.fallbackProvider || value.groqFallbackConsent === true || value.imageDataUrl !== undefined) {
+      throw new Error('Invalid selected provider');
+    }
+    input.selectedProvider = value.selectedProvider;
+  }
   if (value.imageDataUrl !== undefined) {
     if (value.imageConsent !== true) throw new Error('Photo consent required');
     input.imageDataUrl = validateImage(value.imageDataUrl); input.imageConsent = true;
@@ -73,7 +79,7 @@ const modeInstructions = {
 };
 export async function generateChat(rawInput, { key, accountId, model = COPY_MODEL, timeoutMs = 25000, fetcher = fetch, provider = 'openai' }) {
   if (model !== COPY_MODEL) throw new Error('Unsupported model');
-  const { imageDataUrl, imageConsent, groqFallbackConsent, fallbackProvider, ...input } = validateChatInput(rawInput);
+  const { imageDataUrl, imageConsent, groqFallbackConsent, fallbackProvider, selectedProvider, ...input } = validateChatInput(rawInput);
   const taskInstructions = input.mode ? `${instructions} ${modeInstructions[input.mode]}` : instructions;
   if (provider === 'gemini') return validateChatOutput(await generateGemini({ input, imageDataUrl, instructions: taskInstructions, schema }, { key, timeoutMs, fetcher }), input);
   const adapter = textProviderAdapter(provider);

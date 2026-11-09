@@ -1,5 +1,5 @@
 import { geminiSelected, geminiEnabled, geminiUsers, geminiModel } from '../lib/gemini.js';
-import { availableEvaluations, availableFallbacks, configuredEvaluation, configuredFallback } from '../lib/chat-providers.js';
+import { availableEvaluations, availableFallbacks, configuredEvaluation, configuredFallback, configuredSol } from '../lib/chat-providers.js';
 import { configuration } from '../lib/supabase.js';
 import { readAccount, accountFailure, accountJson } from '../lib/account.js';
 import { validateChatInput as validateInput, generateChat as generateCopy, MAX_CHAT_REQUEST_BYTES as MAX_REQUEST_BYTES } from '../lib/chat.js';
@@ -48,10 +48,12 @@ export function GET() {
   const available = Boolean(enabled() && configuration() && apiKey() && userCount);
   const fallbackProviders = available && geminiSelected() ? availableFallbacks() : [];
   const evaluationProviders = available && geminiSelected() ? availableEvaluations() : [];
+  const sol = available && geminiSelected() ? configuredSol() : null;
   return accountJson({ available, modelVerified: false,
     ...(geminiSelected() ? { provider: 'gemini', model: geminiModel(), singleUserPilot: available && userCount === 1 } : {}),
     ...(fallbackProviders.length ? { fallbackProviders } : {}),
     ...(evaluationProviders.length ? { evaluationProviders } : {}),
+    ...(sol ? { selectableProviders: [{ id: 'anymodel', label: sol.label }] } : {}),
     ...(fallbackProviders.some(item => item.id === 'groq') ? { groqFallbackAvailable: true } : {}) });
 }
 export async function POST(request) {
@@ -84,9 +86,12 @@ export async function POST(request) {
     } finally { reader.releaseLock(); }
     input = validateInput(JSON.parse(Buffer.concat(parts).toString('utf8')));
   } catch { return accountJson({ error: 'Проверьте сообщение, историю, карточку, язык и согласие на фото.', code: 'invalid_input' }, 400); }
+  const wantsSol = input?.selectedProvider === 'anymodel';
+  const sol = wantsSol && geminiSelected() ? configuredSol() : null;
+  if (wantsSol && !sol) return accountJson({ error: 'Sol сейчас недоступен в этом Preview. Выберите Gemini в настройках чата.', code: 'sol_unavailable' }, 503);
   // Only the verified, allowlisted Gemini administrator skips SatuCard's quota.
   const adminId = process.env.GEMINI_ADMIN_USER_ID?.trim().toLowerCase();
-  const isGeminiAdmin = geminiSelected() && user.id.toLowerCase() === adminId;
+  const isGeminiAdmin = geminiSelected() && !sol && user.id.toLowerCase() === adminId;
   if (evaluation || !isGeminiAdmin) {
     let allowed;
     try { allowed = await reserveCopyQuota(config, user.id); }
@@ -101,6 +106,18 @@ export async function POST(request) {
     } catch (error) {
       const status = logFailure(evaluationId, error);
       return accountJson({ error: `Тест ${evaluation.label} не прошёл. Проверьте ключ и доступную квоту.`, code: 'evaluation_failed' }, status === 429 ? 429 : 502);
+    }
+  }
+  if (sol) {
+    try {
+      const result = await generateCopy({ ...input, history: input.history.slice(-4) }, { key: sol.key, provider: 'anymodel', timeoutMs: 45000 });
+      return accountJson({ ...result, providerUsed: 'anymodel' });
+    } catch (error) {
+      const status = logFailure('anymodel', error);
+      if (status === 402) return accountJson({ error: 'AnyModel отклонил запрос из-за баланса или лимита ключа.', code: 'sol_balance' }, 402);
+      if (status === 429) return accountJson({ error: 'AnyModel ограничивает запросы. Попробуйте позже.', code: 'sol_quota' }, 429);
+      if (error.message === 'Provider timeout') return accountJson({ error: 'Sol не успел ответить. Запрос мог учитываться в расходе токенов.', code: 'sol_timeout' }, 504);
+      return accountJson({ error: 'Sol не вернул подходящий ответ. Проверьте доступ к модели и попробуйте позже.', code: 'sol_failed' }, 502);
     }
   }
   const primary = geminiSelected() ? 'gemini' : 'openai';

@@ -8,7 +8,7 @@
     started = true;
     const editor = window.SATUCARD_EDITOR, renderer = window.SATUCARD_RENDERER;
     let activeProvider = null, singleUserPilot = false;
-    let fallbackProviders = new Map(), evaluationProviders = new Map();
+    let fallbackProviders = new Map(), evaluationProviders = new Map(), modelProviders = new Map();
     let configured = false, busy = false, generation = 0, controller = null, proposal = null, proposalRevision = -1;
     let pendingRow = null, proposalIsTranslation = false, proposalStartsProduct = false, pendingMode = null, buildName = '', evaluationRunning = false;
     let history = [], textConsent = false, applying = false, account, statusGeneration = 0, opener = $('open-ai-chat');
@@ -18,12 +18,16 @@
     const selectedFields = () => fieldChoices.filter(field => field.checked).map(field => field.dataset.aiField);
     const status = (text, error = false) => { $('ai-chat-status').textContent = text; $('ai-chat-status').classList.toggle('error', error); };
     function buttons() {
+      const paidModel = modelProviders.has($('ai-model-provider').value);
       $('ai-chat-send').disabled = busy || !configured || !$('ai-chat-input').value.trim();
       $('ai-chat-stop').hidden = !busy;
       $('ai-chat-input').readOnly = busy;
       $('ai-translate').disabled = busy || !configured;
       $('ai-build-send').disabled = busy || !configured || !$('ai-build-name').value.trim();
       $('ai-evaluation-provider').disabled = busy;
+      $('ai-model-provider').disabled = busy;
+      $('ai-photo-consent').disabled = paidModel;
+      $('ai-fallback-provider').disabled = paidModel;
       $('ai-evaluation-run').disabled = busy || !configured || !evaluationProviders.has($('ai-evaluation-provider').value);
       $('ai-apply').disabled = busy || !proposal || !$('ai-reviewed').checked ||
         (!proposalIsTranslation && !selectedFields().length && !$('ai-apply-template').checked);
@@ -55,6 +59,7 @@
       for (const id of ['ai-facts', 'ai-chat-input', 'ai-build-name', 'ai-build-facts']) $(id).value = '';
       $('ai-photo-consent').checked = false;
       $('ai-fallback-provider').value = $('ai-evaluation-provider').value = '';
+      $('ai-model-provider').value = '';
       $('ai-evaluation-result').textContent = '';
       closeBuild(); buttons();
     }
@@ -118,6 +123,7 @@
         const fallback = result.fallbackProviders ?? (result.groqFallbackAvailable ? [{ id: 'groq', label: 'Groq' }] : []);
         fallbackProviders = providerOptions('fallback', nextProvider === 'gemini' ? fallback : [], ['groq', 'mistral', 'cloudflare', 'cohere']);
         evaluationProviders = providerOptions('evaluation', nextProvider === 'gemini' ? result.evaluationProviders : [], ['alibaba', 'scaleway']);
+        modelProviders = providerOptions('model', nextProvider === 'gemini' ? result.selectableProviders : [], ['anymodel']);
         const providerName = activeProvider === 'gemini' ? 'Google Gemini' : 'OpenAI';
         $('ai-data-question').textContent = `Передать ${providerName} запрос, тексты карточки, факты и историю этого чата?`;
         $('ai-google-data-policy').hidden = activeProvider !== 'gemini';
@@ -128,6 +134,7 @@
         configured = false;
         fallbackProviders = providerOptions('fallback', [], []);
         evaluationProviders = providerOptions('evaluation', [], []);
+        modelProviders = providerOptions('model', [], []);
       } finally { if (token === statusGeneration) { $('ai-chat-setup').hidden = configured; $('ai-chat-recheck').disabled = false; buttons(); } }
     }
     $('ai-chat-recheck').addEventListener('click', checkConnection);
@@ -152,6 +159,11 @@
       if (busy || proposal) invalidate('Данные обновлены. Отправь следующий запрос, чтобы учесть изменения.');
     }));
     $('ai-evaluation-provider').addEventListener('change', () => { $('ai-evaluation-result').textContent = ''; buttons(); });
+    $('ai-model-provider').addEventListener('change', () => {
+      $('ai-data-consent').hidden = true;
+      if (modelProviders.has($('ai-model-provider').value)) $('ai-photo-consent').checked = false;
+      buttons();
+    });
     $('ai-evaluation-run').addEventListener('click', async () => {
       const id = $('ai-evaluation-provider').value, label = evaluationProviders.get(id);
       if (busy || !configured || !label) return;
@@ -284,7 +296,9 @@
     $('ai-chat-form').addEventListener('submit', async event => {
       event.preventDefault(); if (busy || !configured) return;
       const message = $('ai-chat-input').value.trim(); if (!message || message.length > 1500) return;
-      if (!singleUserPilot && !textConsent) { $('ai-data-consent').hidden = false; $('ai-data-confirm').focus(); return; }
+      const modelChoice = $('ai-model-provider').value;
+      const selectedProvider = modelProviders.has(modelChoice) ? modelChoice : null;
+      if (!selectedProvider && !singleUserPilot && !textConsent) { $('ai-data-consent').hidden = false; $('ai-data-confirm').focus(); return; }
       const snapshot = editor.snapshot(), revision = editor.revision;
       const previousProposal = proposal && proposalRevision === revision ? editedProposal() : null;
       const mode = pendingMode;
@@ -312,9 +326,12 @@
         }
         if (mode) body.mode = mode;
         if (previousProposal?.title) body.previousProposal = previousProposal;
-        const fallback = $('ai-fallback-provider').value;
-        if (fallbackProviders.has(fallback)) body.fallbackProvider = fallback;
-        if (!newProduct && $('ai-photo-consent').checked) { body.imageDataUrl = thumbnail(snapshot.images.photo); body.imageConsent = true; }
+        if (selectedProvider) body.selectedProvider = selectedProvider;
+        else {
+          const fallback = $('ai-fallback-provider').value;
+          if (fallbackProviders.has(fallback)) body.fallbackProvider = fallback;
+          if (!newProduct && $('ai-photo-consent').checked) { body.imageDataUrl = thumbnail(snapshot.images.photo); body.imageConsent = true; }
+        }
         pendingRow = append('user', message);
         const response = await fetch('api/chat', { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}`, 'content-type': 'application/json' }, body: JSON.stringify(body), signal: ownController.signal });
         const result = await response.json().catch(() => null);
@@ -334,7 +351,7 @@
         history = history.slice(-8); while (history.reduce((sum, item) => sum + item.content.length, 0) > 12000) history.splice(0, 2);
         $('ai-chat-input').value = '';
         if (result.proposal || mode === 'translate') pendingMode = null;
-        const reserveLabel = fallbackProviders.get(result.providerUsed);
+        const reserveLabel = modelProviders.get(result.providerUsed) || fallbackProviders.get(result.providerUsed);
         const providerNote = reserveLabel ? ' Ответ подготовил ' + reserveLabel + '.' : '';
         if (result.proposal) {
           showProposal(result.proposal, revision, snapshot, { translate, newProduct, suggestTemplate: mode === 'build' });
