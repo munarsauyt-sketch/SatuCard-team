@@ -219,7 +219,7 @@ test('a trial evaluation is authenticated, quota-limited, and sends only the bui
  assert.deepEqual(calls, []);
 });
 
-test('production only offers and accepts Sol for the verified owner', async () => {
+test('production Sol is owner-only and works even when the shared quota is exhausted', async () => {
  const owner = '11111111-1111-4111-8111-111111111111';
  const member = '22222222-2222-4222-8222-222222222222';
  Object.assign(process.env, {
@@ -228,16 +228,20 @@ test('production only offers and accepts Sol for the verified owner', async () =
   SUPABASE_URL:'https://example.supabase.co', SUPABASE_SECRET_KEY:'private',
   VERCEL_ENV:'production', SAI_PREVIEW_ANYMODEL_ENABLED:'true', SAI_PRODUCTION_ANYMODEL_ENABLED:'false', ANYMODEL_API_KEY:'test'
  });
- const unexpected = [];
+ const calls = [];
  globalThis.fetch = async (url, init) => {
   if (url.endsWith('/auth/v1/user')) {
    const id = init.headers.Authorization === 'Bearer owner' ? owner : member;
    return Response.json({ id, email_confirmed_at:'today' });
   }
   if (url.includes('/rest/v1/profiles?')) return Response.json([{ profile_completed_at:'today', mail_proof_required:false }]);
-  if (url.includes('/rpc/')) return Response.json({ allowed:false });
-  unexpected.push(url);
-  throw new Error('Unexpected network request');
+  if (url.includes('/rpc/')) {
+   calls.push('quota');
+   return Response.json({ allowed:false });
+  }
+  calls.push(url);
+  assert.equal(JSON.parse(init.body).model, 'cx/gpt-6.1-sol');
+  return Response.json({ choices:[{ finish_reason:'stop', message:{ role:'assistant', content:JSON.stringify(result) } }] });
  };
  const request = (token, method = 'GET') => new Request('https://example.com/api/chat', {
   method, headers:{ authorization:'Bearer ' + token, 'content-type':'application/json' },
@@ -253,6 +257,10 @@ test('production only offers and accepts Sol for the verified owner', async () =
  const denied = await POST(request('member', 'POST'));
  assert.equal(denied.status, 403);
  assert.equal((await denied.json()).code, 'sol_access_required');
+ assert.deepEqual(calls, []);
+ assert.deepEqual(await (await POST(request('owner', 'POST'))).json(), { ...result, providerUsed:'anymodel' });
+ assert.deepEqual(calls.splice(0), ['https://anymodel.org/v1/chat/completions']);
+ process.env.VERCEL_ENV = 'preview';
  assert.equal((await (await POST(request('owner', 'POST'))).json()).code, 'ai_rate_limited');
- assert.deepEqual(unexpected, []);
+ assert.deepEqual(calls, ['quota']);
 });
