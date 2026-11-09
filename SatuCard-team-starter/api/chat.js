@@ -1,3 +1,4 @@
+import { geminiSelected, geminiEnabled, geminiUsers } from '../lib/gemini.js';
 import { configuration } from '../lib/supabase.js';
 import { readAccount, accountFailure, accountJson } from '../lib/account.js';
 import { validateChatInput as validateInput, generateChat as generateCopy, MAX_CHAT_REQUEST_BYTES as MAX_REQUEST_BYTES } from '../lib/chat.js';
@@ -7,14 +8,17 @@ import { reserveCopyQuota } from '../lib/copy-quota.js';
 // Paid generation is closed by default. Only explicitly trusted account UUIDs
 // may use it; self-service signup is not permission to spend the owner's key.
 function allowedUsers() {
+  if (geminiSelected()) return geminiUsers();
   return new Set((process.env.OPENAI_COPY_ALLOWED_USER_IDS || '').split(',').map(id => id.trim().toLowerCase())
     .filter(id => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id)));
 }
 function enabled() {
+  if (geminiSelected()) return geminiEnabled();
   return process.env.OPENAI_COPY_ENABLED === 'true' && (!process.env.OPENAI_COPY_MODEL?.trim() || process.env.OPENAI_COPY_MODEL.trim() === COPY_MODEL);
 }
+function apiKey() { return (geminiSelected() ? process.env.GEMINI_API_KEY : process.env.OPENAI_API_KEY)?.trim(); }
 export function GET() {
-  return accountJson({ available: Boolean(enabled() && configuration() && process.env.OPENAI_API_KEY?.trim() && allowedUsers().size), modelVerified: false });
+  return accountJson({ available: Boolean(enabled() && configuration() && apiKey() && allowedUsers().size), modelVerified: false, ...(geminiSelected() ? { provider: 'gemini', model: 'gemini-2.5-flash' } : {}) });
 }
 export async function POST(request) {
   const config = configuration();
@@ -22,7 +26,7 @@ export async function POST(request) {
   let user;
   try { ({ user } = await readAccount(request, config, { complete: true })); }
   catch (error) { return accountFailure(error); }
-  const key = process.env.OPENAI_API_KEY?.trim();
+  const key = apiKey();
   if (!key) return accountJson({ error: 'ИИ-помощник пока не настроен. Можно использовать локальный шаблон.', code: 'ai_unavailable' }, 503);
   if (!allowedUsers().has(user.id.toLowerCase())) return accountJson({ error: 'ИИ доступен только аккаунтам, подключённым владельцем сайта. Используйте локальный шаблон.', code: 'ai_access_required' }, 403);
   if (!/^application\/json(?:\s*;|$)/i.test(request.headers.get('content-type') || '')) return accountJson({ error: 'Ожидается JSON.', code: 'invalid_input' }, 415);
@@ -48,7 +52,7 @@ export async function POST(request) {
   catch { return accountJson({ error: 'Общий лимит ИИ недоступен. Используйте локальный шаблон.', code: 'ai_quota_unavailable' }, 503); }
   if (!allowed) return accountJson({ error: 'Лимит ИИ-запросов достигнут. Подождите не менее минуты или используйте локальный шаблон.', code: 'ai_rate_limited' }, 429);
   try {
-    return accountJson(await generateCopy(input, { key }));
+    return accountJson(await generateCopy(input, { key, provider: geminiSelected() ? 'gemini' : 'openai' }));
   } catch {
     return accountJson({ error: 'Не удалось получить корректный ответ ИИ. Попытка учтена в лимите. Используйте шаблон или повторите позже.', code: 'ai_failed' }, 502);
   }
