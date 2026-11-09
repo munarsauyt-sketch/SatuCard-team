@@ -7,7 +7,7 @@
     if (started || !window.SATUCARD_EDITOR || !$('ai-chat')) return;
     started = true;
     const editor = window.SATUCARD_EDITOR, renderer = window.SATUCARD_RENDERER;
-    let activeProvider = 'openai';
+    let activeProvider = null;
     let configured = false, busy = false, generation = 0, controller = null, proposal = null, proposalRevision = -1;
     let history = [], textConsent = false, applying = false, account, statusGeneration = 0, opener = $('open-ai-chat');
     let activeView = editor.snapshot().model.activeViewId, activePhoto = editor.snapshot().model.photoId;
@@ -55,7 +55,7 @@
         const result = response.ok ? await response.json() : {};
         if (token !== statusGeneration) return;
         const nextProvider = result.provider === 'gemini' ? 'gemini' : 'openai';
-        if (nextProvider !== activeProvider) { clearChat('Провайдер изменён. Подтвердите передачу данных заново.'); $('ai-photo-consent').checked = false; }
+        if (activeProvider && nextProvider !== activeProvider) { clearChat('Провайдер изменён. Подтвердите передачу данных заново.'); $('ai-photo-consent').checked = false; }
         activeProvider = nextProvider;
         const providerName = activeProvider === 'gemini' ? 'Google Gemini' : 'OpenAI';
         $('ai-data-question').textContent = `Передать ${providerName} запрос, тексты карточки, факты и историю этого чата?` +
