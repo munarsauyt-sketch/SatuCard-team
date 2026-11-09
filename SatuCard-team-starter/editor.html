@@ -154,7 +154,7 @@
 
   <button id="open-ai-chat" class="ai-floating-launch" type="button" data-open-ai aria-controls="ai-chat" aria-expanded="false" aria-label="Открыть чат sAI"><svg class="studio-icon" aria-hidden="true"><use href="#i-spark"/></svg>sAI</button>
   <aside id="ai-chat" class="ai-chat" role="dialog" aria-modal="false" aria-labelledby="ai-chat-title" hidden>
-    <header class="ai-chat-header"><div class="ai-chat-heading"><h2 id="ai-chat-title">sAI</h2><p id="ai-chat-connection" class="ai-connection" role="status">Проверяем подключение…</p></div><div class="ai-chat-header-actions"><button id="ai-chat-new" class="ai-quiet-button" type="button">Новый чат</button><button id="ai-chat-close" class="ai-close-button" type="button" aria-label="Закрыть чат sAI">×</button></div></header>
+    <header class="ai-chat-header"><h2 id="ai-chat-title">sAI</h2><div class="ai-chat-header-actions"><button id="ai-chat-new" class="ai-quiet-button" type="button">Новый чат</button><button id="ai-chat-close" class="ai-close-button" type="button" aria-label="Закрыть чат sAI">×</button></div></header>
     <div class="ai-chat-scroll">
       <div id="ai-chat-setup" class="ai-chat-setup" hidden><p><strong>sAI ещё не подключён.</strong> Ответы появятся после подключения. Редактор работает.</p><details><summary>Как подключить</summary><p>Владелец сайта подключает серверный ключ OpenAI, доступ к модели и лимиты. Не вводите ключи в чат.</p><button id="ai-chat-recheck" type="button" class="ai-quiet-button">Проверить снова</button></details></div>
       <div id="ai-chat-messages" class="ai-chat-messages" role="log" aria-label="Переписка с sAI" aria-live="polite" aria-relevant="additions"></div>
@@ -181,8 +181,8 @@
     </div>
     <form id="ai-chat-form" class="ai-chat-composer">
       <p id="ai-chat-status" role="status"></p>
-      <div id="ai-data-consent" class="ai-data-consent" role="group" aria-labelledby="ai-data-question" hidden><p id="ai-data-question">Передать OpenAI запрос, тексты карточки, факты и историю этого чата?</p><div><button id="ai-data-cancel" class="ai-quiet-button" type="button">Не сейчас</button><button id="ai-data-confirm" class="ai-quiet-button" type="button">Продолжить</button></div></div>
-      <div class="ai-input-shell"><label for="ai-chat-input" class="ai-sr-only">Сообщение sAI</label><textarea id="ai-chat-input" maxlength="1500" rows="1"></textarea><div class="ai-chat-send-row"><button id="ai-chat-stop" class="ai-quiet-button" type="button" hidden>Остановить</button><button id="ai-chat-send" class="ai-send-button" type="submit" aria-label="Отправить сообщение" disabled><span aria-hidden="true">↑</span></button></div></div>
+      <div id="ai-data-consent" class="ai-data-consent" role="group" aria-labelledby="ai-data-question" hidden><p id="ai-data-question">Передать OpenAI запрос, тексты карточки, факты и историю этого чата?</p><a id="ai-google-data-policy" href="https://ai.google.dev/gemini-api/terms#unpaid-services" target="_blank" rel="noopener noreferrer" hidden>Как Google использует данные</a><div><button id="ai-data-cancel" class="ai-quiet-button" type="button">Не сейчас</button><button id="ai-data-confirm" class="ai-quiet-button" type="button">Продолжить</button></div></div>
+      <div class="ai-input-shell"><label for="ai-chat-input" class="ai-sr-only">Сообщение sAI</label><textarea id="ai-chat-input" maxlength="1500" rows="1" enterkeyhint="send"></textarea><div class="ai-chat-send-row"><button id="ai-chat-stop" class="ai-quiet-button" type="button" hidden>Остановить</button><button id="ai-chat-send" class="ai-send-button" type="submit" aria-label="Отправить сообщение" disabled><span aria-hidden="true">↑</span></button></div></div>
 
 
     </form>

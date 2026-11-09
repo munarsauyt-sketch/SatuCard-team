@@ -41,10 +41,10 @@ const reply = { reply: 'Предлагаю короче. Можно уточни
 async function chatApp(options = {}) {
   const requests = [];
   const app = await setup({ ...options, fetch: async (url, init = {}) => {
-    if (!init.method) return Response.json({ available: options.available !== false, modelVerified: false });
+    if (!init.method) return Response.json({ available: options.available !== false, modelVerified: false, provider: options.provider });
     requests.push(JSON.parse(init.body)); return options.reply ? options.reply(init) : Response.json(reply);
   }});
-  await until(() => /Настройка найдена|Не подключён/.test(app.$('ai-chat-connection').textContent));
+  await until(() => !app.$('ai-chat-recheck').disabled && app.$('ai-chat-setup').hidden === (options.available !== false));
   app.$('open-ai-chat').click();
   return { ...app, requests };
 }
@@ -256,14 +256,42 @@ test('first-send data consent is contextual, cancelable and never implies photo 
   }finally{app.dom.window.close();}
 });
 
-test('Gemini chat discloses Google free-tier processing and still requires text/photo consent', async () => {
-  const ui = await setup({fetch:async()=>Response.json({available:true,provider:'gemini'})});
+test('Gemini chat keeps the header clean and links to data terms before sending', async () => {
+  const ui = await chatApp({ provider: 'gemini' });
   try {
-    await until(()=>ui.$('ai-chat-connection').textContent.includes('Gemini'));
+    assert.doesNotMatch(ui.w.document.querySelector('.ai-chat-header').textContent, /Gemini|подключение/);
+    send(ui, 'Первый запрос', false);
+    assert.equal(ui.requests.length, 0);
+    assert.equal(ui.$('ai-data-consent').hidden, false);
     assert.match(ui.$('ai-data-question').textContent,/Google Gemini/);
-    assert.match(ui.$('ai-data-question').textContent,/улучшения продуктов/);
+    assert.doesNotMatch(ui.$('ai-data-question').textContent,/улучшения продуктов/);
+    assert.equal(ui.$('ai-google-data-policy').hidden, false);
+    assert.equal(ui.$('ai-google-data-policy').href, 'https://ai.google.dev/gemini-api/terms#unpaid-services');
     assert.match(ui.$('ai-photo-consent').parentElement.textContent,/Google Gemini/);
     assert.equal(ui.$('ai-photo-consent').checked,false);
     assert.equal(ui.$('ai-chat-messages').children.length,0);
   } finally {ui.dom.window.close();}
+});
+
+test('Enter submits through consent and Shift+Enter or composition do not send', async () => {
+  const app = await chatApp();
+  const pressEnter = options => app.$('ai-chat-input').dispatchEvent(
+    new app.w.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true, ...options })
+  );
+  try {
+    app.input('ai-chat-input', 'Первый запрос');
+    assert.equal(pressEnter({ shiftKey: true }), true);
+    assert.equal(pressEnter({ isComposing: true }), true);
+    assert.equal(pressEnter({ repeat: true }), false);
+    assert.equal(app.$('ai-data-consent').hidden, true);
+    assert.equal(pressEnter(), false);
+    assert.equal(app.$('ai-data-consent').hidden, false);
+    assert.equal(app.requests.length, 0);
+    app.$('ai-data-confirm').click();
+    await until(() => app.requests.length === 1 && app.$('ai-chat-stop').hidden);
+    app.input('ai-chat-input', 'Вторая строка\nПродолжение');
+    assert.equal(pressEnter(), false);
+    await until(() => app.requests.length === 2 && app.$('ai-chat-stop').hidden);
+    assert.equal(app.requests[1].message, 'Вторая строка\nПродолжение');
+  } finally { app.dom.window.close(); }
 });
