@@ -18,7 +18,9 @@ function enabled() {
 }
 function apiKey() { return (geminiSelected() ? process.env.GEMINI_API_KEY : process.env.OPENAI_API_KEY)?.trim(); }
 export function GET() {
-  return accountJson({ available: Boolean(enabled() && configuration() && apiKey() && allowedUsers().size), modelVerified: false, ...(geminiSelected() ? { provider: 'gemini', model: geminiModel() } : {}) });
+  const userCount = allowedUsers().size;
+  const available = Boolean(enabled() && configuration() && apiKey() && userCount);
+  return accountJson({ available, modelVerified: false, ...(geminiSelected() ? { provider: 'gemini', model: geminiModel(), singleUserPilot: available && userCount === 1 } : {}) });
 }
 export async function POST(request) {
   const config = configuration();

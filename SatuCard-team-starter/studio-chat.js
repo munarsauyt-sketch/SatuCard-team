@@ -7,7 +7,7 @@
     if (started || !window.SATUCARD_EDITOR || !$('ai-chat')) return;
     started = true;
     const editor = window.SATUCARD_EDITOR, renderer = window.SATUCARD_RENDERER;
-    let activeProvider = null;
+    let activeProvider = null, singleUserPilot = false;
     let configured = false, busy = false, generation = 0, controller = null, proposal = null, proposalRevision = -1;
     let history = [], textConsent = false, applying = false, account, statusGeneration = 0, opener = $('open-ai-chat');
     let activeView = editor.snapshot().model.activeViewId, activePhoto = editor.snapshot().model.photoId;
@@ -55,8 +55,13 @@
         const result = response.ok ? await response.json() : {};
         if (token !== statusGeneration) return;
         const nextProvider = result.provider === 'gemini' ? 'gemini' : 'openai';
-        if (activeProvider && nextProvider !== activeProvider) { clearChat('Провайдер изменён. Подтвердите передачу данных заново.'); $('ai-photo-consent').checked = false; }
+        const nextSingleUserPilot = nextProvider === 'gemini' && result.singleUserPilot === true;
+        if (activeProvider && (nextProvider !== activeProvider || nextSingleUserPilot !== singleUserPilot)) {
+          clearChat('Настройки sAI изменились. Начните новый чат.');
+          $('ai-photo-consent').checked = false;
+        }
         activeProvider = nextProvider;
+        singleUserPilot = nextSingleUserPilot;
         const providerName = activeProvider === 'gemini' ? 'Google Gemini' : 'OpenAI';
         $('ai-data-question').textContent = `Передать ${providerName} запрос, тексты карточки, факты и историю этого чата?`;
         $('ai-google-data-policy').hidden = activeProvider !== 'gemini';
@@ -122,7 +127,7 @@
     $('ai-chat-form').addEventListener('submit', async event => {
       event.preventDefault(); if (busy || !configured) return;
       const message = $('ai-chat-input').value.trim(); if (!message || message.length > 1500) return;
-      if (!textConsent) { $('ai-data-consent').hidden = false; $('ai-data-confirm').focus(); return; }
+      if (!singleUserPilot && !textConsent) { $('ai-data-consent').hidden = false; $('ai-data-confirm').focus(); return; }
       invalidate(); const token = generation, snapshot = editor.snapshot(), revision = editor.revision;
       const current = () => token === generation && revision === editor.revision;
       busy = true; buttons(); status('sAI отвечает…');
