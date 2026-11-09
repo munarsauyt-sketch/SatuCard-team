@@ -124,7 +124,7 @@ test('canceled request cannot overwrite a newer response; invalid replies fail c
 test('timeouts restore composer; no synthetic offline AI response',async()=>{
   let expire,signal;const app=await chatApp({reply:init=>{signal=init.signal;return new Promise((_,reject)=>signal.addEventListener('abort',()=>reject(new DOMException('Aborted','AbortError'))));}});
   try{
-    const original=app.w.setTimeout;app.w.setTimeout=(callback,delay,...args)=>{if(delay===35000){expire=callback;return 999;}return original(callback,delay,...args);};
+    const original=app.w.setTimeout;app.w.setTimeout=(callback,delay,...args)=>{if(delay===75000){expire=callback;return 999;}return original(callback,delay,...args);};
     send(app);await until(()=>!!signal);expire();await until(()=>/истекло/.test(app.$('ai-chat-status').textContent));assert.equal(app.$('ai-chat-input').readOnly,false);assert.equal(app.$('ai-chat-proposal').hidden,true);
   }finally{app.dom.window.close();}
 });

@@ -122,7 +122,7 @@
       const current = () => token === generation && revision === editor.revision;
       busy = true; buttons(); status('sAI отвечает…');
       const ownController = new AbortController(); controller = ownController;
-      const timer = setTimeout(() => ownController.abort(), 35000);
+      const timer = setTimeout(() => ownController.abort(), 75000);
       let userRow;
       try {
         const session = await window.SATUCARD_AUTH?.getSession();
