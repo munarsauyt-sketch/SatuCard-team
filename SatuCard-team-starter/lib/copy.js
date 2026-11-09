@@ -4,6 +4,18 @@ export const COPY_MODEL = 'gpt-6.1-terra';
 export const MAX_IMAGE_DATA_LENGTH = 750000;
 export const MAX_REQUEST_BYTES = 770000;
 export const TEMPLATE_IDS = Object.freeze(['studio', 'accent', 'minimal', 'noir', 'neon', 'editorial', 'bloom', 'bold']);
+const modelCodePattern = /(?<![\p{L}\p{N}_-])[a-z]{1,12}-?\d+[a-z0-9]*(?:-[a-z0-9]+)*(?![\p{L}\p{N}_-])/giu;
+
+export function modelCodesIn(text) {
+  return new Set((text.match(modelCodePattern) || []).map(code => code.toLowerCase()));
+}
+
+export function numericClaims(text, modelCodes) {
+  const content = modelCodes?.size
+    ? text.replace(modelCodePattern, code => modelCodes.has(code.toLowerCase()) ? ' ' : code)
+    : text;
+  return content.match(/\d+(?:[.,]\d+)?/g) || [];
+}
 
 // Only the locally re-encoded thumbnail may leave the browser, never a URL,
 // original file, SVG, arbitrary attachment or a server-side fetch target.
@@ -40,7 +52,7 @@ export function validateInput(value) {
   return input;
 }
 
-export function validateOutput(value, input) {
+export function validateOutput(value, input, titleModelCodes) {
   if (!value || typeof value !== 'object' || Array.isArray(value) ||
       Object.keys(value).some(key => !['title', 'subtitle', 'description', 'features', 'template'].includes(key)) ||
       !TEMPLATE_IDS.includes(value.template)) throw new Error('Invalid draft');
@@ -52,8 +64,9 @@ export function validateOutput(value, input) {
   if (/[\u0000-\u001f<>]/.test(output)) throw new Error('Invalid text');
   // Defense in depth, NOT semantic verification. Seller review remains mandatory.
   // Image/OCR is deliberately not an approved source of specifications/numbers.
-  const suppliedNumbers = new Set((input.title + ' ' + input.facts).match(/\d+(?:[.,]\d+)?/g) || []);
-  if ((output.match(/\d+(?:[.,]\d+)?/g) || []).some(number => !suppliedNumbers.has(number))) throw new Error('Unsupported numeric claim');
+  const suppliedNumbers = new Set(numericClaims(input.title + ' ' + input.facts));
+  const claims = [...numericClaims(value.title, titleModelCodes), ...numericClaims([value.subtitle, value.description, ...value.features].join(' '))];
+  if (claims.some(number => !suppliedNumbers.has(number))) throw new Error('Unsupported numeric claim');
   return { title: value.title.trim(), subtitle: value.subtitle.trim(), description: value.description.trim(),
     features: value.features.map(item => item.trim()), template: value.template, source: 'ai' };
 }
