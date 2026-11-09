@@ -94,3 +94,24 @@ test('missing, executable, oversized and malformed profile input cannot alter th
   }
   assert.equal(writes.length, 0);
 });
+
+test('profile rejects a streamed overflow before reading the rest, even with a false Content-Length', async () => {
+  const writes = setup();
+  let cancelled = false;
+  let pulls = 0;
+  const body = new ReadableStream({
+    pull(controller) {
+      pulls++;
+      controller.enqueue(new Uint8Array(4097));
+    },
+    cancel() { cancelled = true; }
+  }, { highWaterMark: 0 });
+  const response = await POST(new Request('https://satucard.example/api/profile', {
+    method: 'POST', body, duplex: 'half',
+    headers: { Authorization: request().headers.get('authorization'), 'content-type': 'application/json', 'content-length': '10' }
+  }));
+  assert.equal(response.status, 413);
+  assert.equal(cancelled, true);
+  assert.equal(pulls, 1);
+  assert.equal(writes.length, 0);
+});
