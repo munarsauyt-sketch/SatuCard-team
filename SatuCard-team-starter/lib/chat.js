@@ -1,5 +1,5 @@
 import { generateGemini } from './gemini.js';
-import { generateGroq } from './groq.js';
+import { isFallbackProvider, textProviderAdapter } from './chat-providers.js';
 import { modelCodesIn, numericEvidence } from './numeric-claims.js';
 import { COPY_MODEL, TEMPLATE_IDS, schema as cardSchema, validateImage, validateOutput } from './copy.js';
 
@@ -34,6 +34,10 @@ export function validateChatInput(value) {
     if (typeof value.groqFallbackConsent !== 'boolean') throw new Error('Invalid fallback consent');
     input.groqFallbackConsent = value.groqFallbackConsent;
   }
+  if (value.fallbackProvider !== undefined) {
+    if (!isFallbackProvider(value.fallbackProvider)) throw new Error('Invalid fallback provider');
+    input.fallbackProvider = value.fallbackProvider;
+  }
   if (value.imageDataUrl !== undefined) {
     if (value.imageConsent !== true) throw new Error('Photo consent required');
     input.imageDataUrl = validateImage(value.imageDataUrl); input.imageConsent = true;
@@ -67,13 +71,14 @@ const modeInstructions = {
   build: 'The seller explicitly requested a complete card draft. When the product is identified in the card or the confirmed facts, provide one complete proposal using those confirmed facts and ask only for essential missing information. When you cannot identify the product, ask for its name.',
   translate: 'The seller explicitly requested a translation of the current card into the selected language. Return a complete proposal translating the existing title, subtitle, description and features. Preserve the product model codes, quantities, units, facts, and current template. Keep blank fields blank.'
 };
-export async function generateChat(rawInput, { key, model = COPY_MODEL, timeoutMs = 25000, fetcher = fetch, provider = 'openai' }) {
+export async function generateChat(rawInput, { key, accountId, model = COPY_MODEL, timeoutMs = 25000, fetcher = fetch, provider = 'openai' }) {
   if (model !== COPY_MODEL) throw new Error('Unsupported model');
-  const { imageDataUrl, imageConsent, groqFallbackConsent, ...input } = validateChatInput(rawInput);
-  if (!['openai', 'gemini', 'groq'].includes(provider)) throw new Error('Unsupported provider');
+  const { imageDataUrl, imageConsent, groqFallbackConsent, fallbackProvider, ...input } = validateChatInput(rawInput);
   const taskInstructions = input.mode ? `${instructions} ${modeInstructions[input.mode]}` : instructions;
   if (provider === 'gemini') return validateChatOutput(await generateGemini({ input, imageDataUrl, instructions: taskInstructions, schema }, { key, timeoutMs, fetcher }), input);
-  if (provider === 'groq') return validateChatOutput(await generateGroq({ input, instructions: taskInstructions, schema }, { key, timeoutMs, fetcher }), input);
+  const adapter = textProviderAdapter(provider);
+  if (adapter) return validateChatOutput(await adapter({ input, instructions: taskInstructions, schema }, { key, accountId, timeoutMs, fetcher }), input);
+  if (provider !== 'openai') throw new Error('Unsupported provider');
   const controller = new AbortController(); let timer;
   const timeout = new Promise((_, reject) => { timer = setTimeout(() => { controller.abort(); reject(new Error('Provider timeout')); }, timeoutMs); });
   try {

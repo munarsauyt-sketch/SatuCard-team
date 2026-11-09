@@ -7,9 +7,10 @@
     if (started || !window.SATUCARD_EDITOR || !$('ai-chat')) return;
     started = true;
     const editor = window.SATUCARD_EDITOR, renderer = window.SATUCARD_RENDERER;
-    let activeProvider = null, singleUserPilot = false, groqAvailable = false;
+    let activeProvider = null, singleUserPilot = false;
+    let fallbackProviders = new Map(), evaluationProviders = new Map();
     let configured = false, busy = false, generation = 0, controller = null, proposal = null, proposalRevision = -1;
-    let pendingRow = null, proposalIsTranslation = false, proposalStartsProduct = false, pendingMode = null, buildName = '';
+    let pendingRow = null, proposalIsTranslation = false, proposalStartsProduct = false, pendingMode = null, buildName = '', evaluationRunning = false;
     let history = [], textConsent = false, applying = false, account, statusGeneration = 0, opener = $('open-ai-chat');
     const initial = editor.snapshot();
     let activeView = initial.model.activeViewId, activePhoto = initial.model.photoId, productContext = initial.productContextId;
@@ -22,6 +23,8 @@
       $('ai-chat-input').readOnly = busy;
       $('ai-translate').disabled = busy || !configured;
       $('ai-build-send').disabled = busy || !configured || !$('ai-build-name').value.trim();
+      $('ai-evaluation-provider').disabled = busy;
+      $('ai-evaluation-run').disabled = busy || !configured || !evaluationProviders.has($('ai-evaluation-provider').value);
       $('ai-apply').disabled = busy || !proposal || !$('ai-reviewed').checked ||
         (!proposalIsTranslation && !selectedFields().length && !$('ai-apply-template').checked);
       resizeInput();
@@ -37,6 +40,10 @@
       ++generation;
       controller?.abort(); controller = null; busy = false;
       pendingRow?.remove(); pendingRow = null;
+      if (evaluationRunning) {
+        evaluationRunning = false;
+        $('ai-evaluation-result').textContent = 'Тест остановлен.';
+      }
       if (!keepDraft) discardProposal();
       buttons();
       if (text !== undefined) status(text);
@@ -46,7 +53,9 @@
     function resetProduct(text) {
       clearChat(text);
       for (const id of ['ai-facts', 'ai-chat-input', 'ai-build-name', 'ai-build-facts']) $(id).value = '';
-      $('ai-photo-consent').checked = $('ai-groq-consent').checked = false;
+      $('ai-photo-consent').checked = false;
+      $('ai-fallback-provider').value = $('ai-evaluation-provider').value = '';
+      $('ai-evaluation-result').textContent = '';
       closeBuild(); buttons();
     }
     function trimMessages() {
@@ -77,6 +86,20 @@
     $('ai-chat').addEventListener('keydown', event => {
       if (event.key === 'Escape') { event.preventDefault(); close(); }
     });
+    function providerOptions(key, entries, known) {
+      const select = $('ai-' + key + '-provider'), selected = select.value;
+      const choices = new Map();
+      select.options.length = 1;
+      for (const entry of Array.isArray(entries) ? entries : []) {
+        if (!known.includes(entry?.id) || typeof entry.label !== 'string' || choices.has(entry.id)) continue;
+        const option = document.createElement('option');
+        option.value = entry.id; option.textContent = entry.label;
+        select.append(option); choices.set(entry.id, entry.label);
+      }
+      if (choices.has(selected)) select.value = selected;
+      $('ai-' + key + '-option').hidden = choices.size === 0;
+      return choices;
+    }
     async function checkConnection() {
       const token = ++statusGeneration; $('ai-chat-recheck').disabled = true;
       try {
@@ -92,9 +115,9 @@
         }
         activeProvider = nextProvider;
         singleUserPilot = nextSingleUserPilot;
-        groqAvailable = nextProvider === 'gemini' && result.groqFallbackAvailable === true;
-        $('ai-groq-option').hidden = !groqAvailable;
-        if (!groqAvailable) $('ai-groq-consent').checked = false;
+        const fallback = result.fallbackProviders ?? (result.groqFallbackAvailable ? [{ id: 'groq', label: 'Groq' }] : []);
+        fallbackProviders = providerOptions('fallback', nextProvider === 'gemini' ? fallback : [], ['groq', 'mistral', 'cloudflare', 'cohere']);
+        evaluationProviders = providerOptions('evaluation', nextProvider === 'gemini' ? result.evaluationProviders : [], ['alibaba', 'scaleway']);
         const providerName = activeProvider === 'gemini' ? 'Google Gemini' : 'OpenAI';
         $('ai-data-question').textContent = `Передать ${providerName} запрос, тексты карточки, факты и историю этого чата?`;
         $('ai-google-data-policy').hidden = activeProvider !== 'gemini';
@@ -103,6 +126,8 @@
       } catch {
         if (token !== statusGeneration) return;
         configured = false;
+        fallbackProviders = providerOptions('fallback', [], []);
+        evaluationProviders = providerOptions('evaluation', [], []);
       } finally { if (token === statusGeneration) { $('ai-chat-setup').hidden = configured; $('ai-chat-recheck').disabled = false; buttons(); } }
     }
     $('ai-chat-recheck').addEventListener('click', checkConnection);
@@ -123,9 +148,40 @@
     $('ai-chat-new').addEventListener('click', () => { resetProduct(''); $('ai-chat-input').focus(); });
     $('ai-chat-stop').addEventListener('click', () => invalidate('Ожидание остановлено. Уже отправленный запрос может учитываться в лимите.', true));
     $('ai-dismiss').addEventListener('click', () => { discardProposal(); buttons(); status('Предложение отклонено. Можно уточнить запрос.'); });
-    ['ai-language', 'ai-tone', 'ai-facts', 'ai-photo-consent', 'ai-groq-consent'].forEach(id => $(id).addEventListener('input', () => {
+    ['ai-language', 'ai-tone', 'ai-facts', 'ai-photo-consent', 'ai-fallback-provider'].forEach(id => $(id).addEventListener('input', () => {
       if (busy || proposal) invalidate('Данные обновлены. Отправь следующий запрос, чтобы учесть изменения.');
     }));
+    $('ai-evaluation-provider').addEventListener('change', () => { $('ai-evaluation-result').textContent = ''; buttons(); });
+    $('ai-evaluation-run').addEventListener('click', async () => {
+      const id = $('ai-evaluation-provider').value, label = evaluationProviders.get(id);
+      if (busy || !configured || !label) return;
+      invalidate(undefined, true);
+      const token = generation, ownController = new AbortController();
+      controller = ownController; busy = true; evaluationRunning = true; buttons();
+      const output = $('ai-evaluation-result');
+      output.textContent = 'Проверяем ' + label + '…';
+      const timer = setTimeout(() => ownController.abort(), 20000);
+      try {
+        const session = await window.SATUCARD_AUTH?.getSession();
+        if (token !== generation) return;
+        if (!session) throw new Error('Войди в аккаунт пилота.');
+        const response = await fetch('api/chat?previewEvaluation=' + encodeURIComponent(id), {
+          method: 'POST', headers: { Authorization: `Bearer ${session.access_token}`, 'content-type': 'application/json' },
+          signal: ownController.signal
+        });
+        const result = await response.json().catch(() => null);
+        if (token !== generation) return;
+        if (!response.ok) throw new Error(result?.error || 'Тест не прошёл. Попробуй позже.');
+        if (!validReply(result) || result.providerUsed !== id || !Number.isInteger(result.elapsedMs)) throw new Error('Сервис вернул некорректный тестовый ответ.');
+        const sample = result.proposal ? ' ' + result.proposal.title + '. ' + result.proposal.description : '';
+        output.textContent = label + ' ответил за ' + result.elapsedMs + ' мс. ' + result.reply + sample;
+      } catch (error) {
+        if (token === generation) output.textContent = error.name === 'AbortError' ? 'Время ожидания теста истекло.' : error.message;
+      } finally {
+        clearTimeout(timer);
+        if (token === generation) { controller = null; busy = false; evaluationRunning = false; buttons(); }
+      }
+    });
     $('ai-build-toggle').addEventListener('click', () => {
       if (!$('ai-build-panel').hidden) { closeBuild(); return; }
       $('ai-build-panel').hidden = false;
@@ -256,16 +312,17 @@
         }
         if (mode) body.mode = mode;
         if (previousProposal?.title) body.previousProposal = previousProposal;
-        if (groqAvailable && $('ai-groq-consent').checked) body.groqFallbackConsent = true;
+        const fallback = $('ai-fallback-provider').value;
+        if (fallbackProviders.has(fallback)) body.fallbackProvider = fallback;
         if (!newProduct && $('ai-photo-consent').checked) { body.imageDataUrl = thumbnail(snapshot.images.photo); body.imageConsent = true; }
         pendingRow = append('user', message);
         const response = await fetch('api/chat', { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}`, 'content-type': 'application/json' }, body: JSON.stringify(body), signal: ownController.signal });
         const result = await response.json().catch(() => null);
         if (!current()) return;
         if (!response.ok) {
-          if (result?.code === 'gemini_quota' && groqAvailable && !body.groqFallbackConsent) {
-            $('ai-groq-option').closest('details').open = true;
-            throw new Error('Лимит Gemini исчерпан. Включи Groq в настройках чата и повтори запрос.');
+          if (result?.code === 'gemini_quota' && fallbackProviders.size && !body.fallbackProvider) {
+            $('ai-fallback-option').closest('details').open = true;
+            throw new Error('Лимит Gemini исчерпан. Выбери резерв в настройках чата и повтори запрос.');
           }
           throw new Error(result?.error || 'Не удалось получить ответ. Попробуй позже.');
         }
@@ -277,7 +334,8 @@
         history = history.slice(-8); while (history.reduce((sum, item) => sum + item.content.length, 0) > 12000) history.splice(0, 2);
         $('ai-chat-input').value = '';
         if (result.proposal || mode === 'translate') pendingMode = null;
-        const providerNote = result.providerUsed === 'groq' ? ' Ответ подготовил Groq.' : '';
+        const reserveLabel = fallbackProviders.get(result.providerUsed);
+        const providerNote = reserveLabel ? ' Ответ подготовил ' + reserveLabel + '.' : '';
         if (result.proposal) {
           showProposal(result.proposal, revision, snapshot, { translate, newProduct, suggestTemplate: mode === 'build' });
           status('Черновик готов. Проверь изменения перед применением.' + providerNote);

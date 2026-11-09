@@ -6,7 +6,8 @@ import { imageDataUrl } from './copy-fixtures.js';
 const input = { message:'Сократи текст',history:[],card:{title:'Чашка',subtitle:'',description:'Керамика',features:[],template:'minimal'},facts:'Керамика',language:'ru',tone:'neutral' };
 const result = {reply:'Предлагаю лаконичный вариант.',proposal:input.card};
 const answer = (value=result, finishReason='STOP') => ({candidates:[{finishReason,content:{role:'model',parts:[{text:JSON.stringify(value)}]}}]});
-const keys=['SATUCARD_AI_PROVIDER','GEMINI_CHAT_ENABLED','GEMINI_CHAT_MODEL','GEMINI_API_KEY','GEMINI_ALLOWED_USER_IDS','GEMINI_ADMIN_USER_ID','GROQ_CHAT_FALLBACK_ENABLED','GROQ_API_KEY','SUPABASE_URL','SUPABASE_SECRET_KEY'];
+const keys=['SATUCARD_AI_PROVIDER','GEMINI_CHAT_ENABLED','GEMINI_CHAT_MODEL','GEMINI_API_KEY','GEMINI_ALLOWED_USER_IDS','GEMINI_ADMIN_USER_ID','GROQ_CHAT_FALLBACK_ENABLED','GROQ_API_KEY','SUPABASE_URL','SUPABASE_SECRET_KEY',
+ 'VERCEL_ENV','SAI_PREVIEW_FALLBACKS','SAI_PREVIEW_EVALUATION','MISTRAL_API_KEY','CLOUDFLARE_API_TOKEN','CLOUDFLARE_ACCOUNT_ID','COHERE_API_KEY','ALIBABA_API_KEY','SCALEWAY_API_KEY'];
 const saved=Object.fromEntries(keys.map(k=>[k,process.env[k]])), oldFetch=globalThis.fetch;
 afterEach(()=>{globalThis.fetch=oldFetch;for(const k of keys){if(saved[k]===undefined)delete process.env[k];else process.env[k]=saved[k]}});
 test('Gemini uses only its endpoint, header key, bounded schema and shared output validation',async()=>{
@@ -121,4 +122,98 @@ test('Groq requires opt-in and a Gemini 429, uses one quota reservation and rece
  assert.deepEqual(calls, ['quota']);
  delete process.env.GROQ_API_KEY;
  assert.equal((await GET().json()).groqFallbackAvailable, undefined);
+});
+
+test('only the chosen Preview reserve receives the chat after a Gemini 429', async () => {
+ const id = '44444444-4444-4444-8444-444444444444';
+ Object.assign(process.env, {
+  SATUCARD_AI_PROVIDER:'gemini', GEMINI_CHAT_ENABLED:'true', GEMINI_CHAT_MODEL:'gemini-3.1-flash-lite', GEMINI_API_KEY:'test',
+  GEMINI_ALLOWED_USER_IDS:id, GROQ_CHAT_FALLBACK_ENABLED:'true', GROQ_API_KEY:'groq-test',
+  SUPABASE_URL:'https://example.supabase.co', SUPABASE_SECRET_KEY:'private',
+  VERCEL_ENV:'preview', SAI_PREVIEW_FALLBACKS:'mistral, cloudflare, cohere',
+  MISTRAL_API_KEY:'mistral-test', COHERE_API_KEY:'cohere-test', CLOUDFLARE_API_TOKEN:'cloudflare-test', CLOUDFLARE_ACCOUNT_ID:'wrong',
+  SAI_PREVIEW_EVALUATION:'alibaba', ALIBABA_API_KEY:'alibaba-test'
+ });
+ delete process.env.GEMINI_ADMIN_USER_ID;
+ const options = await GET().json();
+ assert.deepEqual(options.fallbackProviders.map(p => p.id), ['groq','mistral','cohere']);
+ assert.deepEqual(options.evaluationProviders, [{ id:'alibaba', label:'Alibaba Cloud' }]);
+ const calls = [];
+ let fallbackStatus = 200;
+ globalThis.fetch = async (url, init) => {
+  if (url.endsWith('/auth/v1/user')) return Response.json({ id, email_confirmed_at:'today' });
+  if (url.includes('/rest/v1/profiles?')) return Response.json([{ id, profile_completed_at:'today', mail_proof_required:false }]);
+  if (url.includes('/rpc/')) { calls.push('quota'); return Response.json({ allowed:true }); }
+  if (url.startsWith('https://generativelanguage.googleapis.com/')) { calls.push('gemini'); return new Response(null, { status:429 }); }
+  assert.equal(url, 'https://api.mistral.ai/v1/chat/completions');
+  calls.push('mistral');
+  const body = JSON.parse(init.body);
+  assert.equal(init.headers.Authorization, 'Bearer mistral-test');
+  const context = JSON.parse(body.messages[1].content);
+  assert.equal(context.imageDataUrl, undefined);
+  assert.equal(context.fallbackProvider, undefined);
+  if (fallbackStatus !== 200) return new Response(null, { status:fallbackStatus });
+  return Response.json({ choices:[{ finish_reason:'stop', message:{ role:'assistant', content:JSON.stringify(result) } }] });
+ };
+ const request = fallbackProvider => new Request('https://example.com/api/chat', {
+  method:'POST', headers:{ 'content-type':'application/json', authorization:'Bearer test.token.signature' },
+  body:JSON.stringify({ ...input, imageConsent:true, imageDataUrl, fallbackProvider })
+ });
+ assert.equal((await POST(request('alibaba'))).status, 400);
+ assert.deepEqual(calls, []);
+ assert.equal((await (await POST(request())).json()).code, 'gemini_quota');
+ assert.deepEqual(calls.splice(0), ['quota', 'gemini']);
+ assert.deepEqual(await (await POST(request('mistral'))).json(), { ...result, providerUsed:'mistral' });
+ assert.deepEqual(calls.splice(0), ['quota', 'gemini', 'mistral']);
+ fallbackStatus = 429;
+ assert.equal((await (await POST(request('mistral'))).json()).code, 'fallback_quota');
+ assert.deepEqual(calls.splice(0), ['quota', 'gemini', 'mistral']);
+ process.env.VERCEL_ENV = 'production';
+ assert.deepEqual((await GET().json()).fallbackProviders.map(p => p.id), ['groq']);
+ assert.equal((await GET().json()).evaluationProviders, undefined);
+ assert.equal((await (await POST(request('mistral'))).json()).code, 'gemini_quota');
+ assert.deepEqual(calls, ['quota', 'gemini']);
+});
+
+test('a trial evaluation is authenticated, quota-limited, and sends only the built-in sample in Preview', async () => {
+ const id = '55555555-5555-4555-8555-555555555555';
+ Object.assign(process.env, {
+  SATUCARD_AI_PROVIDER:'gemini', GEMINI_CHAT_ENABLED:'true', GEMINI_CHAT_MODEL:'gemini-3.1-flash-lite', GEMINI_API_KEY:'test',
+  GEMINI_ALLOWED_USER_IDS:id, GEMINI_ADMIN_USER_ID:id, SUPABASE_URL:'https://example.supabase.co', SUPABASE_SECRET_KEY:'private',
+  VERCEL_ENV:'preview', SAI_PREVIEW_EVALUATION:'alibaba', ALIBABA_API_KEY:'alibaba-test'
+ });
+ let allowed = true;
+ const calls = [];
+ globalThis.fetch = async (url, init) => {
+  if (url.endsWith('/auth/v1/user')) return Response.json({ id, email_confirmed_at:'today' });
+  if (url.includes('/rest/v1/profiles?')) return Response.json([{ id, profile_completed_at:'today', mail_proof_required:false }]);
+  if (url.includes('/rpc/')) { calls.push('quota'); return Response.json({ allowed }); }
+  calls.push('alibaba');
+  assert.equal(url, 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions');
+  const body = JSON.parse(init.body);
+  const context = JSON.parse(body.messages[1].content);
+  assert.equal(context.card.title, 'Демо-чашка');
+  assert.equal(context.imageDataUrl, undefined);
+  assert.ok(!init.body.includes('private-card'));
+  return Response.json({ choices:[{ finish_reason:'stop', message:{ role:'assistant', content:JSON.stringify(result) } }] });
+ };
+ const request = (provider = 'alibaba', auth = true) => new Request('https://example.com/api/chat?previewEvaluation=' + provider, {
+  method:'POST', headers:{ 'content-type':'application/json', ...(auth ? { authorization:'Bearer test.token.signature' } : {}) },
+  body:JSON.stringify({ ...input, message:'private-card', imageConsent:true, imageDataUrl })
+ });
+ assert.equal((await POST(request('alibaba', false))).status, 401);
+ assert.equal((await POST(request('scaleway'))).status, 404);
+ assert.deepEqual(calls, []);
+ allowed = false;
+ assert.equal((await (await POST(request())).json()).code, 'ai_rate_limited');
+ assert.deepEqual(calls.splice(0), ['quota']);
+ allowed = true;
+ const response = await (await POST(request())).json();
+ assert.equal(response.providerUsed, 'alibaba');
+ assert.equal(response.proposal.title, result.proposal.title);
+ assert.ok(Number.isInteger(response.elapsedMs));
+ assert.deepEqual(calls.splice(0), ['quota','alibaba']);
+ process.env.VERCEL_ENV = 'production';
+ assert.equal((await POST(request())).status, 404);
+ assert.deepEqual(calls, []);
 });

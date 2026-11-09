@@ -40,13 +40,18 @@ const proposal = { title: 'Новая чашка', subtitle: 'Лаконичны
 const reply = { reply: 'Предлагаю короче. Можно уточнить оформление.', proposal };
 async function chatApp(options = {}) {
   const requests = [];
+  const evaluations = [];
   const app = await setup({ ...options, fetch: async (url, init = {}) => {
-    if (!init.method) return Response.json({ available: options.available !== false, modelVerified: false, provider: options.provider, singleUserPilot: options.singleUserPilot, groqFallbackAvailable: options.groqFallbackAvailable });
+    if (!init.method) return Response.json({ available: options.available !== false, modelVerified: false, provider: options.provider, singleUserPilot: options.singleUserPilot, fallbackProviders: options.fallbackProviders, evaluationProviders: options.evaluationProviders });
+    if (url.includes('?previewEvaluation=')) {
+      evaluations.push({ url, body: init.body });
+      return options.evaluate();
+    }
     requests.push(JSON.parse(init.body)); return options.reply ? options.reply(init) : Response.json(reply);
   }});
   await until(() => !app.$('ai-chat-recheck').disabled && app.$('ai-chat-setup').hidden === (options.available !== false));
   app.$('open-ai-chat').click();
-  return { ...app, requests };
+  return { ...app, requests, evaluations };
 }
 function check(app, id, value = true) { app.$(id).checked = value; app.$(id).dispatchEvent(new app.w.Event('input', { bubbles: true })); }
 function send(app, text = 'Сделай короче', approve = true) { app.input('ai-chat-input', text); app.$('ai-chat-form').dispatchEvent(new app.w.Event('submit', { bubbles: true, cancelable: true })); if (approve && !app.$('ai-data-consent').hidden) app.$('ai-data-confirm').click(); }
@@ -184,31 +189,52 @@ test('guided build starts clean and applies selected fields without carrying dem
     assert.equal(after.model.photoId, null);
   } finally { app.dom.window.close(); }
 });
-test('Kazakh translation creates a separate copy with one undo, and Groq consent is opt in', async () => {
+test('Kazakh translation creates a separate copy with one undo, and the reserve is opt-in', async () => {
   const translated = { ...proposal, title: 'Керамика кесе', subtitle: 'Ақ кесе' };
-  const app = await chatApp({ provider: 'gemini', singleUserPilot: true, groqFallbackAvailable: true,
-    reply: () => Response.json({ reply: 'Аударма дайын.', proposal: translated, providerUsed: 'groq' }) });
+  const app = await chatApp({ provider: 'gemini', singleUserPilot: true,
+    fallbackProviders: [{ id:'groq', label:'Groq' }, { id:'cohere', label:'Cohere' }],
+    reply: () => Response.json({ reply: 'Аударма дайын.', proposal: translated, providerUsed: 'cohere' }) });
   try {
     const before = app.w.SATUCARD_EDITOR.snapshot().model;
-    assert.equal(app.$('ai-groq-option').hidden, false);
-    assert.equal(app.$('ai-groq-consent').checked, false);
-    check(app, 'ai-groq-consent');
+    assert.equal(app.$('ai-fallback-option').hidden, false);
+    assert.equal(app.$('ai-fallback-provider').value, '');
+    app.input('ai-fallback-provider', 'cohere');
     app.$('ai-translate').click();
     assert.equal(app.requests.length, 0);
     app.$('ai-chat-form').requestSubmit();
     await until(() => !app.$('ai-chat-proposal').hidden && app.$('ai-chat-stop').hidden);
     assert.equal(app.requests[0].mode, 'translate');
     assert.equal(app.requests[0].language, 'kk');
-    assert.equal(app.requests[0].groqFallbackConsent, true);
-    assert.match(app.$('ai-chat-status').textContent, /Groq/);
+    assert.equal(app.requests[0].fallbackProvider, 'cohere');
+    assert.match(app.$('ai-chat-status').textContent, /Cohere/);
     check(app, 'ai-reviewed');
     app.$('ai-apply').click();
     const after = app.w.SATUCARD_EDITOR.snapshot().model;
     assert.equal(after.views.length, before.views.length + 1);
     assert.equal(after.views[0].settings.title, before.settings.title);
     assert.equal(after.settings.title, translated.title);
+    assert.equal(app.$('ai-fallback-provider').value, '');
     app.$('undo-button').click();
     assert.equal(app.w.SATUCARD_EDITOR.snapshot().model.views.length, before.views.length);
+  } finally { app.dom.window.close(); }
+});
+
+test('Preview evaluation sends no card data and displays a result separately from chat and proposals', async () => {
+  const app = await chatApp({ provider:'gemini', singleUserPilot:true,
+    fallbackProviders: [{ id:'groq', label:'Groq' }],
+    evaluationProviders: [{ id:'alibaba', label:'Alibaba Cloud' }, { id:'scaleway', label:'Scaleway' }],
+    evaluate: () => Response.json({ ...reply, providerUsed:'alibaba', elapsedMs:42 }) });
+  try {
+    assert.equal(app.$('ai-evaluation-option').hidden, false);
+    assert.deepEqual([...app.$('ai-fallback-provider').options].map(option => option.value), ['', 'groq']);
+    app.input('ai-chat-input', 'Текст продавца');
+    app.input('ai-evaluation-provider', 'alibaba');
+    app.$('ai-evaluation-run').click();
+    await until(() => app.$('ai-evaluation-result').textContent.includes('42 мс'));
+    assert.deepEqual(app.evaluations, [{ url:'api/chat?previewEvaluation=alibaba', body:undefined }]);
+    assert.equal(app.$('ai-chat-input').value, 'Текст продавца');
+    assert.equal(app.$('ai-chat-proposal').hidden, true);
+    assert.equal(app.$('ai-chat-messages').children.length, 0);
   } finally { app.dom.window.close(); }
 });
 test('changing the primary photo via editor API revokes prior consent',async()=>{

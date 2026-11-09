@@ -19,7 +19,7 @@
   <script src="cloud-projects.js?v=workflow-1" defer></script>
   <script src="editor.js?v=sai-studio-draft-1" defer></script>
   <script src="studio-workflow.js?v=sai-studio-draft-1" defer></script>
-  <script src="studio-chat.js?v=sai-studio-draft-1" defer></script>
+  <script src="studio-chat.js?v=sai-studio-draft-2" defer></script>
   <link rel="stylesheet" href="studio-chat.css?v=sai-studio-draft-1">
   <link rel="stylesheet" href="studio-workflow.css?v=sai-studio-draft-1">
   <link rel="stylesheet" href="editor-tour.css?v=20261105">
@@ -197,7 +197,18 @@
         <label for="ai-facts">Проверенные факты о товаре</label><textarea id="ai-facts" maxlength="2000" rows="3" placeholder="Материал, размеры, комплектация. Не добавляйте секреты и личные данные."></textarea>
         <div class="ai-options-row"><div><label for="ai-language">Язык</label><select id="ai-language"><option value="ru">Русский</option><option value="kk">Қазақша</option></select></div><div><label for="ai-tone">Тон</label><select id="ai-tone"><option value="neutral">Нейтральный</option><option value="friendly">Дружелюбный</option><option value="premium">Сдержанный</option></select></div></div>
         <label class="ai-check"><input id="ai-photo-consent" type="checkbox"> Разрешаю отправить уменьшенное основное фото OpenAI для выбора оформления. Не для определения свойств товара.</label>
-        <div id="ai-groq-option" hidden><label class="ai-check"><input id="ai-groq-consent" type="checkbox" aria-describedby="ai-groq-details"> Если закончится лимит Gemini, повторить запрос через Groq</label><p id="ai-groq-details" class="ai-before">Groq получит запрос, тексты карточки, факты и историю без фото.</p></div>
+        <div id="ai-fallback-option" hidden>
+          <label for="ai-fallback-provider">Резерв при лимите Gemini</label>
+          <select id="ai-fallback-provider" aria-describedby="ai-fallback-details"><option value="">Без резерва</option></select>
+          <p id="ai-fallback-details" class="ai-before">Выбранный сервис получит запрос, тексты карточки, факты и историю без фото.</p>
+        </div>
+        <div id="ai-evaluation-option" hidden>
+          <label for="ai-evaluation-provider">Пробный вызов в Preview</label>
+          <select id="ai-evaluation-provider" aria-describedby="ai-evaluation-details"><option value="">Выбери сервис</option></select>
+          <p id="ai-evaluation-details" class="ai-before">Отправим пример чашки. Вызов использует квоту сервиса и одну попытку SatuCard.</p>
+          <button id="ai-evaluation-run" class="ai-quiet-button" type="button" disabled>Запустить тест</button>
+          <p id="ai-evaluation-result" class="ai-before" aria-live="polite"></p>
+        </div>
       </details>
     </div>
     <form id="ai-chat-form" class="ai-chat-composer">

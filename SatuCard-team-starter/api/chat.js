@@ -1,5 +1,5 @@
 import { geminiSelected, geminiEnabled, geminiUsers, geminiModel } from '../lib/gemini.js';
-import { groqFallbackKey } from '../lib/groq.js';
+import { availableEvaluations, availableFallbacks, configuredEvaluation, configuredFallback } from '../lib/chat-providers.js';
 import { configuration } from '../lib/supabase.js';
 import { readAccount, accountFailure, accountJson } from '../lib/account.js';
 import { validateChatInput as validateInput, generateChat as generateCopy, MAX_CHAT_REQUEST_BYTES as MAX_REQUEST_BYTES } from '../lib/chat.js';
@@ -7,7 +7,29 @@ import { COPY_MODEL } from '../lib/copy.js';
 import { reserveCopyQuota } from '../lib/copy-quota.js';
 
 const GEMINI_TIMEOUT_MS = 60000;
-const GROQ_TIMEOUT_MS = 12000;
+const RESERVE_TIMEOUT_MS = 12000;
+const knownFailureReasons = new Set(['Invalid response', 'Incomplete response', 'Invalid draft', 'Invalid text', 'Unsupported numeric claim', 'Unsafe reply', 'Unsafe proposal', 'Invalid features', 'Provider timeout']);
+const sampleEvaluation = {
+  mode: 'build', message: 'Собери карточку для демонстрационной чашки.', history: [], language: 'ru', tone: 'neutral',
+  card: { title: 'Демо-чашка', subtitle: '', description: '', features: [], template: 'studio' },
+  facts: 'Материал: керамика. Цвет: белый. Объём: 200 мл.'
+};
+
+function logFailure(provider, error) {
+  const status = Number.isInteger(error.providerStatus) ? error.providerStatus : null;
+  console.warn('sAI provider request failed', { provider, status, reason: knownFailureReasons.has(error.message) ? error.message : 'provider_or_output_error' });
+  return status;
+}
+
+function reserveFailure(provider, label, error) {
+  const status = logFailure(provider, error);
+  const code = provider === 'groq' ? 'groq' : 'fallback';
+  if (status === 429) return accountJson({ error: `Резерв ${label} сейчас ограничивает запросы. Попробуйте позже.`, code: code + '_quota' }, 429);
+  const message = error.message === 'Unsupported numeric claim'
+    ? `В ответе ${label} появилось неподтверждённое число. Проверьте факты о товаре и повторите запрос.`
+    : `Резерв ${label} сейчас не смог подготовить ответ. Попробуйте позже.`;
+  return accountJson({ error: message, code: code + '_failed' }, 502);
+}
 
 // Paid generation is closed by default. Only explicitly trusted account UUIDs
 // may use it; self-service signup is not permission to spend the owner's key.
@@ -24,10 +46,13 @@ function apiKey() { return (geminiSelected() ? process.env.GEMINI_API_KEY : proc
 export function GET() {
   const userCount = allowedUsers().size;
   const available = Boolean(enabled() && configuration() && apiKey() && userCount);
-  const groqFallbackAvailable = available && geminiSelected() && Boolean(groqFallbackKey());
+  const fallbackProviders = available && geminiSelected() ? availableFallbacks() : [];
+  const evaluationProviders = available && geminiSelected() ? availableEvaluations() : [];
   return accountJson({ available, modelVerified: false,
     ...(geminiSelected() ? { provider: 'gemini', model: geminiModel(), singleUserPilot: available && userCount === 1 } : {}),
-    ...(groqFallbackAvailable ? { groqFallbackAvailable: true } : {}) });
+    ...(fallbackProviders.length ? { fallbackProviders } : {}),
+    ...(evaluationProviders.length ? { evaluationProviders } : {}),
+    ...(fallbackProviders.some(item => item.id === 'groq') ? { groqFallbackAvailable: true } : {}) });
 }
 export async function POST(request) {
   const config = configuration();
@@ -39,8 +64,11 @@ export async function POST(request) {
   if (!key) return accountJson({ error: 'ИИ-помощник пока не настроен. Можно использовать локальный шаблон.', code: 'ai_unavailable' }, 503);
   if (!allowedUsers().has(user.id.toLowerCase())) return accountJson({ error: 'ИИ доступен только аккаунтам, подключённым владельцем сайта. Используйте локальный шаблон.', code: 'ai_access_required' }, 403);
   if (!/^application\/json(?:\s*;|$)/i.test(request.headers.get('content-type') || '')) return accountJson({ error: 'Ожидается JSON.', code: 'invalid_input' }, 415);
+  const evaluationId = new URL(request.url).searchParams.get('previewEvaluation');
+  const evaluation = evaluationId !== null && geminiSelected() ? configuredEvaluation(evaluationId) : null;
+  if (evaluationId !== null && !evaluation) return accountJson({ error: 'Этот тест недоступен в текущей сборке.', code: 'evaluation_unavailable' }, 404);
   let input;
-  try {
+  if (!evaluation) try {
     // Bound streamed bytes too; Content-Length alone is not trustworthy.
     if (Number(request.headers.get('content-length')) > MAX_REQUEST_BYTES) throw new Error('Too large');
     const reader = request.body?.getReader();
@@ -59,11 +87,21 @@ export async function POST(request) {
   // Only the verified, allowlisted Gemini administrator skips SatuCard's quota.
   const adminId = process.env.GEMINI_ADMIN_USER_ID?.trim().toLowerCase();
   const isGeminiAdmin = geminiSelected() && user.id.toLowerCase() === adminId;
-  if (!isGeminiAdmin) {
+  if (evaluation || !isGeminiAdmin) {
     let allowed;
     try { allowed = await reserveCopyQuota(config, user.id); }
     catch { return accountJson({ error: 'Общий лимит ИИ недоступен. Используйте локальный шаблон.', code: 'ai_quota_unavailable' }, 503); }
     if (!allowed) return accountJson({ error: 'Лимит ИИ-запросов достигнут. Подождите не менее минуты или используйте локальный шаблон.', code: 'ai_rate_limited' }, 429);
+  }
+  if (evaluation) {
+    const started = performance.now();
+    try {
+      const result = await generateCopy(sampleEvaluation, { key: evaluation.key, provider: evaluationId, timeoutMs: RESERVE_TIMEOUT_MS });
+      return accountJson({ ...result, providerUsed: evaluationId, elapsedMs: Math.round(performance.now() - started) });
+    } catch (error) {
+      const status = logFailure(evaluationId, error);
+      return accountJson({ error: `Тест ${evaluation.label} не прошёл. Проверьте ключ и доступную квоту.`, code: 'evaluation_failed' }, status === 429 ? 429 : 502);
+    }
   }
   const primary = geminiSelected() ? 'gemini' : 'openai';
   const started = performance.now();
@@ -71,26 +109,20 @@ export async function POST(request) {
     return accountJson(await generateCopy(input, { key, provider: primary, timeoutMs: primary === 'gemini' ? GEMINI_TIMEOUT_MS : 25000 }));
   } catch (error) {
     if (primary === 'gemini') {
-      const known = ['Invalid response', 'Incomplete response', 'Invalid draft', 'Invalid text', 'Unsupported numeric claim', 'Unsafe reply', 'Unsafe proposal', 'Invalid features', 'Provider timeout'];
-      console.warn('Gemini request failed', { status: Number.isInteger(error.providerStatus) ? error.providerStatus : null, reason: known.includes(error.message) ? error.message : 'provider_or_output_error' });
+      logFailure('gemini', error);
       if (error.message === 'Provider timeout') return accountJson({ error: 'Google Gemini не ответил за минуту. Попробуйте позже; автоматических повторов нет.', code: 'gemini_timeout' }, 504);
       if (error.providerStatus === 429) {
-        const fallbackKey = input.groqFallbackConsent === true && groqFallbackKey();
-        const timeoutMs = Math.min(GROQ_TIMEOUT_MS, GEMINI_TIMEOUT_MS - (performance.now() - started));
-        if (fallbackKey && timeoutMs > 0) {
+        const provider = input.fallbackProvider || (input.groqFallbackConsent === true ? 'groq' : null);
+        const reserve = provider && configuredFallback(provider);
+        const timeoutMs = Math.min(RESERVE_TIMEOUT_MS, GEMINI_TIMEOUT_MS - (performance.now() - started));
+        if (reserve && timeoutMs > 0) {
           try {
-            // The same quota reservation covers both calls. Groq receives text only.
+            // The same quota reservation covers both calls. The selected reserve receives text only.
             const { imageDataUrl, imageConsent, ...textInput } = input;
-            const result = await generateCopy(textInput, { key: fallbackKey, provider: 'groq', timeoutMs });
-            return accountJson({ ...result, providerUsed: 'groq' });
+            const result = await generateCopy(textInput, { key: reserve.key, accountId: reserve.accountId, provider, timeoutMs });
+            return accountJson({ ...result, providerUsed: provider });
           } catch (fallbackError) {
-            const status = Number.isInteger(fallbackError.providerStatus) ? fallbackError.providerStatus : null;
-            console.warn('Groq fallback failed', { status, reason: known.includes(fallbackError.message) ? fallbackError.message : 'provider_or_output_error' });
-            if (status === 429) return accountJson({ error: 'Лимиты Gemini и Groq сейчас исчерпаны. Попробуйте позже.', code: 'groq_quota' }, 429);
-            const message = fallbackError.message === 'Unsupported numeric claim'
-              ? 'В ответе Groq появилось неподтверждённое число. Проверьте факты о товаре и повторите запрос.'
-              : 'Резервный Groq сейчас не смог подготовить ответ. Попробуйте позже.';
-            return accountJson({ error: message, code: 'groq_failed' }, 502);
+            return reserveFailure(provider, reserve.label, fallbackError);
           }
         }
         return accountJson({ error: 'Бесплатный лимит Google Gemini сейчас недоступен или исчерпан. Попробуйте позже. Платный тариф автоматически не включается.', code: 'gemini_quota' }, 429);

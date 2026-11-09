@@ -1,5 +1,6 @@
 import { performance } from 'node:perf_hooks';
 import { generateChat } from '../lib/chat.js';
+import { configuredEvaluation, getTextProvider } from '../lib/chat-providers.js';
 
 const card = { title: '', subtitle: '', description: '', features: [], template: 'studio' };
 const request = { language: 'ru', tone: 'neutral', history: [], facts: '', card };
@@ -36,29 +37,38 @@ const cases = [
   }
 ];
 
+const providers = ['gemini', 'groq', 'mistral', 'cloudflare', 'cohere', 'alibaba', 'scaleway'];
+const trialProviders = new Set(['alibaba', 'scaleway']);
 const [flag, provider, caseId] = process.argv.slice(2);
-if (flag !== '--live' || !['gemini', 'groq'].includes(provider)) {
+if (flag !== '--live' || !providers.includes(provider)) {
   for (const { id, check } of cases) console.log(id + ' — ' + check);
-  console.log('Живой прогон: node scripts/evaluate-sai.mjs --live gemini|groq [case-id]');
+  console.log('Живой прогон: node scripts/evaluate-sai.mjs --live <провайдер> [case-id]');
+  console.log('Провайдеры: ' + providers.join(', '));
   if (flag) process.exitCode = 1;
 } else {
   const selected = caseId ? cases.filter(item => item.id === caseId) : cases;
-  const key = process.env[provider === 'gemini' ? 'GEMINI_API_KEY' : 'GROQ_API_KEY']?.trim();
-  if (!key || !selected.length) {
-    console.error('Укажите серверный ключ выбранного провайдера и существующий сценарий.');
+  const trial = trialProviders.has(provider);
+  let credentials;
+  if (provider === 'gemini') credentials = { key: process.env.GEMINI_API_KEY?.trim() };
+  else credentials = trial ? configuredEvaluation(provider) : getTextProvider(provider);
+  if (trial && !credentials) {
+    console.error('Для Alibaba и Scaleway нужны Preview, серверный ключ и разрешение в SAI_PREVIEW_EVALUATION.');
+    process.exitCode = 1;
+  } else if (!credentials?.key || !selected.length) {
+    console.error('Укажите настройки доступа выбранного провайдера и существующий сценарий.');
     process.exitCode = 1;
   } else {
     for (const { id, input, check } of selected) {
       const start = performance.now();
       try {
-        const result = await generateChat({ ...request, ...input }, { key, provider, timeoutMs: 25000 });
+        const result = await generateChat({ ...request, ...input }, { key: credentials.key, accountId: credentials.accountId, provider, timeoutMs: 25000 });
         console.log(JSON.stringify({ provider, id, ms: Math.round(performance.now() - start), check, ...result }));
         if (!result.proposal) process.exitCode = 1;
       } catch (error) {
         console.log(JSON.stringify({ provider, id, ms: Math.round(performance.now() - start), providerStatus: error.providerStatus ?? null,
           reason: error.message === 'Unsupported numeric claim' ? 'unsupported_numeric_claim' : 'provider_or_output_error' }));
         process.exitCode = 1;
-        if (error.providerStatus === 429) break;
+        if ([401, 402, 403, 429].includes(error.providerStatus)) break;
       }
     }
   }
