@@ -1,17 +1,18 @@
-import { ACCESS_DAYS, BILLING_PLANS, createDemoReceipt } from './billing-plans.js';
+import { ACCESS_DAYS, BILLING_PLANS } from './billing-plans.js';
+import { TRANSFER_CARD, TRANSFER_CARD_DISPLAY } from './payment-requisites.js';
+import { SUPPORT } from './support.js';
 
 const money = value => new Intl.NumberFormat('ru-RU').format(value) + ' ₸';
-const dialog = document.getElementById('demo-checkout');
-const actions = document.getElementById('checkout-actions');
-const result = document.getElementById('demo-result');
-let selectedPlan;
+const dialog = document.getElementById('transfer-checkout');
+const copyStatus = document.getElementById('copy-transfer-status');
+document.getElementById('transfer-card').value = TRANSFER_CARD_DISPLAY;
+document.getElementById('transfer-support').href = 'mailto:' + SUPPORT.emails[0];
 
 function checkout(plan) {
-  selectedPlan = plan;
   document.getElementById('checkout-plan').textContent = plan.name;
   document.getElementById('checkout-price').textContent = money(plan.priceKzt);
   document.getElementById('checkout-account').href = 'dashboard.html?plan=' + encodeURIComponent(plan.id) + '#billing-title';
-  actions.hidden = false; result.hidden = true; result.textContent = '';
+  copyStatus.textContent = '';
   dialog.showModal();
 }
 
@@ -33,28 +34,18 @@ for (const plan of BILLING_PLANS) {
     list.append(item);
   }
   const button = document.createElement('button');
-  button.type = 'button'; button.className = 'pricing-button'; button.textContent = 'Проверить оплату';
-  button.setAttribute('aria-label', 'Проверить оплату тарифа ' + plan.name);
+  button.type = 'button'; button.className = 'pricing-button'; button.textContent = 'Реквизиты для перевода';
+  button.setAttribute('aria-label', 'Реквизиты для оплаты тарифа ' + plan.name);
   button.addEventListener('click', () => checkout(plan));
   card.append(title, price, period, includes, list, button);
   document.getElementById('pricing-plans').append(card);
 }
 
-for (const button of actions.querySelectorAll('[data-payment-result]')) {
-  button.addEventListener('click', () => {
-    if (!selectedPlan) return;
-    const receipt = createDemoReceipt(selectedPlan.id, button.dataset.paymentResult);
-    const heading = {
-      success: 'Демонстрационная оплата прошла',
-      declined: 'Банк отклонил демонстрационный платёж',
-      cancelled: 'Демонстрационная покупка отменена'
-    }[receipt.status];
-    let detail = 'Списание — 0 ₸.';
-    if (receipt.accessExampleUntil) {
-      const date = new Intl.DateTimeFormat('ru-RU', { dateStyle: 'long', timeStyle: 'short' }).format(new Date(receipt.accessExampleUntil));
-      detail += '\nПример срока доступа — до ' + date + '.';
-    } else detail += '\nМожно вернуться к тарифам и повторить проверку.';
-    result.textContent = heading + '\n' + detail;
-    result.hidden = false; actions.hidden = true;
-  });
-}
+document.getElementById('copy-transfer-card').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(TRANSFER_CARD);
+    copyStatus.textContent = 'Номер карты скопирован.';
+  } catch {
+    copyStatus.textContent = 'Не удалось скопировать. Выделите номер карты и скопируйте его вручную.';
+  }
+});

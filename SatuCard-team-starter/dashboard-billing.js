@@ -1,4 +1,5 @@
 import { SUPPORT } from './support.js';
+import { TRANSFER_CARD_DISPLAY } from './payment-requisites.js';
 
 const $ = id => document.getElementById(id);
 const money = amount => new Intl.NumberFormat('ru-RU').format(amount) + ' ₸';
@@ -117,6 +118,8 @@ function orderRow(order, payment, isAdmin) {
   }
   const actions = element('div');
   actions.className = 'billing-order-actions';
+  row.append(element('p', 'Карта для перевода: ' + TRANSFER_CARD_DISPLAY),
+    element('p', 'Переведите ' + money(order.amountKzt) + '. В сообщении к переводу обязательно укажите email вашего аккаунта SatuCard. Тариф подключается после проверки поступления.'));
   if (payment.checkoutUrl) actions.append(link('Открыть страницу оплаты', payment.checkoutUrl, 'button button-orange'));
   const subject = 'Заявка SatuCard ' + order.id;
   actions.append(link('Уточнить оплату в поддержке', 'mailto:' + SUPPORT.emails[0] + '?subject=' + encodeURIComponent(subject)),
