@@ -1,0 +1,37 @@
+.pricing-main { padding-block: 36px 72px; }
+.pricing-banner { display: inline-block; padding: 9px 16px; border: 1px solid var(--brand-accent); border-radius: 999px; color: var(--brand-accent-ink); background: var(--brand-accent-soft); font-size: 14px; }
+.pricing-intro { max-width: 840px; margin: 38px 0 48px; }
+.pricing-eyebrow { color: var(--brand-muted); font-size: 13px; font-weight: 800; letter-spacing: .12em; }
+.pricing-intro h1 { font-size: clamp(36px, 5vw, 66px); line-height: 1.08; letter-spacing: -.05em; margin: 20px 0 24px; }
+.pricing-intro > p:not(.pricing-eyebrow) { max-width: 660px; font-size: 18px; }
+.pricing-preview-note { color: var(--brand-muted); }
+.pricing-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; align-items: stretch; }
+.pricing-card { display: flex; flex-direction: column; padding: 28px 22px; background: var(--brand-surface); border: 1px solid var(--brand-line); border-radius: 22px; }
+.pricing-card[data-plan=max] { border: 2px solid var(--brand-accent); padding: 27px 21px; }
+.pricing-card h2 { margin: 0 0 16px; font-size: 26px; letter-spacing: -.04em; }
+.pricing-price { margin: 0; font-size: 37px; font-weight: 800; line-height: 1.2; letter-spacing: -.05em; white-space: nowrap; }
+.pricing-period { margin: 5px 0 24px; color: var(--brand-muted); font-size: 14px; }
+.pricing-token-count { font-size: 20px; font-weight: 800; margin: 0; }
+.pricing-card ul { padding-left: 20px; margin-block: 20px 28px; }
+.pricing-card li { margin-bottom: 8px; }
+.pricing-includes { margin: 14px 0 0; color: var(--brand-muted); font-size: 14px; }
+.pricing-button { width: 100%; display: inline-flex; align-items: center; justify-content: center; min-height: 50px; padding: 12px 16px; background: var(--brand-accent); color: #18191b; font-weight: 800; border: 1px solid var(--brand-accent); border-radius: 12px; }
+.pricing-card > .pricing-button { margin-top: auto; }
+.pricing-button-secondary { background: var(--brand-soft); color: var(--brand-ink); border-color: var(--brand-line); font-weight: 600; }
+.pricing-button:focus-visible, .pricing-back:focus-visible, .pricing-close:focus-visible { outline: 3px solid var(--brand-accent); outline-offset: 4px; }
+.pricing-explainer { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; margin-top: 48px; padding-top: 32px; border-top: 1px solid var(--brand-line); }
+.pricing-explainer h2 { font-size: 20px; margin: 0 0 12px; }
+.pricing-explainer p { color: var(--brand-muted); margin: 0; }
+.pricing-dialog { max-width: 510px; width: calc(100% - 32px); max-height: calc(100dvh - 40px); overflow-y: auto; color: var(--brand-ink); background: var(--brand-surface); border: 1px solid var(--brand-line); border-radius: 24px; padding: 32px; }
+.pricing-dialog::backdrop { background: rgb(0 0 0 / .55); }
+.pricing-dialog h2 { font-size: 28px; letter-spacing: -.04em; margin: 12px 0; }
+.pricing-close { float: right; border: 0; background: transparent; color: var(--brand-muted); font-size: 30px; min-width: 42px; min-height: 42px; }
+.checkout-summary { margin-block: 24px; }
+.checkout-summary > div { display: flex; justify-content: space-between; gap: 20px; padding-block: 9px; }
+.checkout-summary dd { margin: 0; font-weight: 800; text-align: right; }
+.checkout-total { border-top: 1px solid var(--brand-line); margin-top: 10px; padding-top: 16px; }
+.checkout-actions { display: grid; gap: 10px; }
+.pricing-back { margin-top: 24px; padding: 10px 0; color: var(--brand-ink); background: transparent; border: 0; text-decoration: underline; }
+.demo-result { padding: 20px; border: 1px solid var(--brand-line); border-radius: 14px; background: var(--brand-soft); white-space: pre-line; }
+@media (max-width: 1050px) { .pricing-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 620px) { .pricing-main { padding-top: 20px; } .pricing-intro { margin-block: 28px 32px; } .pricing-grid, .pricing-explainer { grid-template-columns: 1fr; } .pricing-card { padding: 26px; } .pricing-card[data-plan=max] { padding: 25px; } .pricing-dialog { padding: 24px; } }
