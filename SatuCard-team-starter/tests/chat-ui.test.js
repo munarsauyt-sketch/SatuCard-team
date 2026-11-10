@@ -42,7 +42,7 @@ async function chatApp(options = {}) {
   const requests = [];
   const evaluations = [];
   const app = await setup({ ...options, fetch: async (url, init = {}) => {
-    if (!init.method) return Response.json({ available: options.available !== false, hasAccess: options.hasAccess !== false, adminOnly: true, modelVerified: false, provider: options.provider, singleUserPilot: options.singleUserPilot, fallbackProviders: options.fallbackProviders, evaluationProviders: options.evaluationProviders });
+    if (!init.method) return Response.json({ available: options.available !== false, hasAccess: options.hasAccess !== false, adminOnly: !options.paidCustomer, paidCustomer: options.paidCustomer, models: options.models, modelVerified: false, provider: options.provider, singleUserPilot: options.singleUserPilot, fallbackProviders: options.fallbackProviders, evaluationProviders: options.evaluationProviders });
     if (url.includes('?previewEvaluation=')) {
       evaluations.push({ url, body: init.body });
       return options.evaluate();
@@ -55,6 +55,23 @@ async function chatApp(options = {}) {
 }
 function check(app, id, value = true) { app.$(id).checked = value; app.$(id).dispatchEvent(new app.w.Event('input', { bubbles: true })); }
 function send(app, text = 'Сделай короче', approve = true) { app.input('ai-chat-input', text); app.$('ai-chat-form').dispatchEvent(new app.w.Event('submit', { bubbles: true, cancelable: true })); if (approve && !app.$('ai-data-consent').hidden) app.$('ai-data-confirm').click(); }
+
+test('paid chat offers authorized models and obtains consent before sending selected text to AnyModel', async () => {
+  const app = await chatApp({ paidCustomer: true, models: [{ id: 'cx/gpt-6-luna', label: 'GPT-6 Luna' }] });
+  try {
+    assert.equal(app.$('ai-model-option').hidden, false);
+    assert.equal(app.$('ai-photo-consent').disabled, true);
+    app.input('ai-model-provider', 'cx/gpt-6-luna');
+    send(app, 'Сделай короче', false);
+    assert.match(app.$('ai-data-question').textContent, /AnyModel/);
+    assert.equal(app.requests.length, 0);
+    app.$('ai-data-confirm').click();
+    await until(() => app.requests.length === 1);
+    assert.equal(app.requests[0].selectedProvider, 'anymodel');
+    assert.equal(app.requests[0].selectedModel, 'cx/gpt-6-luna');
+    assert.equal(app.requests[0].imageDataUrl, undefined);
+  } finally { app.dom.window.close(); }
+});
 
 test('free accounts see paid access and cannot submit through chat controls', async () => {
   const app = await chatApp({ hasAccess: false });

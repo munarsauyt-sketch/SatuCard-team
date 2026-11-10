@@ -8,7 +8,9 @@
   <script src="theme.js?v=rebrand-20261012"></script>
   <link rel="stylesheet" href="brand.css?v=rebrand-20261012">
   <link rel="stylesheet" href="account-pages.css?v=verified-auth-20261026">
+  <link rel="stylesheet" href="dashboard-billing.css">
   <script src="auth-client.js?v=verified-auth-20261026" defer></script><script src="site.js?v=rebrand-20261012" defer></script><script src="cloud-projects.js?v=workflow-1" defer></script><script src="dashboard.js?v=workflow-1" defer></script><script src="dashboard-projects.js?v=workflow-1" defer></script><link rel="stylesheet" href="studio-workflow.css?v=workflow-1">
+  <script src="dashboard-billing.js" type="module"></script>
 </head>
 <body class="account-page dashboard-page">
 <a class="skip-link" href="#main">К содержимому</a>
@@ -22,6 +24,27 @@
 <main id="main" class="dashboard-main container" data-state="loading">
   <div class="dashboard-heading"><div><p class="account-kicker">ЛИЧНЫЙ КАБИНЕТ / ВАШ МАГАЗИН</p><h1>Всё, что вы<br>создали<span>.</span></h1><p>Ваша коллекция карточек. Готова к следующей продаже.</p></div><a class="button button-orange" href="editor.html">Создать карточку <span aria-hidden="true">↗</span></a></div>
   <section class="profile-panel" aria-labelledby="profile-title"><div class="profile-avatar" aria-hidden="true">S</div><div class="profile-details"><span class="profile-label">ВАШ ПРОФИЛЬ</span><h2 id="profile-title">Загружаем профиль…</h2><p id="profile-email"></p><p id="profile-created"></p></div><span class="profile-connection"><i aria-hidden="true"></i>Ваше пространство</span><a class="button button-light" href="profile.html?edit=1">Изменить профиль</a><button class="button button-light" id="logout-button" type="button">Выйти <span aria-hidden="true">↗</span></button></section>
+  <section class="billing-panel" aria-labelledby="billing-title">
+    <div class="billing-heading">
+      <div><p class="account-kicker">sAI / ВАШ ТАРИФ</p><h2 id="billing-title">Тариф и лимиты</h2></div>
+      <a class="button button-light" href="pricing.html">Сравнить тарифы</a>
+    </div>
+    <p id="billing-status" role="status" aria-live="polite">Проверяем доступ…</p>
+    <div id="billing-usage" class="billing-usage" hidden>
+      <label for="billing-progress" id="billing-remaining"></label>
+      <progress id="billing-progress" max="100" value="0"></progress>
+    </div>
+    <p id="billing-next" hidden></p>
+    <details id="billing-models" hidden><summary>Доступные модели</summary><ul id="billing-model-list"></ul></details>
+    <form id="billing-create" class="billing-form" hidden>
+      <label>Тариф <select id="billing-plan" required></select></label>
+      <button class="button button-orange" type="submit">Создать заявку</button>
+    </form>
+    <section aria-labelledby="billing-orders-title"><h3 id="billing-orders-title">Покупки и заявки</h3><div id="billing-orders"></div></section>
+    <section id="billing-admin" aria-labelledby="billing-admin-title" hidden><h3 id="billing-admin-title">Заявки на проверку</h3><div id="billing-admin-orders"></div></section>
+    <div class="billing-support"><strong>Поддержка по оплате</strong><div id="billing-support"></div></div>
+    <button type="button" class="button button-light" id="billing-refresh">Обновить тариф и заявки</button>
+  </section>
   <section class="dashboard-projects workflow-panel" aria-labelledby="projects-title"><h2 id="projects-title">Редактируемые проекты</h2><p>Приватные комплекты с фото, текстами и настройками. Нажмите «Редактировать», чтобы продолжить.</p><button id="projects-refresh" type="button" class="button button-light">Обновить проекты</button><p id="projects-status" role="status">Загружаем проекты…</p><ul id="dashboard-project-list" class="workflow-project-list"></ul></section>
   <section class="dashboard-cards" aria-labelledby="cards-title"><div class="dashboard-section-title"><div><p class="account-kicker">КОЛЛЕКЦИЯ / SATUCARD</p><h2 id="cards-title">Опубликованные карточки<span>.</span></h2></div><span id="cards-count" class="cards-count"></span></div>
     <p id="dashboard-status" class="collection-status" role="status" aria-live="polite">Загружаем вашу коллекцию…</p>

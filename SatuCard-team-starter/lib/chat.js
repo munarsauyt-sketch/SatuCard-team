@@ -2,6 +2,7 @@ import { generateGemini } from './gemini.js';
 import { isFallbackProvider, textProviderAdapter } from './chat-providers.js';
 import { modelCodesIn, numericEvidence } from './numeric-claims.js';
 import { COPY_MODEL, TEMPLATE_IDS, schema as cardSchema, validateImage, validateOutput } from './copy.js';
+import { ANYMODEL_MODELS } from './anymodel.js';
 
 export const MAX_CHAT_REQUEST_BYTES = 830000;
 const controls = /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/;
@@ -44,6 +45,10 @@ export function validateChatInput(value) {
     }
     input.selectedProvider = value.selectedProvider;
   }
+  if (value.selectedModel !== undefined) {
+    if (value.selectedProvider !== 'anymodel' || !ANYMODEL_MODELS.includes(value.selectedModel)) throw new Error('Invalid selected model');
+    input.selectedModel = value.selectedModel;
+  }
   if (value.imageDataUrl !== undefined) {
     if (value.imageConsent !== true) throw new Error('Photo consent required');
     input.imageDataUrl = validateImage(value.imageDataUrl); input.imageConsent = true;
@@ -77,13 +82,15 @@ const modeInstructions = {
   build: 'The seller explicitly requested a complete card draft. When the product is identified in the card or the confirmed facts, provide one complete proposal using those confirmed facts and ask only for essential missing information. When you cannot identify the product, ask for its name.',
   translate: 'The seller explicitly requested a translation of the current card into the selected language. Return a complete proposal translating the existing title, subtitle, description and features. Preserve the product model codes, quantities, units, facts, and current template. Keep blank fields blank.'
 };
-export async function generateChat(rawInput, { key, accountId, model = COPY_MODEL, timeoutMs = 25000, fetcher = fetch, provider = 'openai' }) {
+export async function generateChat(rawInput, { key, accountId, model = COPY_MODEL, providerModel, beforeRequest, onUsage, timeoutMs = 25000, fetcher = fetch, provider = 'openai' }) {
   if (model !== COPY_MODEL) throw new Error('Unsupported model');
-  const { imageDataUrl, imageConsent, groqFallbackConsent, fallbackProvider, selectedProvider, ...input } = validateChatInput(rawInput);
+  const { imageDataUrl, imageConsent, groqFallbackConsent, fallbackProvider, selectedProvider, selectedModel, ...input } = validateChatInput(rawInput);
   const taskInstructions = input.mode ? `${instructions} ${modeInstructions[input.mode]}` : instructions;
   if (provider === 'gemini') return validateChatOutput(await generateGemini({ input, imageDataUrl, instructions: taskInstructions, schema }, { key, timeoutMs, fetcher }), input);
   const adapter = textProviderAdapter(provider);
-  if (adapter) return validateChatOutput(await adapter({ input, instructions: taskInstructions, schema }, { key, accountId, timeoutMs, fetcher }), input);
+  if (adapter) return validateChatOutput(await adapter({ input, instructions: taskInstructions, schema }, {
+    key, accountId, timeoutMs, fetcher, ...(provider === 'anymodel' ? { model: providerModel, beforeRequest, onUsage } : {})
+  }), input);
   if (provider !== 'openai') throw new Error('Unsupported provider');
   const controller = new AbortController(); let timer;
   const timeout = new Promise((_, reject) => { timer = setTimeout(() => { controller.abort(); reject(new Error('Provider timeout')); }, timeoutMs); });
