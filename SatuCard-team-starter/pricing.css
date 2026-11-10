@@ -11,7 +11,6 @@
 .pricing-card h2 { margin: 0 0 16px; font-size: 26px; letter-spacing: -.04em; }
 .pricing-price { margin: 0; font-size: 37px; font-weight: 800; line-height: 1.2; letter-spacing: -.05em; white-space: nowrap; }
 .pricing-period { margin: 5px 0 24px; color: var(--brand-muted); font-size: 14px; }
-.pricing-token-count { font-size: 20px; font-weight: 800; margin: 0; }
 .pricing-card ul { padding-left: 20px; margin-block: 20px 28px; }
 .pricing-card li { margin-bottom: 8px; }
 .pricing-includes { margin: 14px 0 0; color: var(--brand-muted); font-size: 14px; }

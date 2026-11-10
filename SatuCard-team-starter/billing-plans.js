@@ -1,13 +1,14 @@
 export const ACCESS_DAYS = 30;
+const maxModels = ['GPT-6 Astra', 'GPT-6.1 Sol', 'Claude Opus 5.5'];
 export const BILLING_PLANS = Object.freeze([
   { id: 'basic', name: 'Basic', priceKzt: 1000, tokens: 5_000_000,
     models: ['Gemini 2.5 Flash', 'GPT-6 Luna', 'Claude Sonnet 5.5'] },
   { id: 'plus', name: 'Plus', priceKzt: 2500, tokens: 8_000_000, includes: 'Basic',
     models: ['GPT-6.1 Terra', 'GPT-6 Sol', 'Claude Opus 4.8'] },
   { id: 'max', name: 'Max', priceKzt: 5000, tokens: 10_000_000, includes: 'Plus',
-    models: ['GPT-6 Astra', 'GPT-6.1 Sol', 'Claude Opus 5.5'] },
+    models: maxModels },
   { id: 'max3', name: 'Max ×3', priceKzt: 10000, tokens: 30_000_000, includes: 'Max',
-    models: ['Тройной объём токенов Max'] }
+    models: maxModels, benefits: ['Тройной объём лимитов'] }
 ]);
 
 // Demo receipts exercise checkout screens. They are never payment evidence or
