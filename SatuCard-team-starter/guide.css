@@ -1,14 +1,14 @@
 
 .guide-hero { display:grid; grid-template-columns:1.35fr .65fr; align-items:center; gap:70px; padding:70px 0 60px; }
 .guide-hero h1 { font-size:clamp(40px,5vw,76px); margin:22px 0; }
-.guide-hero h1>span,.guide-finish h2>span { color:var(--orange); }
+.guide-hero h1>span,.guide-finish h2>span { color:var(--brand-accent-ink); }
 .guide-lead { font-size:18px; color:var(--muted); max-width:580px; }
 .guide-actions { display:flex; flex-wrap:wrap; gap:22px; align-items:center; margin-top:30px; }
 .guide-small { color:var(--muted); font-size:12px; max-width:440px; margin-top:20px; }
 .guide-result { position:relative; max-width:310px; margin:auto; transform:rotate(3deg); }
 .guide-result img { width:100%; border-radius:14px; box-shadow:0 24px 50px #0003; }
-.guide-result figcaption { padding:13px 16px; background:var(--ink); color:var(--paper); border-radius:12px; font-size:12px; margin:-12px -12px 0; position:relative; transform:rotate(-3deg); }
-.guide-result figcaption>span { color:var(--orange); font-size:21px; margin-right:8px; }
+.guide-result figcaption { padding:13px 16px; background:var(--brand-night); color:#f4f3ff; border-radius:9px; font-size:12px; margin:-12px -12px 0; position:relative; transform:rotate(-3deg); }
+.guide-result figcaption>span { color:var(--brand-signal); font-size:21px; margin-right:8px; }
 .guide-index { position:sticky; top:84px; z-index:20; display:flex; gap:8px; padding:14px 0; overflow:auto; background:var(--paper); border-block:1px solid var(--line); }
 .guide-index a { padding:10px 16px; border:1px solid var(--line); border-radius:30px; white-space:nowrap; font-size:12px; font-weight:800; }
 .guide-index a:hover { border-color:var(--orange); background:var(--surface); }
@@ -19,7 +19,7 @@
 .guide-step li { padding-left:8px; margin-top:14px; color:var(--muted); font-size:15px; }
 .guide-step li::marker { color:var(--brand-accent-ink); font-weight:800; }
 .guide-step strong { color:var(--ink); }
-.guide-tip { border-left:3px solid var(--orange); padding:4px 0 4px 18px; color:var(--muted); font-size:13px; margin-top:28px; max-width:720px; }
+.guide-tip { border-left:3px solid var(--brand-accent-ink); padding:4px 0 4px 18px; color:var(--muted); font-size:13px; margin-top:28px; max-width:720px; }
 .guide-screen { max-width:300px; width:100%; margin:auto; }
 .guide-screen img { width:100%; border:1px solid var(--line); border-radius:16px; box-shadow:var(--surface-shadow); }
 .guide-screen figcaption { font-size:11px; color:var(--muted); margin-top:14px; text-align:center; }

@@ -31,7 +31,9 @@ function fakeCanvas() {
   for (const method of ['beginPath', 'moveTo', 'lineTo', 'quadraticCurveTo', 'closePath', 'fill', 'stroke', 'arc', 'clip', 'fillRect', 'clearRect']) {
     context[method] = (...args) => { operations.push(args); };
   }
-  return { canvas: { width: 0, height: 0, getContext: () => context }, context, operations, text, images, stack };
+  const canvas = { width: 0, height: 0, getContext: () => context };
+  context.canvas = canvas;
+  return { canvas, context, operations, text, images, stack };
 }
 
 test('render reports the actual fitted title font size at either export scale', () => {
@@ -81,6 +83,9 @@ test('normalizes imported or restored settings without mutating them', () => {
   assert.equal(state.photo.zoom, 1); assert.equal(state.photo.x, 0); assert.equal(state.photo.y, 100);
   assert.equal(state.photo.rotation, 180); assert.equal(state.photo.brightness, 50); assert.equal(state.photo.contrast, 150);
   assert.equal(state.photo.saturation, 0); assert.equal(state.photo.radius, 50);
+  assert.equal(state.photo.warmth, 0); assert.equal(state.photo.blur, 0);
+  assert.equal(renderer.normalize({ photo: { warmth: 100, blur: 40 } }).photo.warmth, 60);
+  assert.equal(renderer.normalize({ photo: { warmth: 100, blur: 40 } }).photo.blur, 12);
   assert.equal(renderer.normalize({ price: 500, oldPrice: 400 }).oldPrice, null);
   assert.equal(renderer.normalize({ price: 500, oldPrice: 600 }).oldPrice, 600);
 });
@@ -130,6 +135,19 @@ test('photo framing applies position, rotation, flip and filters equally to prev
   assert.ok(image.transform[1] < 0, 'horizontal flip is applied in the rotated coordinate system');
   image.transform.forEach((value, index) => assert.ok(Math.abs(exported.transform[index] - value * 2) < 1e-8));
   assert.deepEqual(exported.args, image.args, 'export uses the same logical geometry');
+});
+
+test('photo warmth and blur affect only the main photo and match at 1× and 2×', () => {
+  const primary = { naturalWidth: 1200, naturalHeight: 800 };
+  const secondary = { naturalWidth: 1000, naturalHeight: 800 };
+  for (const purpose of ['cover', 'contents']) {
+    for (const scale of [1, 2]) {
+      const scene = fakeCanvas();
+      renderer.render(scene.canvas, { purpose, photo: { warmth: 35, blur: 6 } }, { photo: primary, photos: [primary, secondary] }, { scale });
+      assert.match(scene.images.find(image => image.image === primary).filter, new RegExp(`sepia\\(35%\\) blur\\(${6 * scale}px\\)$`));
+      assert.doesNotMatch(scene.images.find(image => image.image === secondary).filter, /sepia|blur/);
+    }
+  }
 });
 
 test('empty photos and hidden product metadata still produce a useful composition', () => {

@@ -44,6 +44,18 @@ export async function POST(request) {
     const title = typeof body.title === 'string' ? body.title.trim() : '';
     if (!title || [...title].length > 80 || (body.id !== undefined && !projectId(body.id)) || (body.id !== undefined ? !Number.isSafeInteger(body.version) || body.version < 1 || body.version >= 2147483647 : body.version !== undefined)) throw new AccountError('Проверьте название и версию проекта.', 400, 'invalid_project');
     const payload = validateProject(body.payload);
+    if (process.env.VERCEL_ENV === 'preview') {
+      // Preview and Production can share storage. Older versions cannot read these settings.
+      const settings = [payload.settings, ...(payload.views || []).map(view => view.settings)];
+      const photos = settings.map(entry => entry.photo).filter(Boolean);
+      if (photos.some(photo => photo.warmth || photo.blur)) {
+        throw new AccountError('Скачайте проект, чтобы сохранить новые эффекты.', 409, 'preview_photo_effects_local');
+      }
+      for (const photo of photos) {
+        delete photo.warmth;
+        delete photo.blur;
+      }
+    }
     const query = new URLSearchParams({ select: fields });
     let record;
     if (body.id !== undefined) {

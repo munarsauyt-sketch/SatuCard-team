@@ -6,7 +6,7 @@
   const form = $('editor-form'), renderer = window.SATUCARD_RENDERER, project = window.SATUCARD_PROJECT;
   if (!form || !renderer || !project) return;
   form.inert = true;
-  ['download-button', 'publish-button', 'save-project-button', 'load-project-input'].forEach(id => { $(id).disabled = true; });
+  ['download-button', 'copy-card-image', 'publish-button', 'save-project-button', 'load-project-input'].forEach(id => { $(id).disabled = true; });
   const canvas = $('product-canvas'), assets = new Map(), pendingAssets = new Set();
   const palettes = {
     forest: ['#e1e8d9', '#466343', '#233126'], orange: ['#fff0e5', '#f06435', '#35251f'],
@@ -17,7 +17,13 @@
   const selectFields = { 'card-format': 'format', 'font-family': 'font', 'text-align': 'textAlign', 'card-purpose': 'purpose', 'product-category': 'category' };
   const colorFields = { 'background-color': 'background', 'accent-color': 'accent', 'text-color': 'textColor' };
   const checkFields = { 'show-price': 'showPrice', 'show-brand': 'showBrand', 'custom-colors': 'customColors' };
-  const photoRanges = { 'photo-zoom': 'zoom', 'photo-position-x': 'x', 'photo-position-y': 'y', 'photo-rotation': 'rotation', 'photo-brightness': 'brightness', 'photo-contrast': 'contrast', 'photo-saturation': 'saturation', 'photo-radius': 'radius' };
+  const photoRanges = { 'photo-zoom': 'zoom', 'photo-position-x': 'x', 'photo-position-y': 'y', 'photo-rotation': 'rotation', 'photo-brightness': 'brightness', 'photo-contrast': 'contrast', 'photo-saturation': 'saturation', 'photo-warmth': 'warmth', 'photo-blur': 'blur', 'photo-radius': 'radius' };
+  const exportFormats = {
+    png: { mime: 'image/png', extension: 'png', label: 'PNG' },
+    jpeg: { mime: 'image/jpeg', extension: 'jpg', label: 'JPEG' },
+    webp: { mime: 'image/webp', extension: 'webp', label: 'WebP' }
+  };
+  const selectedExportFormat = () => exportFormats[$('export-format').value] || exportFormats.png;
   const copyFields = ['title', 'subtitle', 'description', 'features'];
   let model = { settings: renderer.normalize({ ...samples.headphones, brandName: 'SatuCard.', template: 'neon', format: 'portrait' }), photoId: null, photoIds: [], libraryIds: [], logoId: null, productContextId: 0 };
   let initialModel, history, geometry, dragging, pendingDraft;
@@ -162,7 +168,8 @@
   }
   function updateOutputs() {
     $('name-count').textContent = `${$('product-name').value.length} / 60`;
-    for (const [id, key] of Object.entries(photoRanges)) $(id + '-value').value = $(id).value + (key === 'rotation' ? '°' : key === 'radius' ? ' px' : '%');
+    const units = { rotation: '°', radius: ' px', blur: ' px' };
+    for (const [id, key] of Object.entries(photoRanges)) $(id + '-value').value = $(id).value + (units[key] || '%');
     $('text-scale-value').value = $('text-scale').value + '%';
     for (const id of Object.keys(colorFields)) $(id).disabled = !$('custom-colors').checked;
   }
@@ -182,12 +189,15 @@
     const cardName = model.settings.title ? 'Карточка: ' + model.settings.title : 'Карточка без названия';
     $('preview-caption').textContent = cardName + '. Шаблон ' + renderer.templates[model.settings.template].label + '.';
     canvas.setAttribute('aria-label', $('preview-caption').textContent);
-    $('download-button').querySelector('span').textContent = $('export-format').value === 'jpeg' ? 'Скачать JPEG' : 'Скачать PNG';
+    $('download-button').querySelector('span').textContent = 'Скачать ' + selectedExportFormat().label;
     document.querySelectorAll('[data-template]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.template === model.settings.template)));
     document.querySelectorAll('[data-sample]').forEach(button => button.setAttribute('aria-pressed', String(model.photoId === 'sample-' + button.dataset.sample)));
     const filters = { original: [100, 100, 100], mono: [100, 110, 0], vivid: [103, 115, 130], soft: [110, 90, 85] };
-    document.querySelectorAll('[data-photo-filter]').forEach(button => button.setAttribute('aria-pressed', String(filters[button.dataset.photoFilter].every((value, index) => value === model.settings.photo[['brightness', 'contrast', 'saturation'][index]]))));
+    const { brightness, contrast, saturation, warmth, blur } = model.settings.photo;
+    document.querySelectorAll('[data-photo-filter]').forEach(button => button.setAttribute('aria-pressed',
+      String(!warmth && !blur && filters[button.dataset.photoFilter].every((value, index) => value === [brightness, contrast, saturation][index]))));
     document.querySelectorAll('[data-palette]').forEach(button => button.setAttribute('aria-pressed', String(model.settings.customColors && palettes[button.dataset.palette].every((value, index) => value === model.settings[['background', 'accent', 'textColor'][index]]))));
+    $('photo-palette').disabled = !model.photoId;
     if ($('fullscreen-dialog').open) renderer.render($('fullscreen-canvas'), model.settings, imageAssets());
     if ($('phone-dialog').open) renderer.render($('phone-canvas'), model.settings, imageAssets());
   }
@@ -370,19 +380,69 @@
     const url = URL.createObjectURL(blob), anchor = document.createElement('a'); anchor.href = url; anchor.download = name;
     document.body.append(anchor); anchor.click(); anchor.remove(); setTimeout(() => URL.revokeObjectURL(url), 30000);
   }
-  async function exportImage() {
-    if (exporting) return; readForm(); commit(); if (!validDetails()) return;
-    exporting = true; $('download-button').disabled = true; status('download-status', 'Подготавливаем изображение…');
+  function applyPhotoPalette() {
+    const photo = imageAssets().photo;
+    if (!photo) return;
     try {
-      const saved = clone(model.settings), name = filename(), jpeg = $('export-format').value === 'jpeg';
+      const sample = document.createElement('canvas'); sample.width = sample.height = 32;
+      const ctx = sample.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(photo, 0, 0, 32, 32);
+      const { data } = ctx.getImageData(0, 0, 32, 32);
+      const colors = new Map();
+      for (let i = 0; i < data.length; i += 4) {
+        const red = data[i], green = data[i + 1], blue = data[i + 2];
+        if (data[i + 3] < 128) continue;
+        const high = Math.max(red, green, blue), low = Math.min(red, green, blue);
+        const bin = (red >> 5) * 64 + (green >> 5) * 8 + (blue >> 5);
+        const color = colors.get(bin) || { score: 0, count: 0, red: 0, green: 0, blue: 0 };
+        color.score += (1 + (high - low) / 48) * (low > 235 || high < 32 ? 0.3 : 1);
+        color.count++; color.red += red; color.green += green; color.blue += blue;
+        colors.set(bin, color);
+      }
+      const best = [...colors.values()].sort((a, b) => b.score - a.score)[0];
+      if (!best) throw new Error('Добавьте фото с видимыми цветами.');
+      const rgb = [best.red, best.green, best.blue].map(channel => channel / best.count);
+      const hex = channels => '#' + channels.map(channel => Math.round(channel).toString(16).padStart(2, '0')).join('');
+      commit();
+      model.settings = renderer.normalize({ ...model.settings, customColors: true,
+        background: hex(rgb.map(channel => channel * 0.16 + 255 * 0.84)),
+        accent: hex(rgb.map(channel => channel * 0.56)), textColor: '#1c1c27' });
+      syncForm(); edited(true);
+      status('project-status', 'Цвета взяты из главного фото. Палитру можно отменить.');
+    } catch (error) { status('project-status', 'Не удалось подобрать цвета по фото.', true); }
+  }
+  async function renderExport(settings, images, format, scale) {
+    await readyFonts(settings);
+    const surface = document.createElement('canvas');
+    const layout = renderer.render(surface, settings, images, { scale });
+    const blob = await blobFromCanvas(surface, format.mime, 0.95);
+    if (format.mime === 'image/webp' && blob.type !== format.mime) throw new Error('Браузер не поддерживает экспорт WebP. Выберите PNG или JPEG.');
+    return { surface, layout, blob };
+  }
+  async function exportImage(copy = false) {
+    if (exporting) return; readForm(); commit(); if (!validDetails()) return;
+    if (copy && (!navigator.clipboard?.write || typeof window.ClipboardItem !== 'function')) {
+      status('download-status', 'Копирование изображений недоступно в этом браузере. Скачайте PNG.', true); return;
+    }
+    exporting = true; $('download-button').disabled = $('copy-card-image').disabled = true;
+    status('download-status', 'Подготавливаем изображение…');
+    try {
+      const saved = clone(model.settings), name = filename(), format = copy ? exportFormats.png : selectedExportFormat();
       const photos = imageAssets(), scale = Number($('export-scale').value);
-      await readyFonts(saved);
-      const surface = document.createElement('canvas'); const layout = renderer.render(surface, saved, photos, { scale });
-      const blob = await blobFromCanvas(surface, jpeg ? 'image/jpeg' : 'image/png', 0.95);
+      const rendering = renderExport(saved, photos, format, scale);
+      if (copy) {
+        const image = rendering.then(({ blob }) => blob);
+        try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': image })]); }
+        catch { await image.catch(() => {}); throw new Error('Не удалось скопировать карточку. Скачайте её как PNG.'); }
+        status('download-status', 'Карточка скопирована в буфер обмена.');
+        return;
+      }
+      const { surface, layout, blob } = await rendering;
       window.SATUCARD_WORKFLOW?.showPreflight(saved, photos, surface, blob, layout);
-      downloadBlob(blob, `${name}-${renderer.formats[saved.format].file}.${jpeg ? 'jpg' : 'png'}`);
+      downloadBlob(blob, `${name}-${renderer.formats[saved.format].file}.${format.extension}`);
       status('download-status', `Файл готов: ${surface.width} × ${surface.height}, ${(blob.size / 1024 / 1024).toFixed(1)} МБ. Проверьте загрузки браузера.`);
-    } catch (error) { status('download-status', error.message, true); } finally { exporting = false; $('download-button').disabled = false; }
+    } catch (error) { status('download-status', error.message, true); }
+    finally { exporting = false; $('download-button').disabled = $('copy-card-image').disabled = false; }
   }
   async function publishCard() {
     if (publishing) return; readForm(); commit(); if (!validDetails(true)) return;
@@ -424,6 +484,15 @@
   form.addEventListener('change', event => { if (event.target.type === 'file' || event.target.closest('[data-workflow-control]')) return; readForm(); commit(); requestRender(true); if (event.target.id === 'card-format') fitPreview(); if (['card-purpose', 'product-category'].includes(event.target.id)) updateContentHints(); if (event.target.id === 'font-family') readyFonts(model.settings).then(() => requestRender(true)).catch(() => status('project-status', 'Шрифт недоступен. Используется запасной шрифт.', true)); });
   form.addEventListener('focusout', commit);
   $('photo-input').addEventListener('change', event => { loadPhotos([...event.target.files]); event.target.value = ''; });
+  document.addEventListener('paste', event => {
+    if (event.defaultPrevented || !initialized ||
+        event.target.closest?.('input,textarea,select,[contenteditable],dialog,#ai-chat')) return;
+    const photos = Array.from(event.clipboardData?.files || []).filter(file => file.type.startsWith('image/'));
+    if (!photos.length) return;
+    event.preventDefault();
+    activateTab('photo');
+    loadPhotos(photos);
+  });
   $('brand-logo').addEventListener('change', event => { loadFile(event.target.files[0], true); event.target.value = ''; });
   $('brand-logo-remove').addEventListener('click', () => { ++logoVersion; commit(); model.logoId = null; syncForm(); status('brand-logo-status', 'Логотип удалён.'); edited(true); });
   const zone = $('drop-zone');
@@ -436,9 +505,11 @@
     model.settings = renderer.normalize({ ...model.settings, template: button.dataset.template, customColors: false, background: template.background, accent: template.accent, textColor: template.textColor }); syncForm(); edited(true);
   });
   document.querySelectorAll('[data-palette]').forEach(button => button.addEventListener('click', () => { commit(); const [background, accent, textColor] = palettes[button.dataset.palette]; model.settings = renderer.normalize({ ...model.settings, customColors: true, background, accent, textColor }); syncForm(); edited(true); }));
+  $('photo-palette').addEventListener('click', applyPhotoPalette);
   document.querySelectorAll('[data-photo-filter]').forEach(button => button.addEventListener('click', () => {
     const filters = { original: [100, 100, 100], mono: [100, 110, 0], vivid: [103, 115, 130], soft: [110, 90, 85] }; commit();
-    const [brightness, contrast, saturation] = filters[button.dataset.photoFilter]; model.settings.photo = { ...model.settings.photo, brightness, contrast, saturation }; syncForm(); edited(true);
+    const [brightness, contrast, saturation] = filters[button.dataset.photoFilter];
+    model.settings.photo = { ...model.settings.photo, brightness, contrast, saturation, warmth: 0, blur: 0 }; syncForm(); edited(true);
   }));
   $('reset-photo-button').addEventListener('click', () => { commit(); model.settings.photo = renderer.normalize({}).photo; syncForm(); edited(true); });
   document.querySelectorAll('[data-editor-tab]').forEach(button => {
@@ -456,6 +527,23 @@
   $('reset-button').addEventListener('click', () => { if (!initialModel) return; cancelDrag(); commit(); ++photoVersion; ++logoVersion; ++projectVersion; model = clone(initialModel); changeProductContext(); syncForm(); edited(true); fitPreview(); status('file-status', 'Исходный демонстрационный товар. Сброс можно отменить.'); status('brand-logo-status', ''); });
   $('preview-zoom').addEventListener('input', () => { $('canvas-frame').style.width = Number($('canvas-frame').dataset.baseWidth || 460) * Number($('preview-zoom').value) / 100 + 'px'; $('preview-zoom-value').value = $('preview-zoom').value + '%'; });
   $('preview-fit-button').addEventListener('click', fitPreview); window.addEventListener('resize', fitPreview);
+  const focusMode = $('canvas-focus-mode');
+  if (focusMode) {
+    function setFocusMode(active) {
+      focusMode.closest('.studio-layout').classList.toggle('is-canvas-focus', active);
+      focusMode.setAttribute('aria-pressed', String(active));
+      focusMode.textContent = active ? 'Вернуть инструменты' : 'Только холст';
+      fitPreview();
+    }
+    focusMode.addEventListener('click', () => setFocusMode(focusMode.getAttribute('aria-pressed') !== 'true'));
+    document.querySelector('.studio-mobile-view a[href="#studio-settings"]')?.addEventListener('click', () => {
+      if (focusMode.getAttribute('aria-pressed') === 'true') setFocusMode(false);
+    });
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && !event.defaultPrevented && !document.querySelector('dialog[open]') &&
+          focusMode.getAttribute('aria-pressed') === 'true') setFocusMode(false);
+    });
+  }
   canvas.addEventListener('pointerdown', event => {
     if (!model.photoId || !geometry?.photoRect || event.button > 0) return;
     const box = canvas.getBoundingClientRect(), scale = 900 / box.width, point = { x: (event.clientX - box.left) * scale, y: (event.clientY - box.top) * scale }, rect = geometry.photoRect;
@@ -481,7 +569,9 @@
   });
   $('fullscreen-button').addEventListener('click', () => { renderer.render($('fullscreen-canvas'), model.settings, imageAssets()); $('fullscreen-dialog').showModal(); });
   $('fullscreen-close').addEventListener('click', () => $('fullscreen-dialog').close()); $('publish-dialog-close').addEventListener('click', () => $('publish-dialog').close());
-  $('download-button').addEventListener('click', exportImage); $('publish-button').addEventListener('click', publishCard); $('export-format').addEventListener('change', () => requestRender());
+  $('download-button').addEventListener('click', () => exportImage());
+  $('copy-card-image').addEventListener('click', () => exportImage(true));
+  $('publish-button').addEventListener('click', publishCard); $('export-format').addEventListener('change', () => requestRender());
   $('copy-link-button').addEventListener('click', event => copyLink(event.currentTarget)); $('publish-dialog-copy').addEventListener('click', event => copyLink(event.currentTarget));
   $('save-project-button').addEventListener('click', () => { try { readForm(); commit(); downloadBlob(new Blob([serialized()], { type: 'application/json' }), filename() + '.satucard.json'); status('project-status', 'Проект подготовлен: фото, логотип и все настройки.'); } catch (error) { status('project-status', error.message, true); } });
   $('load-project-input').addEventListener('change', async event => {
@@ -506,9 +596,9 @@
     await loadSample(Object.hasOwn(samples, params.get('photo')) ? params.get('photo') : 'headphones', true);
     if (!initialized) { syncActiveView(); initialModel = clone(model); history = project.createHistory(model); initialized = true; updateHistory(); requestRender(true); }
     form.inert = false;
-    ['download-button', 'publish-button', 'save-project-button', 'load-project-input'].forEach(id => { $(id).disabled = false; });
+    ['download-button', 'copy-card-image', 'publish-button', 'save-project-button', 'load-project-input'].forEach(id => { $(id).disabled = false; });
     fitPreview();
-    try { const saved = await project.draftAction('get'); if (saved) { project.parseProject(saved, renderer.normalize); pendingDraft = saved; $('draft-restore-banner').hidden = false; status('draft-status', 'На этом устройстве есть сохранённый черновик.'); } else status('draft-status', 'Изменения сохраняются на этом устройстве.'); }
+    try { const saved = await project.draftAction('get'); if (saved) { project.parseProject(saved, renderer.normalize); pendingDraft = saved; $('draft-restore-banner').hidden = false; status('draft-status', 'Есть сохранённый черновик'); } else status('draft-status', 'Локальное автосохранение'); }
     catch (_) { status('draft-status', 'Автосохранение недоступно — используйте «Сохранить проект».'); }
     form.dataset.editorReady = 'true';
     document.dispatchEvent(new Event('satucard:editor-ready'));
@@ -526,16 +616,24 @@
         images: imageAssets(), viewImages: Object.fromEntries(model.views.map(view => [view.id, imageAssets(view)])),
         ...(includeProject ? { serialized: serialized() } : {}), filename: filename() };
     },
-    readyFonts, blobFromCanvas, downloadBlob, restoreProject,
+    selectedExportFormat, renderExport, downloadBlob, restoreProject,
     selectView(id) {
       cancelDrag(); ++photoVersion; readForm(); commit(); const view = model.views.find(item => item.id === id); if (!view) return;
       model.activeViewId = id; model.settings = clone(view.settings); setPhotoIds(view.photoIds); syncForm(); edited(true); fitPreview();
     },
-    addView() {
+    addView(format) {
       readForm(); commit(); if (model.views.length >= 8) throw new Error('В комплекте не больше 8 карточек.');
-      const id = crypto.randomUUID();
-      model.views.push({ id, label: 'Карточка ' + (model.views.length + 1), settings: clone(model.settings), photoIds: [...model.photoIds], sampleKey: activeView().sampleKey });
-      model.activeViewId = id; syncForm(); edited(true);
+      if (format && !Object.hasOwn(renderer.formats, format)) throw new Error('Выберите формат карточки.');
+      const id = crypto.randomUUID(), settings = clone(model.settings);
+      let label = 'Карточка ' + (model.views.length + 1);
+      if (format) {
+        const suffix = ' · ' + renderer.formats[format].file.replace('x', ':');
+        label = activeView().label.slice(0, 60 - suffix.length) + suffix;
+        settings.format = format;
+      }
+      model.views.push({ id, label, settings, photoIds: [...model.photoIds], sampleKey: activeView().sampleKey });
+      model.activeViewId = id; model.settings = settings; syncForm(); edited(true);
+      if (format) fitPreview();
     },
     removeView() {
       cancelDrag(); commit(); if (model.views.length <= 1) return;

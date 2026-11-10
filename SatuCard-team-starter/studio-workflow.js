@@ -36,6 +36,8 @@
       }
       if (document.activeElement !== $('view-label')) $('view-label').value = model.views.find(view => view.id === model.activeViewId).label;
       $('remove-view').disabled = model.views.length <= 1; $('add-view').disabled = model.views.length >= 8; $('make-set').disabled = model.views.length > 6;
+      $('duplicate-format').disabled = model.views.length >= 8;
+      for (const option of $('duplicate-format').options) option.disabled = option.value === model.settings.format;
       $('remove-background').disabled = removing || !model.photoId;
       const index = model.views.findIndex(view => view.id === model.activeViewId); $('view-earlier').disabled = index === 0; $('view-later').disabled = index === model.views.length - 1;
       if (cloudIdentity) message('cloud-status', `Открыт «${cloudIdentity.title}». Изменения сохраняются в облако только по кнопке.`);
@@ -50,6 +52,11 @@
     $('apply-brand').addEventListener('click', () => actOnSet(() => editor.applyBrand()));
     $('make-set').addEventListener('click', () => actOnSet(() => editor.makeSet()));
     $('add-view').addEventListener('click', () => actOnSet(() => editor.addView()));
+    $('duplicate-format').addEventListener('change', event => {
+      const { value } = event.target;
+      event.target.value = '';
+      if (value) actOnSet(() => editor.addView(value));
+    });
     $('remove-view').addEventListener('click', () => actOnSet(() => editor.removeView()));
     $('view-label').addEventListener('change', () => actOnSet(() => editor.renameView($('view-label').value)));
 
@@ -265,23 +272,17 @@
       $('preflight-panel').open = true; return report;
     }
     window.SATUCARD_WORKFLOW = { showPreflight };
-    async function renderFile(settings, images, jpeg, scale) {
-      await editor.readyFonts(settings);
-      const surface = document.createElement('canvas');
-      const layout = renderer.render(surface, settings, images, { scale });
-      return { surface, layout, blob: await editor.blobFromCanvas(surface, jpeg ? 'image/jpeg' : 'image/png', 0.95) };
-    }
     async function checkExport() {
       if (checking) return;
       checking = true;
       $('check-export').disabled = true;
       const snapshot = editor.snapshot(), revision = editor.revision;
-      const format = $('export-format').value, scale = $('export-scale').value, marketplace = $('marketplace').value;
+      const format = editor.selectedExportFormat(), scale = $('export-scale').value, marketplace = $('marketplace').value;
       $('preflight-results').replaceChildren();
       message('preflight-status', 'Проверяем макет и размер файла…');
       try {
-        const { surface, blob, layout } = await renderFile(snapshot.model.settings, snapshot.images, format === 'jpeg', Number(scale));
-        if (revision !== editor.revision || format !== $('export-format').value || scale !== $('export-scale').value || marketplace !== $('marketplace').value) {
+        const { surface, blob, layout } = await editor.renderExport(snapshot.model.settings, snapshot.images, format, Number(scale));
+        if (revision !== editor.revision || format !== editor.selectedExportFormat() || scale !== $('export-scale').value || marketplace !== $('marketplace').value) {
           message('preflight-status', 'Карточка или параметры экспорта изменились. Повторите проверку.');
           return;
         }
@@ -300,13 +301,13 @@
     ['export-format', 'export-scale', 'marketplace'].forEach(id => $(id).addEventListener('change', () => invalidatePreflight('Параметры экспорта изменились. Повторите проверку.')));
     $('download-set').addEventListener('click', async () => {
       if (exportingSet) return; exportingSet = true; $('download-set').disabled = true;
-      const snapshot = editor.snapshot(), jpeg = $('export-format').value === 'jpeg', scale = Number($('export-scale').value), marketplace = $('marketplace').value;
+      const snapshot = editor.snapshot(), format = editor.selectedExportFormat(), scale = Number($('export-scale').value), marketplace = $('marketplace').value;
       try {
         const files = [], reports = [];
         for (const [index, view] of snapshot.model.views.entries()) {
           message('set-status', `Готовим ${index + 1} из ${snapshot.model.views.length}: ${view.label}…`);
-          const { surface, blob, layout } = await renderFile(view.settings, snapshot.viewImages[view.id], jpeg, scale);
-          const name = `${String(index + 1).padStart(2, '0')}-${safeName(view.label)}.${jpeg ? 'jpg' : 'png'}`;
+          const { surface, blob, layout } = await editor.renderExport(view.settings, snapshot.viewImages[view.id], format, scale);
+          const name = `${String(index + 1).padStart(2, '0')}-${safeName(view.label)}.${format.extension}`;
           files.push({ name, bytes: new Uint8Array(await blob.arrayBuffer()) });
           reports.push({ file: name, report: getReport(view.settings, snapshot.viewImages[view.id], surface, blob, layout, marketplace) });
           await new Promise(resolve => setTimeout(resolve, 0));

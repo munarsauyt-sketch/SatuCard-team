@@ -94,7 +94,14 @@
       const views = parseViews(set.views, set.activeViewId, clone);
       payload = { app: 'SatuCard', schemaVersion: 1, savedAt: new Date().toISOString(), settings, photo, logo, ...views };
     }
-    const text = JSON.stringify(payload);
+    const text = JSON.stringify(payload, (key, value) => {
+      if (key !== 'photo' || (value?.warmth !== 0 && value?.blur !== 0)) return value;
+      // Keep projects without these effects readable by earlier editors and APIs.
+      const portablePhoto = { ...value };
+      if (portablePhoto.warmth === 0) delete portablePhoto.warmth;
+      if (portablePhoto.blur === 0) delete portablePhoto.blur;
+      return portablePhoto;
+    });
     if (text.length > MAX_PROJECT_LENGTH) throw new Error('Файл проекта слишком большой. Максимум 17 МБ.');
     return text;
   }

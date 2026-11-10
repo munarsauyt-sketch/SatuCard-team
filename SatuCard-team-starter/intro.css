@@ -3,11 +3,11 @@
 .intro-player figcaption { padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .intro-player h2 { font-size: 18px; letter-spacing: -.04em; }
 
-.intro-screen { position: relative; background: #18191b; aspect-ratio: 16 / 9; }
+.intro-screen { position: relative; background: var(--brand-night); aspect-ratio: 16 / 9; }
 .intro-screen video { width: 100%; height: 100%; display: block; object-fit: contain; }
-.intro-play { position: absolute; inset: 0; display: grid; place-items: center; margin: auto; width: 78px; height: 78px; padding: 0; border: 1px solid #fff7; border-radius: 50%; background: #ff5b35; color: #18191b; cursor: pointer; box-shadow: 0 8px 30px #0004; }
+.intro-play { position: absolute; inset: 0; display: grid; place-items: center; margin: auto; width: 78px; height: 78px; padding: 0; border: 1px solid #fff7; border-radius: 20px; background: var(--brand-signal); color: var(--brand-on-signal); cursor: pointer; box-shadow: 0 8px 30px #0004; }
 .intro-play svg { width: 30px; height: 30px; margin-left: 5px; fill: currentColor; }
-.intro-play:hover { background: #ff795a; transform: scale(1.05); }
+.intro-play:hover { background: #edffa9; transform: scale(1.05); }
 .intro-play:focus-visible { outline: 3px solid #fff; outline-offset: 5px; }
 .intro-play[hidden],.intro-error[hidden] { display: none; }
 .intro-error { padding: 14px 22px; font-size: 13px; line-height: 1.6; }

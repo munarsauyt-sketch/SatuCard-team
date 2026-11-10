@@ -62,7 +62,8 @@
         zoom: clamp(photo.zoom, 0.7, 2.5, 1), x: clamp(photo.x, 0, 100, 50), y: clamp(photo.y, 0, 100, 50),
         rotation: clamp(photo.rotation, -180, 180, 0), flip: photo.flip === true,
         brightness: clamp(photo.brightness, 50, 150, 100), contrast: clamp(photo.contrast, 50, 150, 100),
-        saturation: clamp(photo.saturation, 0, 180, 100), radius: clamp(photo.radius, 0, 50, 24)
+        saturation: clamp(photo.saturation, 0, 180, 100), radius: clamp(photo.radius, 0, 50, 24),
+        warmth: clamp(photo.warmth, 0, 60, 0), blur: clamp(photo.blur, 0, 12, 0)
       }
     };
   }
@@ -246,7 +247,12 @@
       const centerX = rect.x + rect.width / 2 + (state.photo.x - 50) / 50 * rect.width * 0.35;
       const centerY = rect.y + rect.height / 2 + (state.photo.y - 50) / 50 * rect.height * 0.35;
       ctx.translate(centerX, centerY); ctx.rotate(radians); ctx.scale(state.photo.flip ? -1 : 1, 1);
-      ctx.filter = `brightness(${state.photo.brightness}%) contrast(${state.photo.contrast}%) saturate(${state.photo.saturation}%)`;
+      const { brightness, contrast, saturation, warmth, blur } = state.photo;
+      let filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%)`;
+      if (warmth) filter += ` sepia(${warmth}%)`;
+      // Canvas filters operate in output pixels, independently of the drawing transform.
+      if (blur) filter += ` blur(${blur * ctx.canvas.width / formats[state.format].width}px)`;
+      ctx.filter = filter;
       ctx.drawImage(image, -width * scale / 2, -height * scale / 2, width * scale, height * scale);
     } else {
       circle(ctx, rect.x + rect.width / 2, rect.y + rect.height / 2 - 25, 30, rgba(state.accent, 0.15));
@@ -284,7 +290,7 @@
     }
     photo(ctx, state, primary, main);
     badge(ctx, state, main);
-    const neutral = { ...state, photo: { ...state.photo, zoom: 1, x: 50, y: 50, rotation: 0, flip: false } };
+    const neutral = { ...state, photo: { ...state.photo, zoom: 1, x: 50, y: 50, rotation: 0, flip: false, warmth: 0, blur: 0 } };
     extra.forEach((image, index) => photo(ctx, neutral, image, secondary[index]));
     return { photoRect: main, photoRects: [main, ...secondary] };
   }
@@ -456,7 +462,7 @@
         return;
       }
       // Additional views use neutral framing; dragging and adjustments apply to the primary.
-      photo(ctx, image === primary ? state : { ...state, photo: { ...state.photo, zoom: 1, x: 50, y: 50, rotation: 0, flip: false } }, image, rect);
+      photo(ctx, image === primary ? state : { ...state, photo: { ...state.photo, zoom: 1, x: 50, y: 50, rotation: 0, flip: false, warmth: 0, blur: 0 } }, image, rect);
       photoRects.push(rect);
       if (main) badge(ctx, state, rect);
     };

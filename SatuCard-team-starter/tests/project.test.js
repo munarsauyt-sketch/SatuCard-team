@@ -32,6 +32,21 @@ test('project round-trip retains settings and image data', () => {
   assert.deepEqual(copy(restored), { settings, photo: source, logo: null });
 });
 
+test('portable projects retain applied photo effects and omit their neutral values', () => {
+  const settings = { photo: { zoom: 1, warmth: 0, blur: 6 } };
+  const set = { photos: [], views: [
+    { id: 'main', label: 'Главная', settings, photoIds: [] },
+    { id: 'extra', label: 'Детали', settings: { photo: { warmth: 45, blur: 0 } }, photoIds: [] }
+  ], activeViewId: 'main' };
+  const payload = JSON.parse(project.serializeProject(settings, null, null, set));
+  assert.deepEqual(payload.settings.photo, { zoom: 1, blur: 6 });
+  assert.deepEqual(payload.views.map(view => view.settings.photo), [{ zoom: 1, blur: 6 }, { warmth: 45 }]);
+  assert.equal(settings.photo.warmth, 0);
+  const restored = project.parseProject(JSON.stringify(payload), copy);
+  assert.equal(restored.settings.photo.blur, 6);
+  assert.equal(restored.views[1].settings.photo.warmth, 45);
+});
+
 test('untrusted projects cannot load remote or executable images', () => {
   const base = { app: 'SatuCard', schemaVersion: 1, settings: {}, photo: null, logo: null };
   for (const photo of ['https://example.com/photo.jpg', 'data:image/svg+xml;base64,PHN2Zz4=', 'javascript:alert(1)']) {

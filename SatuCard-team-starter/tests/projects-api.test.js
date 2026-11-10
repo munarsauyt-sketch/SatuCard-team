@@ -4,14 +4,14 @@ import { readFileSync } from 'node:fs';
 import { GET, POST } from '../api/projects.js';
 import { MAX_PROJECT_BYTES } from '../lib/projects.js';
 const originalFetch = globalThis.fetch;
-const env = { url: process.env.SUPABASE_URL, key: process.env.SUPABASE_SECRET_KEY };
+const env = { url: process.env.SUPABASE_URL, key: process.env.SUPABASE_SECRET_KEY, vercel: process.env.VERCEL_ENV };
 const uid = 'aaac8be7-1386-45b8-8d49-3f9d7f5c9fb6';
 const id = 'bbbc8be7-1386-45b8-8d49-3f9d7f5c9fb6';
 const payload = () => ({ app: 'SatuCard', schemaVersion: 1, settings: { title: 'Тауар', format: 'square', photo: { zoom: 1 } }, photo: null, logo: null });
 const row = () => ({ id, title: 'Тауар', version: 1, updated_at: '2026-11-08T00:00:00Z', payload: payload() });
 afterEach(() => {
   globalThis.fetch = originalFetch;
-  for (const [key, value] of [['SUPABASE_URL', env.url], ['SUPABASE_SECRET_KEY', env.key]]) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
+  for (const [key, value] of [['SUPABASE_URL', env.url], ['SUPABASE_SECRET_KEY', env.key], ['VERCEL_ENV', env.vercel]]) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
 });
 function setup({ auth = true, complete = true, confirmed = true, reply = [row()], status = 200, fail = false } = {}) {
   process.env.SUPABASE_URL = 'https://example.supabase.co'; process.env.SUPABASE_SECRET_KEY = 'service-secret';
@@ -68,6 +68,30 @@ test('stale updates and foreign IDs cannot overwrite a project', async () => {
   setup({ reply: [] });
   const response = await POST(req({ id, version: 1, title: 'Test', payload: payload() }));
   assert.equal(response.status, 409); assert.equal((await response.json()).code, 'version_conflict');
+});
+test('preview preserves shared-project compatibility when saving new photo settings', async () => {
+  const calls = setup();
+  process.env.VERCEL_ENV = 'preview';
+  const p = payload();
+  p.views = [{ id: 'main', label: 'Главная', settings: { photo: { warmth: 0, blur: 6 } } }];
+  p.activeViewId = 'main';
+  const preview = await POST(req({ title: 'Test', payload: p }));
+  assert.equal(preview.status, 409);
+  assert.equal((await preview.json()).code, 'preview_photo_effects_local');
+  assert.equal(calls.length, 0);
+  p.settings.photo.warmth = 0;
+  p.views[0].settings.photo.blur = 0;
+  assert.equal((await POST(req({ title: 'Test', payload: p }))).status, 201);
+  const stored = JSON.parse(calls[0].body).payload;
+  assert.deepEqual(stored.settings.photo, { zoom: 1 });
+  assert.deepEqual(stored.views[0].settings.photo, {});
+  process.env.VERCEL_ENV = 'production';
+  p.views[0].settings.photo = { warmth: 35, blur: 6 };
+  assert.equal((await POST(req({ title: 'Test', payload: p }))).status, 201);
+  assert.deepEqual(JSON.parse(calls[1].body).payload.views[0].settings.photo, { warmth: 35, blur: 6 });
+  p.views[0].settings.photo.blur = 13;
+  assert.equal((await POST(req({ title: 'Test', payload: p }))).status, 400);
+  assert.equal(calls.length, 2);
 });
 test('rejects malformed projects, ownership injection, executable/remote media, invalid settings and versions', async () => {
   const calls = setup();

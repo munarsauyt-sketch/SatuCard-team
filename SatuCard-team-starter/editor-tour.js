@@ -11,14 +11,11 @@
     { tab: 'content', target: '.studio-price-grid', title: 'Укажите цену в тенге', text: 'Введите текущую цену. Поле «До скидки» необязательно: старая цена должна быть выше новой. Переключатель ниже позволяет скрыть цену на карточке.' },
     { tab: 'design', target: '#template-grid', title: 'Выберите характер карточки', text: 'Нажмите на один из восьми шаблонов. Предпросмотр изменится сразу. Цвета и шрифт настраиваются ниже; название магазина и логотип — во вкладке «Тексты», в блоке «Бренд вашего магазина».' },
     { tab: 'design', target: '#card-format', title: 'Подберите формат', text: 'Лента 4:5 — 900 × 1125, квадрат 1:1 — 900 × 900, история 9:16 — 900 × 1600. После смены формата проверьте, как расположились фото и текст.' },
-    { target: '#download-button', title: 'Скачайте готовое изображение', text: 'Выберите PNG или JPEG и размер 1× или 2× рядом с кнопкой скачивания. Файл попадёт в загрузки браузера. Для этого аккаунт не нужен. Проверьте цену и читаемость перед экспортом.' },
+    { target: '#download-button', title: 'Скачайте готовое изображение', text: 'На верхней панели выберите PNG, JPG или WebP и масштаб 1× или 2×. Файл попадёт в загрузки браузера. Рядом можно скопировать карточку в буфер обмена.' },
     { target: '#save-project-button', title: 'Оставьте возможность вернуться', text: '«Сохранить проект» скачивает файл .satucard.json с фото, логотипом и настройками. Кнопка «Открыть» загрузит его обратно. Локальный черновик — дополнительная копия в этом браузере, а не в аккаунте.' },
     { target: '#publish-button', title: 'Поделитесь ссылкой', text: 'Для публикации войдите в аккаунт и завершите профиль. После нажатия «Опубликовать» появится публичная ссылка, а карточка — в кабинете. На сервер сохраняется готовое изображение; для дальнейших правок сохраните файл проекта.' }
   ];
   let index = -1, target = null, returnFocus = null, switchingTab = false;
-  const welcome = $('tour-welcome');
-  const storageKey = 'satucard-tutorial-v1';
-  function remember(value) { try { localStorage.setItem(storageKey, value); } catch (_) { /* Обучение доступно и без хранилища. */ } }
   function clearHighlight() { target?.classList.remove('tour-target'); target = null; }
   function position() {
     if (index < 0) return;
@@ -52,6 +49,7 @@
       switchingTab = false;
     }
     target = document.querySelector(step.target);
+    for (let section = target?.closest('details'); section; section = section.parentElement?.closest('details')) section.open = true;
     target?.classList.add('tour-target');
     $('tour-progress').textContent = `ШАГ ${index + 1} ИЗ ${steps.length}`;
     $('tour-meter-fill').style.width = `${(index + 1) / steps.length * 100}%`;
@@ -65,7 +63,8 @@
   function begin() {
     if ($('editor-form').dataset.editorReady !== 'true') return;
     returnFocus = document.activeElement;
-    welcome.hidden = true; panel.hidden = false;
+    if ($('canvas-focus-mode').getAttribute('aria-pressed') === 'true') $('canvas-focus-mode').click();
+    panel.hidden = false;
     document.body.classList.add('tour-active');
     showStep(0);
   }
@@ -74,16 +73,11 @@
     clearHighlight(); index = -1; panel.hidden = true;
     document.body.classList.remove('tour-active');
     document.body.style.removeProperty('--tour-space');
-    if (completed) {
-      remember('completed');
-      window.satucardToast?.('Вы познакомились с редактором. Обучение можно открыть снова.');
-    } else remember('dismissed');
+    if (completed) window.satucardToast?.('Вы познакомились с редактором. Обучение можно открыть снова.');
     const canRestoreFocus = returnFocus?.matches('button,a[href],input,select,textarea,[tabindex]') && !returnFocus.closest('[hidden]');
     (canRestoreFocus ? returnFocus : start).focus({ preventScroll: true });
   }
   start.addEventListener('click', begin);
-  $('welcome-start-tour').addEventListener('click', begin);
-  $('dismiss-tour-welcome').addEventListener('click', () => { welcome.hidden = true; remember('dismissed'); start.focus(); });
   $('tour-close').addEventListener('click', () => close());
   $('tour-prev').addEventListener('click', () => { if (index > 0) showStep(index - 1); });
   $('tour-next').addEventListener('click', () => { if (index === steps.length - 1) close(true); else if (index >= 0) showStep(index + 1); });
@@ -95,10 +89,7 @@
   }));
   window.addEventListener('resize', position);
   function ready() {
-    start.hidden = false; $('welcome-start-tour').disabled = false;
-    let seen = false;
-    try { seen = Boolean(localStorage.getItem(storageKey)); } catch (_) { /* Показываем приглашение без сохранения. */ }
-    welcome.hidden = seen;
+    start.hidden = false;
     const url = new URL(location.href);
     if (url.searchParams.get('tour') === '1') {
       url.searchParams.delete('tour');

@@ -1,27 +1,19 @@
 .templates-page {
-  --gallery-paper: #f7f4ed;
-  --gallery-panel: #fffdf8;
-  --gallery-accent: #ffe4d8;
-  background: var(--gallery-paper);
-}
-
-html[data-theme=dark] .templates-page {
-  --gallery-paper: #141517;
-  --gallery-panel: #1d1e21;
-  --gallery-accent: #38251f;
+  --gallery-panel: var(--brand-surface);
 }
 
 .gallery-intro {
-  padding-block: clamp(38px, 6vw, 86px) clamp(24px, 3.5vw, 50px);
+  padding-block: clamp(38px, 5vw, 70px) clamp(22px, 3vw, 38px);
 }
 
 .gallery-intro h1 {
-  max-width: 13ch;
-  font-size: clamp(42px, 6.4vw, 90px);
+  max-width: 19ch;
+  font-size: clamp(42px, 6vw, 84px);
   font-weight: 800;
   line-height: .98;
   letter-spacing: -.075em;
 }
+.gallery-intro .orange-point { color: var(--brand-accent-ink); }
 
 .gallery-intro p {
   margin-top: 18px;
@@ -35,9 +27,10 @@ html[data-theme=dark] .templates-page {
   justify-content: space-between;
   gap: 16px;
   margin-bottom: clamp(18px, 2.5vw, 32px);
-  padding-block: 12px;
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--soft);
 }
 
 .gallery-filters {
@@ -50,7 +43,7 @@ html[data-theme=dark] .templates-page {
 .gallery-demo select {
   min-height: 44px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 8px;
   background: var(--gallery-panel);
   color: var(--ink);
   font-size: 13px;
@@ -67,9 +60,9 @@ html[data-theme=dark] .templates-page {
 }
 
 .gallery-filters button[aria-pressed=true] {
-  border-color: var(--gallery-accent);
-  background: var(--gallery-accent);
-  color: var(--brand-accent-ink);
+  border-color: var(--brand-accent);
+  background: var(--brand-accent);
+  color: var(--brand-on-accent);
 }
 
 .gallery-filters button span {
@@ -106,14 +99,14 @@ html[data-theme=dark] .templates-page {
   height: 100%;
   padding: 7px;
   border: 1px solid var(--line);
-  border-radius: 20px;
+  border-radius: 13px;
   background: var(--gallery-panel);
   transition: border-color .2s ease, box-shadow .22s ease, transform .22s ease;
 }
 
 .gallery-art {
   overflow: hidden;
-  border-radius: 13px;
+  border-radius: 7px;
   background: var(--soft);
 }
 
@@ -144,7 +137,7 @@ html[data-theme=dark] .templates-page {
   height: 30px;
   place-items: center;
   border: 1px solid var(--line);
-  border-radius: 50%;
+  border-radius: 7px;
   color: var(--ink);
   font-size: 17px;
   line-height: 1;
@@ -152,9 +145,9 @@ html[data-theme=dark] .templates-page {
 }
 
 .gallery-card:focus-visible .gallery-card-arrow {
-  border-color: var(--orange);
-  background: var(--orange);
-  color: #18191b;
+  border-color: var(--brand-accent);
+  background: var(--brand-accent);
+  color: var(--brand-on-accent);
 }
 
 @media (hover: hover) {
@@ -165,9 +158,9 @@ html[data-theme=dark] .templates-page {
   }
 
   .gallery-card:hover .gallery-card-arrow {
-    border-color: var(--orange);
-    background: var(--orange);
-    color: #18191b;
+    border-color: var(--brand-accent);
+    background: var(--brand-accent);
+    color: var(--brand-on-accent);
   }
 }
 

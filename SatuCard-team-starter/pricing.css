@@ -30,7 +30,7 @@
   gap: 12px;
   padding: 7px 8px 7px 14px;
   border: 1px solid var(--brand-line);
-  border-radius: 100px;
+  border-radius: 9px;
   background: var(--brand-surface);
   color: var(--brand-muted);
   font-size: 13px;
@@ -39,9 +39,9 @@
 
 .pricing-banner strong {
   padding: 2px 8px;
-  border-radius: 100px;
-  background: var(--brand-accent-soft);
-  color: var(--brand-accent-ink);
+  border-radius: 5px;
+  background: var(--brand-signal);
+  color: var(--brand-on-signal);
   white-space: nowrap;
 }
 
@@ -56,14 +56,18 @@
   flex-direction: column;
   padding: clamp(18px, 2vw, 28px);
   border: 1px solid var(--brand-line);
-  border-radius: 22px;
+  border-radius: 13px;
   background: var(--brand-surface);
   transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
 }
 
 .pricing-card[data-plan="max"] {
-  border-color: var(--brand-accent);
-  background: color-mix(in srgb, var(--brand-accent-soft) 40%, var(--brand-surface));
+  --brand-line: #7473f0;
+  --brand-muted: #efeeff;
+  --brand-accent-ink: var(--brand-signal);
+  border-color: #7271f1;
+  background: linear-gradient(150deg, #4948e8, #3231a4);
+  color: var(--brand-on-accent);
 }
 
 .pricing-card h2 {
@@ -79,7 +83,7 @@
   width: 8px;
   height: 8px;
   border: 1px solid currentColor;
-  border-radius: 50%;
+  border-radius: 2px;
   color: var(--brand-muted);
 }
 
@@ -157,9 +161,9 @@
   justify-content: center;
   padding: 10px 13px;
   border: 1px solid var(--brand-accent);
-  border-radius: 12px;
+  border-radius: 8px;
   background: var(--brand-accent);
-  color: #18191b;
+  color: var(--brand-on-accent);
   font-size: 14px;
   font-weight: 800;
   transition: background .2s ease, border-color .2s ease, color .2s ease;
@@ -191,8 +195,14 @@
 .pricing-dialog .pricing-button:hover {
   border-color: var(--brand-accent);
   background: var(--brand-accent);
-  color: #18191b;
+  color: var(--brand-on-accent);
 }
+.pricing-card[data-plan="max"] > .pricing-button {
+  border-color: transparent;
+  background: var(--brand-signal);
+  color: var(--brand-on-signal);
+}
+.pricing-card[data-plan="max"] > .pricing-button:hover { background: #edffa9; }
 
 .pricing-footnote {
   display: flex;

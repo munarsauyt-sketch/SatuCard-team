@@ -52,6 +52,60 @@ test('set creation, independent edits, undo/redo and portable restore work throu
   } finally { app.dom.window.close(); }
 });
 
+test('free editing can paste a photo, make a format copy and export WebP or clipboard PNG', async () => {
+  const app = await setup();
+  const { w, $, input } = app;
+  try {
+    const pngFile = new w.File([w.atob(png.split(',')[1])], 'paste.png', { type: 'image/png' });
+    const paste = () => {
+      const event = new w.Event('paste', { bubbles: true, cancelable: true });
+      Object.defineProperty(event, 'clipboardData', { value: { files: [pngFile] } });
+      return event;
+    };
+    const textPaste = paste();
+    $('product-name').dispatchEvent(textPaste);
+    assert.equal(textPaste.defaultPrevented, false);
+    const imagePaste = paste();
+    w.document.body.dispatchEvent(imagePaste);
+    assert.equal(imagePaste.defaultPrevented, true);
+    await until(() => $('file-status').textContent.includes('Фото загружено.'));
+    input('product-name', 'Мой товар');
+    input('photo-warmth', '25');
+    input('photo-blur', '3');
+    input('duplicate-format', 'story');
+    const copy = w.SATUCARD_EDITOR.snapshot().model;
+    assert.deepEqual(Array.from(copy.views, view => view.settings.format), ['portrait', 'story']);
+    assert.equal(copy.settings.photo.warmth, 25);
+    assert.equal(copy.settings.photo.blur, 3);
+    $('undo-button').click();
+    assert.equal(w.SATUCARD_EDITOR.snapshot().model.views.length, 1);
+    assert.equal($('card-format').value, 'portrait');
+    $('photo-palette').click();
+    const palette = w.SATUCARD_EDITOR.snapshot().model.settings;
+    assert.equal(palette.customColors, true);
+    assert.match(palette.background, /^#[0-9a-f]{6}$/);
+    assert.notEqual(palette.background, palette.accent);
+    $('undo-button').click();
+    assert.equal($('custom-colors').checked, false);
+
+    input('export-format', 'webp');
+    $('download-button').click();
+    await until(() => !($('download-button').disabled));
+    assert.equal(app.downloads.at(-1).type, 'image/webp');
+    $('download-set').click();
+    await until(() => !($('download-set').disabled));
+    const archive = new TextDecoder().decode(await app.downloads.at(-1).arrayBuffer());
+    assert.match(archive, /\.webp/);
+
+    let copied;
+    w.ClipboardItem = class { constructor(items) { this.items = items; } };
+    Object.defineProperty(w.navigator, 'clipboard', { value: { write: async ([item]) => { copied = await item.items['image/png']; } } });
+    $('copy-card-image').click();
+    await until(() => !($('copy-card-image').disabled));
+    assert.equal(copied.type, 'image/png');
+  } finally { app.dom.window.close(); }
+});
+
 test('copy previews are explicit, cancelable and cannot overwrite newer fields or helper inputs', async () => {
   const app = await setup(); const { $, input } = app;
   try {

@@ -10,7 +10,7 @@ const number = (value, min, max) => typeof value === 'number' && Number.isFinite
 const invalid = () => new AccountError('Неверный формат проекта SatuCard.', 400, 'invalid_project');
 const textFields = { title: 60, subtitle: 90, description: 180, badge: 24, brandName: 28 };
 const enums = { template: ['studio', 'accent', 'minimal', 'noir', 'neon', 'editorial', 'bloom', 'bold'], format: ['portrait', 'portrait34', 'square', 'story'], purpose: ['cover', 'advantages', 'dimensions', 'specifications', 'contents', 'instructions'], category: ['generic', 'electronics', 'clothing', 'beauty', 'home'], font: ['manrope', 'dejavu'], textAlign: ['left', 'center'] };
-const photoRanges = { zoom: [0.7, 2.5], x: [0, 100], y: [0, 100], rotation: [-180, 180], brightness: [50, 150], contrast: [50, 150], saturation: [0, 180], radius: [0, 50] };
+const photoRanges = { zoom: [0.7, 2.5], x: [0, 100], y: [0, 100], rotation: [-180, 180], brightness: [50, 150], contrast: [50, 150], saturation: [0, 180], radius: [0, 50], warmth: [0, 60], blur: [0, 12] };
 function settings(value) {
   if (!keys(value, [...Object.keys(textFields), ...Object.keys(enums), 'price', 'oldPrice', 'features', 'customColors', 'background', 'accent', 'textColor', 'textScale', 'showPrice', 'showBrand', 'photo'])) return false;
   return Object.entries(value).every(([key, field]) => {
