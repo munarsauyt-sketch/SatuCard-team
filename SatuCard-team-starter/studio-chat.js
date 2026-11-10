@@ -132,10 +132,15 @@
         $('ai-data-question').textContent = `Передать ${providerName} запрос, тексты карточки, факты и историю этого чата?`;
         $('ai-google-data-policy').hidden = activeProvider !== 'gemini';
         $('ai-photo-consent').parentElement.lastChild.textContent = ` Разрешаю отправить уменьшенное основное фото ${providerName} для выбора оформления. Не для определения свойств товара.`;
-        configured = result.available === true;
+        configured = result.available === true && result.hasAccess === true;
+        $('ai-chat-access-note').textContent = result.adminOnly && !result.hasAccess
+          ? 'ИИ доступен в платной версии. Сейчас доступ открыт только администратору.'
+          : 'sAI ещё не подключён. Ответы появятся после подключения.';
+        $('ai-chat-setup-details').hidden = result.adminOnly === true && !result.hasAccess;
       } catch {
         if (token !== statusGeneration) return;
         configured = false;
+        $('ai-chat-access-note').textContent = 'Не удалось проверить доступ к sAI. Попробуйте позже.';
         fallbackProviders = providerOptions('fallback', [], []);
         evaluationProviders = providerOptions('evaluation', [], []);
         modelProviders = providerOptions('model', [], []);
@@ -403,6 +408,7 @@
       const next = event.detail?.user?.id || null;
       if (next === account) return;
       if (account !== undefined) {
+        configured = false;
         modelProviders = providerOptions('model', [], []);
         resetProduct('Аккаунт изменился. Переписка очищена.');
       }

@@ -3,14 +3,14 @@ import assert from 'node:assert/strict';
 import { GET, POST } from '../api/chat.js';
 import { completed, imageDataUrl } from './copy-fixtures.js';
 const originalFetch = globalThis.fetch;
-const keys = ['SUPABASE_URL', 'SUPABASE_SECRET_KEY', 'OPENAI_API_KEY', 'OPENAI_COPY_MODEL', 'OPENAI_COPY_ALLOWED_USER_IDS', 'OPENAI_COPY_ENABLED'];
+const keys = ['SUPABASE_URL', 'SUPABASE_SECRET_KEY', 'OPENAI_API_KEY', 'OPENAI_COPY_MODEL', 'OPENAI_COPY_ALLOWED_USER_IDS', 'OPENAI_COPY_ENABLED', 'GEMINI_ADMIN_USER_ID'];
 const saved = Object.fromEntries(keys.map(key => [key, process.env[key]]));
 afterEach(() => { globalThis.fetch = originalFetch; for (const key of keys) { if (saved[key] === undefined) delete process.env[key]; else process.env[key] = saved[key]; } });
 let counter = 0, id;
 const input = { message: 'Өзгерт', history: [], card: {title: 'Кесе', subtitle: '', description: '', features: [], template: 'studio'}, language: 'kk', facts: 'Ақ түс', tone: 'friendly' };
 function setup({ confirmed = true, complete = true, proof = false, provider = 'ok', quota = 'ok' } = {}) {
   id = `aaac8be7-1386-45b8-8d49-${String(++counter).padStart(12, '0')}`;
-  process.env.OPENAI_COPY_ALLOWED_USER_IDS = id; process.env.OPENAI_COPY_ENABLED = 'true'; delete process.env.OPENAI_COPY_MODEL;
+  process.env.GEMINI_ADMIN_USER_ID = id; process.env.OPENAI_COPY_ALLOWED_USER_IDS = id; process.env.OPENAI_COPY_ENABLED = 'true'; delete process.env.OPENAI_COPY_MODEL;
   process.env.SUPABASE_URL = 'https://example.supabase.co'; process.env.SUPABASE_SECRET_KEY = 'private-supabase'; process.env.OPENAI_API_KEY = 'private-ai';
   const calls = [];
   globalThis.fetch = async (url, options) => {
@@ -34,13 +34,13 @@ function request(body = input, auth = true, type = 'application/json') {
   return new Request('https://example.com/api/copy', { method: 'POST', headers: { 'content-type': type, ...(auth ? { authorization: 'Bearer test.token.signature' } : {}) }, body: JSON.stringify(body) });
 }
 test('availability is config only, never calls provider or exposes secrets', async () => {
-  const calls = setup(); assert.deepEqual(await (await GET()).json(), { available: true, modelVerified: false }); assert.equal(calls.length, 0);
-  delete process.env.OPENAI_API_KEY; assert.deepEqual(await (await GET()).json(), { available: false, modelVerified: false });
+  const calls = setup(); assert.deepEqual(await (await GET()).json(), { available: true, hasAccess: false, adminOnly: true, modelVerified: false }); assert.equal(calls.length, 0);
+  delete process.env.OPENAI_API_KEY; assert.deepEqual(await (await GET()).json(), { available: false, hasAccess: false, adminOnly: true, modelVerified: false });
 });
 test('AI requires explicit activation and exact Terra model; no automatic expensive migration', async () => {
   for (const patch of [{ OPENAI_COPY_ENABLED: '' }, { OPENAI_COPY_ENABLED: 'false' }, { OPENAI_COPY_MODEL: 'gpt-4.1-mini' }, { OPENAI_COPY_MODEL: 'gpt-6.1' }]) {
     const calls = setup(); Object.assign(process.env, patch);
-    assert.deepEqual(await (await GET()).json(), { available: false, modelVerified: false }); assert.equal((await POST(request())).status, 503); assert.equal(calls.length, 0);
+    assert.deepEqual(await (await GET()).json(), { available: false, hasAccess: false, adminOnly: true, modelVerified: false }); assert.equal((await POST(request())).status, 503); assert.equal(calls.length, 0);
   }
 });
 test('full account verification precedes quota and provider', async () => {

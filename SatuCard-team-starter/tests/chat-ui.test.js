@@ -42,19 +42,30 @@ async function chatApp(options = {}) {
   const requests = [];
   const evaluations = [];
   const app = await setup({ ...options, fetch: async (url, init = {}) => {
-    if (!init.method) return Response.json({ available: options.available !== false, modelVerified: false, provider: options.provider, singleUserPilot: options.singleUserPilot, fallbackProviders: options.fallbackProviders, evaluationProviders: options.evaluationProviders });
+    if (!init.method) return Response.json({ available: options.available !== false, hasAccess: options.hasAccess !== false, adminOnly: true, modelVerified: false, provider: options.provider, singleUserPilot: options.singleUserPilot, fallbackProviders: options.fallbackProviders, evaluationProviders: options.evaluationProviders });
     if (url.includes('?previewEvaluation=')) {
       evaluations.push({ url, body: init.body });
       return options.evaluate();
     }
     requests.push(JSON.parse(init.body)); return options.reply ? options.reply(init) : Response.json(reply);
   }});
-  await until(() => !app.$('ai-chat-recheck').disabled && app.$('ai-chat-setup').hidden === (options.available !== false));
+  await until(() => !app.$('ai-chat-recheck').disabled && app.$('ai-chat-setup').hidden === (options.available !== false && options.hasAccess !== false));
   app.$('open-ai-chat').click();
   return { ...app, requests, evaluations };
 }
 function check(app, id, value = true) { app.$(id).checked = value; app.$(id).dispatchEvent(new app.w.Event('input', { bubbles: true })); }
 function send(app, text = 'Сделай короче', approve = true) { app.input('ai-chat-input', text); app.$('ai-chat-form').dispatchEvent(new app.w.Event('submit', { bubbles: true, cancelable: true })); if (approve && !app.$('ai-data-consent').hidden) app.$('ai-data-confirm').click(); }
+
+test('free accounts see paid access and cannot submit through chat controls', async () => {
+  const app = await chatApp({ hasAccess: false });
+  try {
+    assert.match(app.$('ai-chat-access-note').textContent, /платной версии/);
+    send(app);
+    assert.equal(app.$('ai-chat-send').disabled, true);
+    assert.equal(app.$('ai-translate').disabled, true);
+    assert.equal(app.requests.length, 0);
+  } finally { app.dom.window.close(); }
+});
 test('visible AI entry, truthful disconnected state and manual editor work without AI', async () => {
   const app = await chatApp({available:false});
   try {

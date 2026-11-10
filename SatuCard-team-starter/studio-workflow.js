@@ -10,6 +10,7 @@
     let cloudIdentity = null, cloudBusy = false, cloudGeneration = 0, copyDraft = null, copyRevision = -1, copyBusy = false, aiAvailable = false;
     let exportingSet = false, checking = false, removing = false, copyInputVersion = 0;
     let copyController = null;
+    let aiStatusGeneration = 0;
     let knownUserId;
     let copyView = editor.snapshot().model.activeViewId, copyPhoto = editor.snapshot().images.photo;
     window.SATUCARD_AUTH?.getSession().then(session => { if (knownUserId === undefined) knownUserId = session?.user?.id || null; });
@@ -100,6 +101,7 @@
       const userId = event.detail?.user?.id || null;
       if (knownUserId !== undefined && userId !== knownUserId) { detachCloud(); $('copy-photo').checked = false; $('cloud-project-list').replaceChildren(); invalidateCopy('Аккаунт изменился. Создайте подсказку заново.'); }
       knownUserId = userId;
+      checkAiAccess();
     });
 
     function invalidateCopy(text) {
@@ -188,11 +190,31 @@
       } catch (error) { message('copy-status', error.message, true); }
     });
     $('copy-dismiss').addEventListener('click', () => invalidateCopy('Черновик закрыт.'));
-    if (location.protocol !== 'file:') fetch('api/copy', { cache: 'no-store', ...(typeof AbortSignal.timeout === 'function' ? { signal: AbortSignal.timeout(8000) } : {}) }).then(response => response.ok ? response.json() : {}).then(result => {
-      aiAvailable = result.available === true; $('copy-ai').disabled = copyBusy || !aiAvailable;
-      if (!copyBusy && !copyDraft) message('copy-status', aiAvailable ? 'ИИ доступен подключённым аккаунтам. Шаблон работает локально.' : 'ИИ пока не подключён владельцем сайта. Шаблон работает без ключей и сети.');
-    }).catch(() => { if (!copyBusy && !copyDraft) message('copy-status', 'ИИ недоступен. Шаблон работает без сети.'); });
-    else message('copy-status', 'Локальный режим: доступен шаблон. ИИ требует сервер и ключ владельца сайта.');
+    async function checkAiAccess() {
+      const token = ++aiStatusGeneration;
+      aiAvailable = false; $('copy-ai').disabled = true;
+      if (location.protocol === 'file:') {
+        message('copy-status', 'Локальный режим: доступен шаблон.');
+        return;
+      }
+      try {
+        const session = await window.SATUCARD_AUTH?.getSession().catch(() => null);
+        if (token !== aiStatusGeneration) return;
+        const headers = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
+        const response = await fetch('api/copy', { headers, cache: 'no-store', ...(typeof AbortSignal.timeout === 'function' ? { signal: AbortSignal.timeout(8000) } : {}) });
+        const result = response.ok ? await response.json() : {};
+        if (token !== aiStatusGeneration) return;
+        aiAvailable = result.available === true && result.hasAccess === true;
+        if (!copyBusy && !copyDraft) message('copy-status', result.adminOnly && !result.hasAccess
+          ? 'ИИ доступен в платной версии. Сейчас доступ открыт только администратору.'
+          : aiAvailable ? 'ИИ доступен. Шаблон работает локально.' : 'ИИ пока не подключён.');
+      } catch {
+        if (token === aiStatusGeneration && !copyBusy && !copyDraft) message('copy-status', 'ИИ недоступен. Шаблон работает без сети.');
+      } finally {
+        if (token === aiStatusGeneration) $('copy-ai').disabled = copyBusy || !aiAvailable;
+      }
+    }
+    checkAiAccess();
 
     $('background-tolerance').addEventListener('input', () => { $('background-tolerance-value').value = $('background-tolerance').value; });
     $('remove-background').addEventListener('click', async () => {
