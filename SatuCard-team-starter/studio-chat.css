@@ -33,6 +33,7 @@ body.ai-chat-open .ai-floating-launch { visibility: hidden; }
 .ai-message[data-role="user"] { padding: 14px 20px; border-radius: 20px 20px 5px 20px; background: var(--ai-input); align-self: flex-end; }
 .ai-message strong { display: none; }
 .ai-message p { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; font-size: 17px; line-height: 1.7; }
+.ai-message-model { display: block; margin-top: 4px; color: var(--ai-muted); font-size: 14px; }
 .ai-chat-options { margin-top: auto; padding-top: 24px; }
 .ai-chat-options summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 15px; cursor: pointer; color: var(--ai-muted); list-style: none; padding: 10px 0; }
 .ai-chat-options summary::-webkit-details-marker { display: none; }

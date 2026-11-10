@@ -66,10 +66,17 @@
     function trimMessages() {
       while ($('ai-chat-messages').children.length > 8) $('ai-chat-messages').firstElementChild.remove();
     }
-    function append(role, content) {
+    function append(role, content, modelLabel) {
       const row = document.createElement('div'), label = document.createElement('strong'), paragraph = document.createElement('p');
       row.className = 'ai-message'; row.dataset.role = role; row.setAttribute('aria-label', role === 'user' ? 'Вы' : 'sAI'); label.textContent = role === 'user' ? 'Вы' : 'sAI'; paragraph.textContent = content;
-      row.append(label, paragraph); $('ai-chat-messages').append(row);
+      row.append(label, paragraph);
+      if (modelLabel) {
+        const model = document.createElement('small');
+        model.className = 'ai-message-model';
+        model.textContent = 'Модель запроса · ' + modelLabel;
+        row.append(model);
+      }
+      $('ai-chat-messages').append(row);
       return row;
     }
     function open(event) {
@@ -368,18 +375,19 @@
         }
         if (!validReply(result)) throw new Error('Некорректный ответ sAI. Карточка не изменена.');
         pendingRow = null;
-        append('assistant', result.reply);
+        const anyModelLabel = modelProviders.get(result.modelUsed) || modelProviders.get(result.providerUsed);
+        const modelLabel = result.providerUsed === 'anymodel' ? (anyModelLabel ? anyModelLabel + ' · AnyModel' : 'AnyModel') :
+          fallbackProviders.get(result.providerUsed) || (activeProvider === 'gemini' ? 'Google Gemini' : 'OpenAI');
+        append('assistant', result.reply, modelLabel);
         trimMessages();
         history.push({ role: 'user', content: message }, { role: 'assistant', content: result.reply });
         history = history.slice(-8); while (history.reduce((sum, item) => sum + item.content.length, 0) > 12000) history.splice(0, 2);
         $('ai-chat-input').value = '';
         if (result.proposal || mode === 'translate') pendingMode = null;
-        const reserveLabel = modelProviders.get(result.providerUsed) || fallbackProviders.get(result.providerUsed);
-        const providerNote = reserveLabel ? ' Ответ подготовил ' + reserveLabel + '.' : '';
         if (result.proposal) {
           showProposal(result.proposal, revision, snapshot, { translate, newProduct, suggestTemplate: mode === 'build' });
-          status('Черновик готов. Проверь изменения перед применением.' + providerNote);
-        } else status('Можно продолжить разговор. Карточка не менялась.' + providerNote);
+          status('Черновик готов. Проверь изменения перед применением.');
+        } else status('');
         $('ai-chat-messages').lastElementChild?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
       } catch (error) { if (current()) { pendingRow?.remove(); pendingRow = null; status(error.name === 'AbortError' ? 'Время ожидания истекло. Попытка могла учитываться в лимите. Повторите позже.' : error.message, true); } }
       finally { clearTimeout(timer); if (token === generation) { controller = null; busy = false; buttons(); } }

@@ -57,7 +57,8 @@ function check(app, id, value = true) { app.$(id).checked = value; app.$(id).dis
 function send(app, text = 'Сделай короче', approve = true) { app.input('ai-chat-input', text); app.$('ai-chat-form').dispatchEvent(new app.w.Event('submit', { bubbles: true, cancelable: true })); if (approve && !app.$('ai-data-consent').hidden) app.$('ai-data-confirm').click(); }
 
 test('paid chat offers authorized models and obtains consent before sending selected text to AnyModel', async () => {
-  const app = await chatApp({ paidCustomer: true, models: [{ id: 'cx/gpt-6-luna', label: 'GPT-6 Luna' }] });
+  const app = await chatApp({ paidCustomer: true, models: [{ id: 'cx/gpt-6-luna', label: 'GPT-6 Luna' }],
+    reply: () => Response.json({ ...reply, providerUsed: 'anymodel', modelUsed: 'cx/gpt-6-luna' }) });
   try {
     assert.equal(app.$('ai-model-option').hidden, false);
     assert.equal(app.$('ai-photo-consent').disabled, true);
@@ -70,6 +71,8 @@ test('paid chat offers authorized models and obtains consent before sending sele
     assert.equal(app.requests[0].selectedProvider, 'anymodel');
     assert.equal(app.requests[0].selectedModel, 'cx/gpt-6-luna');
     assert.equal(app.requests[0].imageDataUrl, undefined);
+    await until(() => app.$('ai-chat-messages').querySelector('.ai-message-model'));
+    assert.equal(app.$('ai-chat-messages').querySelector('.ai-message-model').textContent, 'Модель запроса · GPT-6 Luna · AnyModel');
   } finally { app.dom.window.close(); }
 });
 
@@ -234,7 +237,7 @@ test('Kazakh translation creates a separate copy with one undo, and the reserve 
     assert.equal(app.requests[0].mode, 'translate');
     assert.equal(app.requests[0].language, 'kk');
     assert.equal(app.requests[0].fallbackProvider, 'cohere');
-    assert.match(app.$('ai-chat-status').textContent, /Cohere/);
+    assert.match(app.$('ai-chat-messages').querySelector('.ai-message-model').textContent, /Cohere/);
     check(app, 'ai-reviewed');
     app.$('ai-apply').click();
     const after = app.w.SATUCARD_EDITOR.snapshot().model;
