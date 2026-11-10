@@ -7,7 +7,7 @@
     if (started || !window.SATUCARD_EDITOR || !$('ai-chat')) return;
     started = true;
     const editor = window.SATUCARD_EDITOR, renderer = window.SATUCARD_RENDERER;
-    let activeProvider = null, singleUserPilot = false;
+    let activeProvider = null, singleUserPilot = false, paidCustomer = false;
     let fallbackProviders = new Map(), evaluationProviders = new Map(), modelProviders = new Map();
     let configured = false, busy = false, generation = 0, controller = null, proposal = null, proposalRevision = -1;
     let pendingRow = null, proposalIsTranslation = false, proposalStartsProduct = false, pendingMode = null, buildName = '', evaluationRunning = false;
@@ -18,7 +18,7 @@
     const selectedFields = () => fieldChoices.filter(field => field.checked).map(field => field.dataset.aiField);
     const status = (text, error = false) => { $('ai-chat-status').textContent = text; $('ai-chat-status').classList.toggle('error', error); };
     function buttons() {
-      const paidModel = modelProviders.has($('ai-model-provider').value);
+      const paidModel = paidCustomer || modelProviders.has($('ai-model-provider').value);
       $('ai-chat-send').disabled = busy || !configured || !$('ai-chat-input').value.trim();
       $('ai-chat-stop').hidden = !busy;
       $('ai-chat-input').readOnly = busy;
@@ -127,19 +127,28 @@
         const fallback = result.fallbackProviders ?? (result.groqFallbackAvailable ? [{ id: 'groq', label: 'Groq' }] : []);
         fallbackProviders = providerOptions('fallback', nextProvider === 'gemini' ? fallback : [], ['groq', 'mistral', 'cloudflare', 'cohere']);
         evaluationProviders = providerOptions('evaluation', nextProvider === 'gemini' ? result.evaluationProviders : [], ['alibaba', 'scaleway']);
-        modelProviders = providerOptions('model', nextProvider === 'gemini' ? result.selectableProviders : [], ['anymodel']);
-        const providerName = activeProvider === 'gemini' ? 'Google Gemini' : 'OpenAI';
+        paidCustomer = result.paidCustomer === true;
+        const models = Array.isArray(result.models) ? result.models.filter(model =>
+          typeof model?.id === 'string' && /^(?:ag|cx|cc)\/[a-z0-9.-]+$/.test(model.id)) : [];
+        const modelOptions = models.length ? models : nextProvider === 'gemini' ? result.selectableProviders : [];
+        modelProviders = providerOptions('model', modelOptions, ['anymodel', ...models.map(model => model.id)]);
+        const select = $('ai-model-provider');
+        select.options[0].textContent = paidCustomer ? 'Автовыбор по тарифу' : 'Gemini';
+        const providerName = paidCustomer ? 'AnyModel' : activeProvider === 'gemini' ? 'Google Gemini' : 'OpenAI';
         $('ai-data-question').textContent = `Передать ${providerName} запрос, тексты карточки, факты и историю этого чата?`;
-        $('ai-google-data-policy').hidden = activeProvider !== 'gemini';
+        $('ai-google-data-policy').hidden = paidCustomer || activeProvider !== 'gemini';
         $('ai-photo-consent').parentElement.lastChild.textContent = ` Разрешаю отправить уменьшенное основное фото ${providerName} для выбора оформления. Не для определения свойств товара.`;
         configured = result.available === true && result.hasAccess === true;
         $('ai-chat-access-note').textContent = result.adminOnly && !result.hasAccess
           ? 'ИИ доступен в платной версии. Сейчас доступ открыт только администратору.'
-          : 'sAI ещё не подключён. Ответы появятся после подключения.';
+          : !result.hasAccess && result.adminOnly === false ? 'Для чата нужен активный тариф.' : 'sAI ещё не подключён. Ответы появятся после подключения.';
+        $('ai-chat-plans').hidden = result.adminOnly !== false || result.hasAccess === true;
         $('ai-chat-setup-details').hidden = result.adminOnly === true && !result.hasAccess;
       } catch {
         if (token !== statusGeneration) return;
         configured = false;
+        paidCustomer = false;
+        $('ai-chat-plans').hidden = true;
         $('ai-chat-access-note').textContent = 'Не удалось проверить доступ к sAI. Попробуйте позже.';
         fallbackProviders = providerOptions('fallback', [], []);
         evaluationProviders = providerOptions('evaluation', [], []);
@@ -306,8 +315,10 @@
       event.preventDefault(); if (busy || !configured) return;
       const message = $('ai-chat-input').value.trim(); if (!message || message.length > 1500) return;
       const modelChoice = $('ai-model-provider').value;
-      const selectedProvider = modelProviders.has(modelChoice) ? modelChoice : null;
-      if (!selectedProvider && !singleUserPilot && !textConsent) { $('ai-data-consent').hidden = false; $('ai-data-confirm').focus(); return; }
+      const selectedProvider = paidCustomer || modelProviders.has(modelChoice) ? 'anymodel' : null;
+      if ((paidCustomer || (!selectedProvider && !singleUserPilot)) && !textConsent) {
+        $('ai-data-consent').hidden = false; $('ai-data-confirm').focus(); return;
+      }
       const snapshot = editor.snapshot(), revision = editor.revision;
       const previousProposal = proposal && proposalRevision === revision ? editedProposal() : null;
       const mode = pendingMode;
@@ -335,7 +346,10 @@
         }
         if (mode) body.mode = mode;
         if (previousProposal?.title) body.previousProposal = previousProposal;
-        if (selectedProvider) body.selectedProvider = selectedProvider;
+        if (selectedProvider) {
+          body.selectedProvider = selectedProvider;
+          if (modelProviders.has(modelChoice) && modelChoice !== 'anymodel') body.selectedModel = modelChoice;
+        }
         else {
           const fallback = $('ai-fallback-provider').value;
           if (fallbackProviders.has(fallback)) body.fallbackProvider = fallback;
@@ -409,6 +423,7 @@
       if (next === account) return;
       if (account !== undefined) {
         configured = false;
+        paidCustomer = false;
         modelProviders = providerOptions('model', [], []);
         resetProduct('Аккаунт изменился. Переписка очищена.');
       }

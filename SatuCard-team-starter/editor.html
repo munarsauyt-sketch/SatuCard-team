@@ -19,7 +19,7 @@
   <script src="cloud-projects.js?v=workflow-1" defer></script>
   <script src="editor.js?v=sai-studio-draft-1" defer></script>
   <script src="studio-workflow.js?v=paid-ai-1" defer></script>
-  <script src="studio-chat.js?v=paid-ai-1" defer></script>
+  <script src="studio-chat.js?v=paid-ai-2" defer></script>
   <link rel="stylesheet" href="studio-chat.css?v=sai-studio-draft-1">
   <link rel="stylesheet" href="studio-workflow.css?v=sai-studio-draft-1">
   <link rel="stylesheet" href="editor-tour.css?v=20261105">
@@ -156,7 +156,7 @@
   <aside id="ai-chat" class="ai-chat" role="dialog" aria-modal="false" aria-labelledby="ai-chat-title" hidden>
     <header class="ai-chat-header"><h2 id="ai-chat-title">sAI</h2><div class="ai-chat-header-actions"><button id="ai-chat-new" class="ai-quiet-button" type="button">Новый чат</button><button id="ai-chat-close" class="ai-close-button" type="button" aria-label="Закрыть чат sAI">×</button></div></header>
     <div class="ai-chat-scroll">
-      <div id="ai-chat-setup" class="ai-chat-setup" hidden><p id="ai-chat-access-note">Проверяем доступ к sAI…</p><details id="ai-chat-setup-details"><summary>Как подключить</summary><p>Владелец сайта подключает серверный ключ, доступ к модели и лимиты. Не вводите ключи в чат.</p><button id="ai-chat-recheck" type="button" class="ai-quiet-button">Проверить снова</button></details></div>
+      <div id="ai-chat-setup" class="ai-chat-setup" hidden><p id="ai-chat-access-note">Проверяем доступ к sAI…</p><a id="ai-chat-plans" href="pricing.html" hidden>Посмотреть тарифы</a><details id="ai-chat-setup-details"><summary>Как подключить</summary><p>Владелец сайта подключает серверный ключ, доступ к модели и лимиты. Не вводите ключи в чат.</p><button id="ai-chat-recheck" type="button" class="ai-quiet-button">Проверить снова</button></details></div>
       <div class="ai-editor-actions" aria-label="Действия с карточкой">
         <button id="ai-build-toggle" class="ai-quiet-button" type="button" aria-expanded="false" aria-controls="ai-build-panel">Собрать карточку</button>
         <button id="ai-translate" class="ai-quiet-button" type="button">Копия на қазақша</button>
@@ -165,7 +165,7 @@
       <div id="ai-model-option" hidden>
         <label for="ai-model-provider">Модель ответа</label>
         <select id="ai-model-provider" aria-describedby="ai-model-details"><option value="">Gemini</option></select>
-        <p id="ai-model-details" class="ai-before">Sol через AnyModel расходует купленные токены. При отправке он получит текст карточки, факты, сообщение и последние реплики без фото.</p>
+        <p id="ai-model-details" class="ai-before">Модели AnyModel получают текст карточки, факты, сообщение и последние реплики.</p>
       </div>
       <section id="ai-build-panel" class="ai-build-panel" aria-labelledby="ai-build-title" hidden>
         <h3 id="ai-build-title">Данные для черновика</h3>

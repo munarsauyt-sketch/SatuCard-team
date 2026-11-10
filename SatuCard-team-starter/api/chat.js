@@ -5,7 +5,11 @@ import { readAccount, accountFailure, accountJson } from '../lib/account.js';
 import { validateChatInput as validateInput, generateChat as generateCopy, MAX_CHAT_REQUEST_BYTES as MAX_REQUEST_BYTES } from '../lib/chat.js';
 import { COPY_MODEL } from '../lib/copy.js';
 import { reserveCopyQuota } from '../lib/copy-quota.js';
-import { AI_ACCESS_MESSAGE, hasAiAccess, isAiAdmin } from '../lib/ai-access.js';
+import { AI_ACCESS_MESSAGE, accountAiAccess, hasAiAccess, isAiAdmin } from '../lib/ai-access.js';
+import { availableAiModels } from '../lib/ai-models.js';
+import { generatePaidChat } from '../lib/paid-chat.js';
+import { paidAccessEnabled } from '../lib/billing.js';
+import { ANYMODEL_MODEL } from '../lib/anymodel.js';
 
 const GEMINI_TIMEOUT_MS = 60000;
 const RESERVE_TIMEOUT_MS = 12000;
@@ -49,13 +53,25 @@ export async function GET(request) {
   const config = configuration();
   const users = allowedUsers();
   const userCount = users.size;
-  const available = Boolean(enabled() && config && apiKey() && userCount);
-  const hasAccess = await hasAiAccess(request, config);
-  const fallbackProviders = available && geminiSelected() ? availableFallbacks() : [];
-  const evaluationProviders = available && geminiSelected() ? availableEvaluations() : [];
-  let sol = available && geminiSelected() ? configuredSol() : null;
-  if (!hasAccess) sol = null;
-  return accountJson({ available, hasAccess, adminOnly: true, modelVerified: false,
+  const legacyAvailable = Boolean(enabled() && config && apiKey() && userCount);
+  const paidEnabled = paidAccessEnabled();
+  const anymodel = configuredSol();
+  let access = { isAdmin: false, hasAccess: false, ready: false, active: null };
+  if (!paidEnabled) access.hasAccess = await hasAiAccess(request, config);
+  else if (config && request?.headers.get('authorization')) {
+    try {
+      const { user } = await readAccount(request, config, { complete: true });
+      access = await accountAiAccess(config, user);
+    } catch {}
+  }
+  const { hasAccess } = access;
+  const paidCustomer = paidEnabled && hasAccess && !access.isAdmin;
+  const available = paidCustomer ? Boolean(anymodel) : legacyAvailable;
+  const fallbackProviders = !paidCustomer && available && geminiSelected() ? availableFallbacks() : [];
+  const evaluationProviders = !paidCustomer && available && geminiSelected() ? availableEvaluations() : [];
+  const sol = !paidCustomer && available && geminiSelected() && hasAccess ? anymodel : null;
+  return accountJson({ available, hasAccess, adminOnly: !paidEnabled, modelVerified: false,
+    ...(paidEnabled && hasAccess ? { paidCustomer, models: anymodel ? availableAiModels(access) : [] } : {}),
     ...(geminiSelected() ? { provider: 'gemini', model: geminiModel(), singleUserPilot: available && userCount === 1 } : {}),
     ...(fallbackProviders.length ? { fallbackProviders } : {}),
     ...(evaluationProviders.length ? { evaluationProviders } : {}),
@@ -64,16 +80,21 @@ export async function GET(request) {
 }
 export async function POST(request) {
   const config = configuration();
-  if (!config || !enabled()) return accountJson({ error: 'ИИ-помощник пока не настроен.', code: 'ai_unavailable' }, 503);
+  if (!config || (!enabled() && !paidAccessEnabled())) return accountJson({ error: 'ИИ-помощник пока не настроен.', code: 'ai_unavailable' }, 503);
   let user;
   try { ({ user } = await readAccount(request, config, { complete: true })); }
   catch (error) { return accountFailure(error); }
-  if (!isAiAdmin(user)) return accountJson({ error: AI_ACCESS_MESSAGE, code: 'ai_subscription_required' }, 403);
+  const access = await accountAiAccess(config, user);
+  if (!access.hasAccess) return accountJson({
+    error: access.ready ? AI_ACCESS_MESSAGE : 'Не удалось проверить платный доступ. Обратитесь в поддержку.',
+    code: access.ready ? 'ai_subscription_required' : 'billing_unavailable'
+  }, access.ready ? 403 : 503);
   const key = apiKey();
-  if (!key) return accountJson({ error: 'ИИ-помощник пока не настроен. Можно использовать локальный шаблон.', code: 'ai_unavailable' }, 503);
-  if (!allowedUsers().has(user.id.toLowerCase())) return accountJson({ error: 'ИИ доступен только аккаунтам, подключённым владельцем сайта. Используйте локальный шаблон.', code: 'ai_access_required' }, 403);
+  if (access.isAdmin && (!key || !enabled())) return accountJson({ error: 'ИИ-помощник пока не настроен. Можно использовать локальный шаблон.', code: 'ai_unavailable' }, 503);
+  if (access.isAdmin && !allowedUsers().has(user.id.toLowerCase())) return accountJson({ error: 'ИИ доступен только аккаунтам, подключённым владельцем сайта. Используйте локальный шаблон.', code: 'ai_access_required' }, 403);
   if (!/^application\/json(?:\s*;|$)/i.test(request.headers.get('content-type') || '')) return accountJson({ error: 'Ожидается JSON.', code: 'invalid_input' }, 415);
   const evaluationId = new URL(request.url).searchParams.get('previewEvaluation');
+  if (evaluationId !== null && !access.isAdmin) return accountJson({ error: 'Проверки провайдеров доступны администратору.', code: 'admin_required' }, 403);
   const evaluation = evaluationId !== null && geminiSelected() ? configuredEvaluation(evaluationId) : null;
   if (evaluationId !== null && !evaluation) return accountJson({ error: 'Этот тест недоступен в текущей сборке.', code: 'evaluation_unavailable' }, 404);
   let input;
@@ -93,13 +114,21 @@ export async function POST(request) {
     } finally { reader.releaseLock(); }
     input = validateInput(JSON.parse(Buffer.concat(parts).toString('utf8')));
   } catch { return accountJson({ error: 'Проверьте сообщение, историю, карточку, язык и согласие на фото.', code: 'invalid_input' }, 400); }
-  const wantsSol = input?.selectedProvider === 'anymodel';
-  const sol = wantsSol && geminiSelected() ? configuredSol() : null;
-  if (wantsSol && !sol) return accountJson({ error: 'Sol сейчас недоступен. Выберите Gemini в чате.', code: 'sol_unavailable' }, 503);
+  const wantsSol = !access.isAdmin || input?.selectedProvider === 'anymodel';
+  const sol = wantsSol && (!access.isAdmin || geminiSelected()) ? configuredSol() : null;
+  if (wantsSol && !sol) return accountJson({ error: 'AnyModel пока не подключён в этой сборке.', code: 'sol_unavailable' }, 503);
+  const models = wantsSol ? availableAiModels(access) : [];
+  const modelId = input?.selectedModel || (access.isAdmin ? ANYMODEL_MODEL : models[0]?.id);
+  const selectedModel = models.find(model => model.id === modelId);
+  if (input?.selectedModel && !paidAccessEnabled() && modelId !== ANYMODEL_MODEL) return accountJson({ error: 'Эта модель пока недоступна.', code: 'model_unavailable' }, 403);
+  if (wantsSol && !selectedModel) return accountJson({ error: 'Для выбранной модели нужен другой тариф.', code: 'plan_required' }, 403);
+  if (wantsSol && (input.imageDataUrl || input.fallbackProvider || input.groqFallbackConsent)) {
+    return accountJson({ error: 'Для этой модели отправьте текстовый запрос без фото и резерва.', code: 'invalid_input' }, 400);
+  }
   const isProduction = process.env.VERCEL_ENV === 'production';
   const isOwner = geminiSelected() && isAiAdmin(user);
   // Owner chat uses provider limits. Preview Sol and evaluations use the shared quota.
-  const usesSiteQuota = Boolean(evaluation) || !isOwner || Boolean(sol && !isProduction);
+  const usesSiteQuota = access.isAdmin && (Boolean(evaluation) || !isOwner || Boolean(sol && !isProduction));
   if (usesSiteQuota) {
     let allowed;
     try { allowed = await reserveCopyQuota(config, user.id); }
@@ -118,9 +147,12 @@ export async function POST(request) {
   }
   if (sol) {
     try {
-      const result = await generateCopy({ ...input, history: input.history.slice(-4) }, { key: sol.key, provider: 'anymodel', timeoutMs: 45000 });
-      return accountJson({ ...result, providerUsed: 'anymodel' });
+      const result = access.isAdmin
+        ? await generateCopy({ ...input, history: input.history.slice(-4) }, { key: sol.key, provider: 'anymodel', providerModel: selectedModel.id, timeoutMs: 45000 })
+        : await generatePaidChat(input, { config, user, model: selectedModel, key: sol.key });
+      return accountJson({ ...result, providerUsed: 'anymodel', ...(paidAccessEnabled() ? { modelUsed: selectedModel.id } : {}) });
     } catch (error) {
+      if (error.status && error.code) return accountFailure(error);
       const status = logFailure('anymodel', error);
       if (status === 402) return accountJson({ error: 'AnyModel отклонил запрос из-за баланса или лимита ключа.', code: 'sol_balance' }, 402);
       if (status === 429) return accountJson({ error: 'AnyModel ограничивает запросы. Попробуйте позже.', code: 'sol_quota' }, 429);

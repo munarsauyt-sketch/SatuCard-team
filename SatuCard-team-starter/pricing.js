@@ -10,6 +10,7 @@ function checkout(plan) {
   selectedPlan = plan;
   document.getElementById('checkout-plan').textContent = plan.name;
   document.getElementById('checkout-price').textContent = money(plan.priceKzt);
+  document.getElementById('checkout-account').href = 'dashboard.html?plan=' + encodeURIComponent(plan.id) + '#billing-title';
   actions.hidden = false; result.hidden = true; result.textContent = '';
   dialog.showModal();
 }
