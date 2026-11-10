@@ -92,6 +92,7 @@ test('free editing can paste a photo, make a format copy and export WebP or clip
     $('download-button').click();
     await until(() => !($('download-button').disabled));
     assert.equal(app.downloads.at(-1).type, 'image/webp');
+    assert.match($('download-status').textContent, /[1-9]\d* КБ/);
     $('download-set').click();
     await until(() => !($('download-set').disabled));
     const archive = new TextDecoder().decode(await app.downloads.at(-1).arrayBuffer());
@@ -104,6 +105,26 @@ test('free editing can paste a photo, make a format copy and export WebP or clip
     await until(() => !($('copy-card-image').disabled));
     assert.equal(copied.type, 'image/png');
   } finally { app.dom.window.close(); }
+});
+
+test('export opens the needed field when the canvas is in focus mode', async () => {
+  const app = await setup();
+  const { $, input, dom } = app;
+  try {
+    input('product-name', '');
+    $('canvas-focus-mode').click();
+    $('download-button').click();
+    assert.equal($('canvas-focus-mode').getAttribute('aria-pressed'), 'false');
+    assert.equal($('panel-content').hidden, false);
+    assert.equal(dom.window.document.activeElement, $('product-name'));
+
+    input('product-name', 'Чашка');
+    input('old-price', 'не цена');
+    $('canvas-focus-mode').click();
+    $('download-button').click();
+    assert.equal($('canvas-focus-mode').getAttribute('aria-pressed'), 'false');
+    assert.equal(dom.window.document.activeElement, $('old-price'));
+  } finally { dom.window.close(); }
 });
 
 test('copy previews are explicit, cancelable and cannot overwrite newer fields or helper inputs', async () => {

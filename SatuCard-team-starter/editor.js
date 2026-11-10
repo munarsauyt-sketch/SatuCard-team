@@ -133,7 +133,12 @@
   }
   function validDetails(requirePrice = false) {
     const price = readPrice('product-price', 'price-error'), old = readPrice('old-price', 'old-price-error', price.value);
-    if (!price.valid || !old.valid) { activateTab('content'); status('download-status', 'Исправьте цену товара.', true); return false; }
+    if (!price.valid || !old.valid) {
+      activateTab('content');
+      $(price.valid ? 'old-price' : 'product-price').focus();
+      status('download-status', 'Исправьте цену товара.', true);
+      return false;
+    }
     if (!$('product-name').value.trim()) { activateTab('content'); $('product-name').focus(); status('download-status', 'Введите название товара.', true); return false; }
     if (requirePrice && price.value === null) { activateTab('content'); $('price-error').textContent = 'Для публикации укажите цену.'; $('product-price').focus(); return false; }
     return true;
@@ -262,7 +267,7 @@
       let value;
       try { value = serialized(); } catch (_) { status('draft-status', 'Скачайте проект для сохранения.', true); return; }
       draftQueue = draftQueue.catch(() => {}).then(() => project.draftAction('put', value));
-      draftQueue.then(() => status('draft-status', 'Черновик сохранён на этом устройстве'), () => status('draft-status', 'Автосохранение недоступно — скачайте проект', true));
+      draftQueue.then(() => status('draft-status', 'Сохранено на устройстве'), () => status('draft-status', 'Сохраните проект вручную', true));
     }, 800);
   }
   function decodeImage(source) {
@@ -359,6 +364,7 @@
   }
 
   function activateTab(key, focus = false) {
+    if (focusMode?.getAttribute('aria-pressed') === 'true') setFocusMode(false);
     document.querySelectorAll('[data-editor-tab]').forEach(button => { const active = button.dataset.editorTab === key; button.setAttribute('aria-selected', String(active)); button.tabIndex = active ? 0 : -1; button.classList.toggle('is-active', active); if (active && focus) button.focus(); });
     document.querySelectorAll('[data-editor-panel]').forEach(panel => { panel.hidden = panel.dataset.editorPanel !== key; });
   }
@@ -440,7 +446,11 @@
       const { surface, layout, blob } = await rendering;
       window.SATUCARD_WORKFLOW?.showPreflight(saved, photos, surface, blob, layout);
       downloadBlob(blob, `${name}-${renderer.formats[saved.format].file}.${format.extension}`);
-      status('download-status', `Файл готов: ${surface.width} × ${surface.height}, ${(blob.size / 1024 / 1024).toFixed(1)} МБ. Проверьте загрузки браузера.`);
+      const kilobytes = blob.size / 1024;
+      const size = kilobytes < 1024
+        ? `${Math.ceil(kilobytes)} КБ`
+        : `${(kilobytes / 1024).toFixed(1).replace('.', ',')} МБ`;
+      status('download-status', `Файл готов: ${surface.width} × ${surface.height}, ${size}. Проверьте загрузки браузера.`);
     } catch (error) { status('download-status', error.message, true); }
     finally { exporting = false; $('download-button').disabled = $('copy-card-image').disabled = false; }
   }
@@ -528,13 +538,13 @@
   $('preview-zoom').addEventListener('input', () => { $('canvas-frame').style.width = Number($('canvas-frame').dataset.baseWidth || 460) * Number($('preview-zoom').value) / 100 + 'px'; $('preview-zoom-value').value = $('preview-zoom').value + '%'; });
   $('preview-fit-button').addEventListener('click', fitPreview); window.addEventListener('resize', fitPreview);
   const focusMode = $('canvas-focus-mode');
+  function setFocusMode(active) {
+    focusMode.closest('.studio-layout').classList.toggle('is-canvas-focus', active);
+    focusMode.setAttribute('aria-pressed', String(active));
+    focusMode.textContent = active ? 'Вернуть инструменты' : 'Фокус';
+    fitPreview();
+  }
   if (focusMode) {
-    function setFocusMode(active) {
-      focusMode.closest('.studio-layout').classList.toggle('is-canvas-focus', active);
-      focusMode.setAttribute('aria-pressed', String(active));
-      focusMode.textContent = active ? 'Вернуть инструменты' : 'Только холст';
-      fitPreview();
-    }
     focusMode.addEventListener('click', () => setFocusMode(focusMode.getAttribute('aria-pressed') !== 'true'));
     document.querySelector('.studio-mobile-view a[href="#studio-settings"]')?.addEventListener('click', () => {
       if (focusMode.getAttribute('aria-pressed') === 'true') setFocusMode(false);
