@@ -426,16 +426,21 @@
     return { surface, layout, blob };
   }
   async function exportImage(copy = false) {
-    if (exporting) return; readForm(); commit(); if (!validDetails()) return;
+    if (exporting || $('download-button').disabled) return;
+    readForm(); commit(); if (!validDetails()) return;
     if (copy && (!navigator.clipboard?.write || typeof window.ClipboardItem !== 'function')) {
       status('download-status', 'Копирование изображений недоступно в этом браузере. Скачайте PNG.', true); return;
     }
-    exporting = true; $('download-button').disabled = $('copy-card-image').disabled = true;
+    exporting = true;
+    $('download-button').disabled = $('copy-card-image').disabled = true;
+    const setButton = $('download-set'), setWasDisabled = setButton.disabled;
+    setButton.disabled = true;
     status('download-status', 'Подготавливаем изображение…');
     try {
-      const saved = clone(model.settings), name = filename(), format = copy ? exportFormats.png : selectedExportFormat();
-      const photos = imageAssets(), scale = Number($('export-scale').value);
-      const rendering = renderExport(saved, photos, format, scale);
+      const view = clone(activeView()), name = filename(), format = copy ? exportFormats.png : selectedExportFormat();
+      const photos = imageAssets(), scale = Number($('export-scale').value), marketplace = $('marketplace').value;
+      const exportRevision = revision;
+      const rendering = renderExport(view.settings, photos, format, scale);
       if (copy) {
         const image = rendering.then(({ blob }) => blob);
         try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': image })]); }
@@ -444,15 +449,29 @@
         return;
       }
       const { surface, layout, blob } = await rendering;
-      window.SATUCARD_WORKFLOW?.showPreflight(saved, photos, surface, blob, layout);
-      downloadBlob(blob, `${name}-${renderer.formats[saved.format].file}.${format.extension}`);
-      const kilobytes = blob.size / 1024;
-      const size = kilobytes < 1024
-        ? `${Math.ceil(kilobytes)} КБ`
-        : `${(kilobytes / 1024).toFixed(1).replace('.', ',')} МБ`;
-      status('download-status', `Файл готов: ${surface.width} × ${surface.height}, ${size}. Проверьте загрузки браузера.`);
+      if (exportRevision !== revision || format !== selectedExportFormat() || scale !== Number($('export-scale').value) || marketplace !== $('marketplace').value) {
+        status('download-status', 'Карточка или параметры экспорта изменились. Запустите скачивание ещё раз.');
+        return;
+      }
+      const download = () => {
+        downloadBlob(blob, `${name}-${renderer.formats[view.settings.format].file}.${format.extension}`);
+        const kilobytes = blob.size / 1024;
+        const size = kilobytes < 1024
+          ? `${Math.ceil(kilobytes)} КБ`
+          : `${(kilobytes / 1024).toFixed(1).replace('.', ',')} МБ`;
+        status('download-status', `Файл готов: ${surface.width} × ${surface.height}, ${size}. Проверьте загрузки браузера.`);
+      };
+      const workflow = window.SATUCARD_WORKFLOW;
+      if (workflow) {
+        const report = workflow.showPreflight(view, photos, surface, blob, layout);
+        workflow.reviewDownload([{ view, report }], download);
+      } else download();
     } catch (error) { status('download-status', error.message, true); }
-    finally { exporting = false; $('download-button').disabled = $('copy-card-image').disabled = false; }
+    finally {
+      exporting = false;
+      $('download-button').disabled = $('copy-card-image').disabled = false;
+      setButton.disabled = setWasDisabled;
+    }
   }
   async function publishCard() {
     if (publishing) return; readForm(); commit(); if (!validDetails(true)) return;

@@ -12,10 +12,23 @@
     let copyController = null;
     let aiStatusGeneration = 0;
     let knownUserId;
+    let pendingExport = null;
+    const review = $('export-review');
+    const demoFields = [
+      ['title', 'product-name', 'Название'],
+      ['subtitle', 'product-subtitle', 'Подзаголовок'],
+      ['description', 'product-description', 'Описание'],
+      ['badge', 'product-badge', 'Плашка']
+    ];
     let copyView = editor.snapshot().model.activeViewId, copyPhoto = editor.snapshot().images.photo;
     window.SATUCARD_AUTH?.getSession().then(session => { if (knownUserId === undefined) knownUserId = session?.user?.id || null; });
     const message = (id, text, error = false) => { $(id).textContent = text; $(id).classList.toggle('error', error); };
+    function closeExportReview() {
+      pendingExport = null;
+      if (review.open) review.close();
+    }
     const invalidatePreflight = reason => {
+      closeExportReview();
       const list = $('preflight-results');
       if (!list.children.length) return;
       list.replaceChildren();
@@ -241,37 +254,104 @@
       finally { removing = false; $('remove-background').disabled = !editor.snapshot().model.photoId; }
     });
 
-    function getReport(settings, images, surface, blob, layout, marketplace = $('marketplace').value) {
-      return tools.preflight(settings, { width: surface.width, height: surface.height, bytes: blob.size, mime: blob.type,
-        photoWidth: images.photo?.naturalWidth, photoHeight: images.photo?.naturalHeight, hasPhoto: Boolean(images.photo), hasLogo: Boolean(images.logo),
-        titlePreviewSize: layout ? layout.titleFontSize * 360 / layout.width : undefined, titleContrast: layout?.titleContrast }, marketplace);
+    function getReport(view, images, surface, blob, layout, marketplace = $('marketplace').value) {
+      const { settings, sampleKey } = view;
+      const sample = window.SATUCARD_SAMPLES[sampleKey];
+      const remaining = demoFields.filter(([key]) => {
+        if (!settings[key]) return false;
+        if (settings[key] === sample?.[key]) return true;
+        if (key === 'description') return Object.values(window.SATUCARD_SAMPLES).some(entry => entry.description === settings.description);
+        return key === 'badge' && settings.badge === window.SATUCARD_SAMPLES.headphones.badge;
+      }).map(([, field, label]) => ({ field, label }));
+      settings.features.forEach((value, index) => {
+        if (sample?.features.includes(value)) remaining.push({ field: `feature-${index + 1}`, label: `Пункт ${index + 1}` });
+      });
+      if (sample && settings.showPrice && settings.price === sample.price) remaining.push({ field: 'product-price', label: 'Цена' });
+      const previewScale = 360 / layout.width;
+      return tools.preflight(settings, {
+        width: surface.width, height: surface.height, bytes: blob.size, mime: blob.type,
+        photoWidth: images.photo?.naturalWidth, photoHeight: images.photo?.naturalHeight,
+        hasPhoto: Boolean(images.photo), hasLogo: Boolean(images.logo),
+        photoScale: layout.photoScale * surface.width / layout.width,
+        titlePreviewSize: layout.titleFontSize * previewScale, titleContrast: layout.titleContrast,
+        bodyText: layout.hitAreas.filter(({ field }) => field === 'product-description' || field.startsWith('feature-'))
+          .map(({ field, fontSize }) => ({ field, fontSize: fontSize * previewScale })),
+        demoFields: remaining
+      }, marketplace);
     }
-    function showPreflight(settings, images, surface, blob, layout) {
-      const report = getReport(settings, images, surface, blob, layout);
+    function fixIssue(field, viewId) {
+      closeExportReview();
+      if (viewId && editor.snapshot().model.activeViewId !== viewId) editor.selectView(viewId);
+      const tab = field.startsWith('photo-') ? 'photo' : field === 'text-color' ? 'design' : 'content';
+      $(`tab-${tab}`).click();
+      const featureFields = ['feature-1', 'feature-2', 'feature-3'];
+      const featureIndex = featureFields.indexOf(field);
+      if (featureIndex !== -1) field = featureFields.filter(id => $(id).value.trim())[featureIndex] || field;
+      const target = field === 'text-color' && $(field).disabled ? $('custom-colors') : $(field);
+      target.focus();
+    }
+    function fixButton(label, field, viewId) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'studio-text-button preflight-action';
+      button.textContent = label;
+      button.addEventListener('click', () => fixIssue(field, viewId));
+      return button;
+    }
+    function showPreflight(view, images, surface, blob, layout) {
+      const report = getReport(view, images, surface, blob, layout);
       const list = $('preflight-results');
       list.replaceChildren();
       for (const check of report.checks) {
         const li = document.createElement('li');
         li.dataset.severity = check.severity;
         li.textContent = ({ pass: '✓ ', warning: 'Внимание: ', error: 'Ошибка: ', info: '' })[check.severity] + check.message;
-        if (check.id === 'title-missing' || check.id === 'title-size' || check.id === 'title-contrast') {
-          const contrast = check.id === 'title-contrast';
-          const button = document.createElement('button');
-          button.type = 'button';
-          button.className = 'studio-text-button preflight-action';
-          button.textContent = contrast ? 'Перейти к цвету текста' : 'Перейти к заголовку';
-          button.addEventListener('click', () => {
-            $(contrast ? 'tab-design' : 'tab-content').click();
-            $(contrast ? 'text-color' : 'product-name').focus();
-          });
-          li.append(button);
+        if (check.field) {
+          const label = check.field === 'product-name' ? 'Перейти к заголовку' : check.field === 'text-color' ? 'Перейти к цвету текста' : 'Исправить';
+          li.append(fixButton(label, check.field, view.id));
         }
         list.append(li);
       }
       message('preflight-status', `${report.label}: ${surface.width} × ${surface.height}, ${(blob.size / 1024 / 1024).toFixed(2)} МБ. ${report.ok ? 'Техническая проверка завершена.' : 'Есть ошибки.'} ${report.disclaimer}`);
       $('preflight-panel').open = true; return report;
     }
-    window.SATUCARD_WORKFLOW = { showPreflight };
+    function reviewDownload(reports, download) {
+      const list = $('export-review-results');
+      list.replaceChildren();
+      for (const { view, report } of reports) {
+        for (const check of report.checks) {
+          if (check.severity !== 'warning' && check.severity !== 'error') continue;
+          if (!check.field && !['dimensions', 'aspect', 'file-size'].includes(check.id)) continue;
+          const item = document.createElement('li');
+          const text = document.createElement('span');
+          text.textContent = (reports.length > 1 ? `${view.label} · ` : '') + check.message;
+          item.append(text);
+          if (check.field) {
+            const button = fixButton('Исправить', check.field, view.id);
+            button.setAttribute('aria-label', `Исправить. ${text.textContent}`);
+            item.append(button);
+          }
+          list.append(item);
+        }
+      }
+      if (!list.children.length) {
+        download();
+        return;
+      }
+      pendingExport = download;
+      review.showModal();
+      $('export-review-title').focus();
+      message('download-status', '');
+    }
+    $('export-review-close').addEventListener('click', closeExportReview);
+    $('export-review-back').addEventListener('click', closeExportReview);
+    review.addEventListener('cancel', event => { event.preventDefault(); closeExportReview(); });
+    $('export-review-download').addEventListener('click', () => {
+      const download = pendingExport;
+      closeExportReview();
+      try { download?.(); } catch (error) { message('download-status', error.message, true); }
+    });
+    window.SATUCARD_WORKFLOW = { showPreflight, reviewDownload };
     async function checkExport() {
       if (checking) return;
       checking = true;
@@ -286,7 +366,8 @@
           message('preflight-status', 'Карточка или параметры экспорта изменились. Повторите проверку.');
           return;
         }
-        showPreflight(snapshot.model.settings, snapshot.images, surface, blob, layout);
+        const view = snapshot.model.views.find(item => item.id === snapshot.model.activeViewId);
+        showPreflight(view, snapshot.images, surface, blob, layout);
       } catch (error) { message('preflight-status', error.message, true); } finally { checking = false; $('check-export').disabled = false; }
     }
     $('check-export').addEventListener('click', checkExport);
@@ -300,23 +381,34 @@
     });
     ['export-format', 'export-scale', 'marketplace'].forEach(id => $(id).addEventListener('change', () => invalidatePreflight('Параметры экспорта изменились. Повторите проверку.')));
     $('download-set').addEventListener('click', async () => {
-      if (exportingSet) return; exportingSet = true; $('download-set').disabled = true;
-      const snapshot = editor.snapshot(), format = editor.selectedExportFormat(), scale = Number($('export-scale').value), marketplace = $('marketplace').value;
+      if (exportingSet || $('download-button').disabled) return;
+      exportingSet = true;
+      const exportButtons = ['download-set', 'download-button', 'copy-card-image'];
+      exportButtons.forEach(id => { $(id).disabled = true; });
       try {
+        const snapshot = editor.snapshot(), revision = editor.revision;
+        const format = editor.selectedExportFormat(), scale = Number($('export-scale').value), marketplace = $('marketplace').value;
         const files = [], reports = [];
         for (const [index, view] of snapshot.model.views.entries()) {
-          message('set-status', `Готовим ${index + 1} из ${snapshot.model.views.length}: ${view.label}…`);
+          message('download-status', `Готовим карточку ${index + 1} из ${snapshot.model.views.length}…`);
           const { surface, blob, layout } = await editor.renderExport(view.settings, snapshot.viewImages[view.id], format, scale);
           const name = `${String(index + 1).padStart(2, '0')}-${safeName(view.label)}.${format.extension}`;
           files.push({ name, bytes: new Uint8Array(await blob.arrayBuffer()) });
-          reports.push({ file: name, report: getReport(view.settings, snapshot.viewImages[view.id], surface, blob, layout, marketplace) });
+          reports.push({ view, file: name, report: getReport(view, snapshot.viewImages[view.id], surface, blob, layout, marketplace) });
           await new Promise(resolve => setTimeout(resolve, 0));
+          if (revision !== editor.revision || format !== editor.selectedExportFormat() || scale !== Number($('export-scale').value) || marketplace !== $('marketplace').value) {
+            message('download-status', 'Комплект или параметры экспорта изменились. Запустите скачивание ещё раз.');
+            return;
+          }
         }
         const reportText = 'SatuCard: проверка комплекта\nНе гарантия приёма площадкой. Проверьте актуальные правила категории.\n\n' + reports.map(({ file, report }) => file + '\n' + report.checks.map(check => `[${check.severity}] ${check.message}`).join('\n')).join('\n\n');
         files.push({ name: 'Проверка.txt', bytes: new TextEncoder().encode(reportText) });
-        editor.downloadBlob(new Blob([tools.createZip(files)], { type: 'application/zip' }), snapshot.filename + '-комплект.zip');
-        message('set-status', `ZIP готов: ${snapshot.model.views.length} изображений и отчёт «Проверка.txt». Экспортирована версия на момент нажатия. Проверьте предупреждения в отчёте.`);
-      } catch (error) { message('set-status', error.message, true); } finally { exportingSet = false; $('download-set').disabled = false; }
+        reviewDownload(reports, () => {
+          editor.downloadBlob(new Blob([tools.createZip(files)], { type: 'application/zip' }), snapshot.filename + '-комплект.zip');
+          message('download-status', `ZIP готов. Карточек: ${snapshot.model.views.length}. Отчёт «Проверка.txt» внутри.`);
+        });
+      } catch (error) { message('download-status', error.message, true); }
+      finally { exportingSet = false; exportButtons.forEach(id => { $(id).disabled = false; }); }
     });
     const requested = new URLSearchParams(location.search).get('project');
     if (requested) { document.querySelector('.cloud-panel').open = true; openCloud(requested); }

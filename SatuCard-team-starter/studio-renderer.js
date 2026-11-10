@@ -167,7 +167,6 @@
       x += 52;
     }
     fitText(ctx, state, state.brandName, { x, y: y + 4, width: 470, height: 32 }, { size: 22, minSize: 16, weight: 800, align: 'left' });
-    label(ctx, state, 'КОЛЛЕКЦИЯ / 01', 675, y + 11, rgba(state.textColor, 0.62), 13);
   }
 
   function background(ctx, state, height) {
@@ -186,14 +185,12 @@
     } else if (state.template === 'minimal') {
       line(ctx, 54, 88, 846, 88, rgba(state.textColor, 0.2));
       line(ctx, 54, height - 42, 846, height - 42, rgba(state.textColor, 0.14));
-      label(ctx, state, 'SATU / DESIGN SERIES', 54, height - 31, rgba(state.textColor, 0.55), 11);
     } else if (state.template === 'noir') {
       const gradient = ctx.createRadialGradient(450, height * 0.52, 40, 450, height * 0.52, 760);
       gradient.addColorStop(0, rgba(accent, 0.15)); gradient.addColorStop(1, rgba(accent, 0));
       ctx.fillStyle = gradient; ctx.fillRect(0, 0, 900, height);
       box(ctx, 24, 24, 852, height - 48, 1, null, rgba(accent, 0.4));
       line(ctx, 54, 88, 846, 88, rgba(accent, 0.42));
-      label(ctx, state, 'SELECTED GOODS', 54, height - 39, rgba(accent, 0.75), 12);
     } else if (state.template === 'neon') {
       const gradient = ctx.createRadialGradient(680, height * 0.48, 20, 540, height * 0.48, 690);
       gradient.addColorStop(0, rgba(accent, 0.15)); gradient.addColorStop(1, rgba(accent, 0));
@@ -205,8 +202,6 @@
     } else if (state.template === 'editorial') {
       ctx.fillStyle = rgba(accent, 0.09); ctx.fillRect(450, 0, 450, height);
       line(ctx, 54, 88, 846, 88, state.textColor, 2);
-      label(ctx, state, 'PRODUCT JOURNAL', 54, height - 32, rgba(state.textColor, 0.68), 12);
-      label(ctx, state, '01', 813, height - 32, state.accent, 14);
     } else if (state.template === 'bloom') {
       circle(ctx, 910, 190, 310, rgba(accent, 0.12));
       circle(ctx, 35, height * 0.75, 320, rgba('#ffffff', 0.4));
@@ -235,6 +230,7 @@
     box(ctx, rect.x, rect.y, rect.width, rect.height, radius, baseFill);
     ctx.restore();
     ctx.save(); path(ctx, rect.x, rect.y, rect.width, rect.height, radius); ctx.clip();
+    let photoScale;
     if (image && (image.naturalWidth || image.width) > 0 && (image.naturalHeight || image.height) > 0) {
       const width = image.naturalWidth || image.width, height = image.naturalHeight || image.height;
       const radians = state.photo.rotation * Math.PI / 180;
@@ -243,7 +239,7 @@
       // contain fits the rotated photo; cover covers the frame even after rotation.
       const base = state.photo.fit === 'cover' ? Math.max((rect.width * cos + rect.height * sin) / width, (rect.width * sin + rect.height * cos) / height)
         : Math.min(rect.width / rotatedWidth, rect.height / rotatedHeight);
-      const scale = base * state.photo.zoom;
+      photoScale = base * state.photo.zoom;
       const centerX = rect.x + rect.width / 2 + (state.photo.x - 50) / 50 * rect.width * 0.35;
       const centerY = rect.y + rect.height / 2 + (state.photo.y - 50) / 50 * rect.height * 0.35;
       ctx.translate(centerX, centerY); ctx.rotate(radians); ctx.scale(state.photo.flip ? -1 : 1, 1);
@@ -253,7 +249,8 @@
       // Canvas filters operate in output pixels, independently of the drawing transform.
       if (blur) filter += ` blur(${blur * ctx.canvas.width / formats[state.format].width}px)`;
       ctx.filter = filter;
-      ctx.drawImage(image, -width * scale / 2, -height * scale / 2, width * scale, height * scale);
+      const drawnWidth = width * photoScale, drawnHeight = height * photoScale;
+      ctx.drawImage(image, -drawnWidth / 2, -drawnHeight / 2, drawnWidth, drawnHeight);
     } else {
       circle(ctx, rect.x + rect.width / 2, rect.y + rect.height / 2 - 25, 30, rgba(state.accent, 0.15));
       label(ctx, state, '+', rect.x + rect.width / 2 - 13, rect.y + rect.height / 2 - 45, state.accent, 38);
@@ -264,6 +261,7 @@
       ctx.lineWidth = state.template === 'bold' ? 3 : 1.5;
       box(ctx, rect.x - 6, rect.y - 6, rect.width + 12, rect.height + 12, radius + 4, null, rgba(state.template === 'bold' ? state.textColor : state.accent, 0.68));
     }
+    return photoScale;
   }
 
   // Every selected view is visible. Compact frames use a horizontal filmstrip;
@@ -288,11 +286,11 @@
         extra.forEach((image, index) => secondary.push({ x: frame.x + mainWidth + gap + index * (width + gap), y: frame.y, width, height: frame.height }));
       }
     }
-    photo(ctx, state, primary, main);
+    const photoScale = photo(ctx, state, primary, main);
     badge(ctx, state, main);
     const neutral = { ...state, photo: { ...state.photo, zoom: 1, x: 50, y: 50, rotation: 0, flip: false, warmth: 0, blur: 0 } };
     extra.forEach((image, index) => photo(ctx, neutral, image, secondary[index]));
-    return { photoRect: main, photoRects: [main, ...secondary] };
+    return { photoRect: main, photoRects: [main, ...secondary], photoScale };
   }
 
   const money = value => `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format(value)} ₸`;
@@ -321,17 +319,19 @@
     if (vertical) {
       const step = rect.height / state.features.length;
       state.features.forEach((feature, index) => {
-        hitAreas.push({ field: 'feature-' + (index + 1), x: rect.x + 22, y: rect.y + index * step + 3, width: rect.width - 22, height: step - 7 });
+        const area = { x: rect.x + 22, y: rect.y + index * step + 3, width: rect.width - 22, height: step - 7 };
         circle(ctx, rect.x + 7, rect.y + index * step + 15, 4, state.accent);
-        fitText(ctx, state, feature, { x: rect.x + 22, y: rect.y + index * step + 3, width: rect.width - 22, height: step - 7 }, { size: 19, minSize: 13, weight: 650, align: 'left' });
+        const { fontSize } = fitText(ctx, state, feature, area, { size: 19, minSize: 13, weight: 650, align: 'left' });
+        hitAreas.push({ field: 'feature-' + (index + 1), ...area, fontSize });
       });
     } else {
       const gap = 10, width = (rect.width - gap * (state.features.length - 1)) / state.features.length;
       state.features.forEach((feature, index) => {
         const x = rect.x + index * (width + gap);
-        hitAreas.push({ field: 'feature-' + (index + 1), x: x + 15, y: rect.y + 9, width: width - 30, height: rect.height - 18 });
+        const area = { x: x + 15, y: rect.y + 9, width: width - 30, height: rect.height - 18 };
         box(ctx, x, rect.y, width, rect.height, 12, rgba(state.textColor, lightColor(state.background) ? 0.055 : 0.075));
-        fitText(ctx, state, feature, { x: x + 15, y: rect.y + 9, width: width - 30, height: rect.height - 18 }, { size: 19, minSize: 12, weight: 650, align: 'center', verticalCenter: true });
+        const { fontSize } = fitText(ctx, state, feature, area, { size: 19, minSize: 12, weight: 650, align: 'center', verticalCenter: true });
+        hitAreas.push({ field: 'feature-' + (index + 1), ...area, fontSize });
       });
     }
   }
@@ -375,8 +375,9 @@
     const gallery = photoGallery(ctx, state, assets, photoRect);
     let y = photoBottom + 20;
     if (state.description) {
-      fitText(ctx, state, state.description, { x: padding, y, width, height: descHeight }, { size: 22, minSize: 15, weight: 500, color: rgba(state.textColor, 0.8) });
-      hitAreas.push({ field: 'product-description', x: padding, y, width, height: descHeight });
+      const area = { x: padding, y, width, height: descHeight };
+      const { fontSize } = fitText(ctx, state, state.description, area, { size: 22, minSize: 15, weight: 500, color: rgba(state.textColor, 0.8) });
+      hitAreas.push({ field: 'product-description', ...area, fontSize });
       y += descHeight + 16;
     }
     if (state.features.length) {
@@ -385,16 +386,6 @@
     if (state.showPrice) {
       const priceWidth = state.oldPrice !== null || state.price !== null && state.price >= 1000000 ? 395 : 335;
       hitAreas.push({ field: 'product-price', x: padding + width - priceWidth, y, width: priceWidth, height: priceHeight });
-      const leftWidth = width - priceWidth - 24;
-      if (state.template === 'neon') {
-        label(ctx, state, 'READY FOR YOUR NEXT', padding, y + 14, state.accent, 14);
-        label(ctx, state, 'ВЫБИРАЙ СВОЙ РИТМ', padding, y + 36, rgba(state.textColor, 0.6), 12);
-      } else if (state.template === 'bold') {
-        fitText(ctx, state, 'ВАШ СЛЕДУЮЩИЙ ВЫБОР ↗', { x: padding, y: y + 14, width: leftWidth, height: 56 }, { size: 22, minSize: 15, weight: 850, align: 'left' });
-      } else {
-        label(ctx, state, 'В ДЕТАЛЯХ — ХАРАКТЕР.', padding, y + 17, rgba(state.textColor, 0.65), 15);
-        label(ctx, state, 'Создано для вашего магазина', padding, y + 42, rgba(state.textColor, 0.48), 12);
-      }
       price(ctx, state, { x: padding + width - priceWidth, y, width: priceWidth, height: priceHeight }, { plain: state.template === 'minimal', size: state.template === 'bold' ? 45 : 38 });
     }
     return { ...gallery, hitAreas, titleFontSize };
@@ -404,8 +395,7 @@
     const hitAreas = [];
     const square = height === 900, story = height === 1600;
     const x = 54, leftWidth = 350, rightX = 444, rightWidth = 402;
-    label(ctx, state, 'ВЫБОР РЕДАКЦИИ', x, 122, state.accent, 14);
-    const titleY = 164, titleHeight = square ? 221 : story ? 345 : 285;
+    const titleY = 122, titleHeight = square ? 221 : story ? 345 : 285;
     const { height: titleUsed, fontSize: titleFontSize } = fitText(ctx, state, state.title, { x, y: titleY, width: leftWidth, height: titleHeight }, { size: story ? 68 : 60, minSize: 27, weight: 850, spacing: 1.08 });
     hitAreas.push({ field: 'product-name', x, y: titleY, width: leftWidth, height: titleUsed });
     let y = titleY + titleUsed + 23;
@@ -425,8 +415,9 @@
     const compression = needed ? Math.min(1, available / needed) : 1;
     if (state.description) {
       const h = descriptionHeight * compression;
-      fitText(ctx, state, state.description, { x, y, width: leftWidth, height: h }, { size: 21, minSize: 13, weight: 500, color: rgba(state.textColor, 0.76), align: 'left' });
-      hitAreas.push({ field: 'product-description', x, y, width: leftWidth, height: h });
+      const area = { x, y, width: leftWidth, height: h };
+      const { fontSize } = fitText(ctx, state, state.description, area, { size: 21, minSize: 13, weight: 500, color: rgba(state.textColor, 0.76), align: 'left' });
+      hitAreas.push({ field: 'product-description', ...area, fontSize });
       y += h + (state.features.length ? 24 * compression : 0);
     }
     if (state.features.length) features(ctx, state, { x, y, width: leftWidth, height: featureHeight * compression }, true, hitAreas);
@@ -441,10 +432,11 @@
   // Purpose controls composition; template continues to control colour and surface styling.
   function purposeLayout(ctx, state, assets, height) {
     const hitAreas = [], photoRects = [];
+    let photoScale;
     const area = (field, value, rect, options = {}) => {
       if (!value) return;
       const metrics = fitText(ctx, state, value, rect, options);
-      hitAreas.push({ field, ...rect });
+      hitAreas.push({ field, ...rect, fontSize: metrics.fontSize });
       return metrics;
     };
     label(ctx, state, purposes[state.purpose].label.toLocaleUpperCase('ru-RU'), 54, 111, state.accent, 16);
@@ -459,12 +451,16 @@
       if (main && state.purpose !== 'contents') {
         const gallery = photoGallery(ctx, state, assets, rect);
         photoRects.push(...gallery.photoRects);
+        photoScale = gallery.photoScale;
         return;
       }
       // Additional views use neutral framing; dragging and adjustments apply to the primary.
-      photo(ctx, image === primary ? state : { ...state, photo: { ...state.photo, zoom: 1, x: 50, y: 50, rotation: 0, flip: false, warmth: 0, blur: 0 } }, image, rect);
+      const scale = photo(ctx, main ? state : { ...state, photo: { ...state.photo, zoom: 1, x: 50, y: 50, rotation: 0, flip: false, warmth: 0, blur: 0 } }, image, rect);
       photoRects.push(rect);
-      if (main) badge(ctx, state, rect);
+      if (main) {
+        photoScale = scale;
+        badge(ctx, state, rect);
+      }
     };
     const rows = (rect, mode) => {
       const count = Math.max(1, state.features.length);
@@ -511,7 +507,7 @@
       price(ctx, state, { x: 451, y: footer + 15, width: 395, height: 91 });
       hitAreas.push({ field: 'product-price', x: 451, y: footer + 15, width: 395, height: 91 });
     }
-    return { photoRect: photoRects[0], photoRects, hitAreas, titleFontSize };
+    return { photoRect: photoRects[0], photoRects, photoScale, hitAreas, titleFontSize };
   }
 
   function render(canvas, input, assets = {}, options = {}) {

@@ -103,26 +103,41 @@
     const key = Object.hasOwn(presets, marketplace) ? marketplace : 'general';
     const preset = presets[key];
     const checks = [];
-    const add = (id, severity, message) => checks.push({ id, severity, message });
-    const { width, height, bytes, mime, photoWidth, photoHeight, hasPhoto, hasLogo, titlePreviewSize, titleContrast } = metadata;
+    const add = (id, severity, message, field) => checks.push({ id, severity, message, ...(field ? { field } : {}) });
+    const { width, height, bytes, mime, photoWidth, photoHeight, hasPhoto, hasLogo, photoScale,
+      titlePreviewSize, titleContrast, bodyText = [], demoFields = [] } = metadata;
     const validDimensions = Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0;
     add('dimensions', !validDimensions ? 'error' : Math.min(width, height) < 900 ? 'warning' : 'pass', !validDimensions ? 'Не удалось определить размер экспорта.' : `Размер: ${width}×${height}. Рекомендация для макета: ${preset.suggested}.`);
     if (validDimensions && preset.ratio) add('aspect', Math.abs(width / height - preset.ratio) > 0.025 ? 'warning' : 'pass', `Предлагаемый формат для ${preset.label}: ${preset.suggested}. Уточните требования категории.`);
     add('file-size', !Number.isFinite(bytes) || bytes <= 0 ? 'warning' : bytes > 10 * 1024 * 1024 ? 'warning' : 'pass', !Number.isFinite(bytes) || bytes <= 0 ? 'Размер файла станет известен после экспорта.' : `Файл: ${(bytes / 1024 / 1024).toFixed(2)} МБ.${bytes > 10 * 1024 * 1024 ? ' Большой файл: проверьте лимит площадки или уменьшите изображение.' : ' Сверьте с лимитом выбранной категории.'}`);
     add('mime', !mime ? 'info' : ['image/png', 'image/jpeg'].includes(mime) ? 'pass' : 'warning', `Формат: ${mime || 'ещё не определён'}. Проверяйте поддержку формата площадкой.`);
-    if (!hasPhoto) add('photo', 'error', 'Добавьте фотографию товара: сейчас в макете нет загруженного товара.');
-    else if (!(photoWidth > 0 && photoHeight > 0)) add('photo-resolution', 'warning', 'Не удалось проверить разрешение исходного фото.');
-    else add('photo-resolution', validDimensions && (photoWidth < width * 0.65 || photoHeight < height * 0.65) ? 'warning' : 'pass', `Исходное фото: ${photoWidth}×${photoHeight}. Проверьте резкость при масштабе 100%: увеличение и обрезка могут снизить качество.`);
+    if (!hasPhoto) add('photo', 'error', 'Добавьте фотографию товара.', 'photo-input');
+    else if (!(photoWidth > 0 && photoHeight > 0)) add('photo-resolution', 'warning', 'Не удалось проверить разрешение исходного фото.', 'photo-input');
+    else if (photoScale > 1.25) {
+      add('photo-resolution', 'warning', `Основное фото ${photoWidth}×${photoHeight} увеличивается до ${Math.round(photoScale * 100)}% и может потерять резкость. Уменьшите масштаб или выберите фото крупнее.`, 'photo-zoom');
+    } else {
+      const lowResolution = photoScale === undefined && validDimensions && (photoWidth < width * 0.65 || photoHeight < height * 0.65);
+      add('photo-resolution', lowResolution ? 'warning' : 'pass', `Исходное фото: ${photoWidth}×${photoHeight}. Проверьте резкость при масштабе 100%.`, lowResolution ? 'photo-zoom' : undefined);
+    }
+    for (const { field, label } of demoFields) {
+      add('demo-content', 'warning', `Поле «${label}» осталось из примера.`, field);
+    }
     if (settings.showPrice !== false && settings.price !== null && settings.price !== undefined && settings.price !== '') add('price', 'warning', 'Цена на изображении может устареть или быть запрещена правилами категории. Для главного фото рассмотрите вариант без цены.');
     if (settings.badge) add('badge', 'warning', 'Проверьте допустимость плашек, скидок и рекламных обещаний на главном фото.');
     if (settings.showBrand !== false && (settings.brandName || hasLogo)) add('brand', 'warning', 'Убедитесь, что имеете право на бренд/логотип и площадка допускает его размещение.');
     const title = typeof settings.title === 'string' ? settings.title.trim() : undefined;
-    if (title === '') add('title-missing', 'error', 'Введите название товара. Сейчас в макете отображается подсказка.');
+    if (title === '') add('title-missing', 'error', 'Введите название товара. Сейчас в макете отображается подсказка.', 'product-name');
     if (title && titlePreviewSize > 0 && titlePreviewSize < 16) {
-      add('title-size', 'warning', `При ширине карточки 360 пикселей размер заголовка будет около ${titlePreviewSize.toFixed(1).replace('.', ',')} пикселя. Попробуйте сократить название или выбрать другой шаблон.`);
+      add('title-size', 'warning', `При ширине карточки 360 пикселей размер заголовка будет около ${titlePreviewSize.toFixed(1).replace('.', ',')} пикселя. Попробуйте сократить название или выбрать другой шаблон.`, 'product-name');
     }
     if (title && titleContrast >= 1 && titleContrast < 3) {
-      add('title-contrast', 'warning', 'Заголовок сливается с фоном. Выберите более контрастный цвет текста или фона.');
+      add('title-contrast', 'warning', 'Заголовок сливается с фоном. Выберите более контрастный цвет текста или фона.', 'text-color');
+    }
+    for (const { field, fontSize } of bodyText) {
+      const description = field === 'product-description';
+      if (!(fontSize > 0 && fontSize < (description ? 8 : 7))) continue;
+      const label = description ? 'Описание' : `Пункт ${field.slice(-1)}`;
+      add('body-size', 'warning', `${label} будет мелким на телефоне (около ${fontSize.toFixed(1).replace('.', ',')} px). Попробуйте сократить текст или увеличить шрифт.`, field);
     }
     if ((settings.title || '').length > 45 || (settings.description || '').length > 120 || (settings.features || []).some(value => String(value).length > 32)) add('text', 'warning', 'Много текста: проверьте переносы, обрезку и читаемость в мобильном превью.');
     add('category-review', 'info', 'Это рекомендации по подготовке, не официальная проверка и не гарантия приёма. Перед загрузкой проверьте действующие правила площадки и категории, фон, кадрирование и достоверность описания.');

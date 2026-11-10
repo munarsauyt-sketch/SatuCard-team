@@ -1,6 +1,6 @@
 .workflow-panel,.workflow-set { padding: 18px 22px; border: 1px solid var(--border, #d5d8d0); border-radius: 14px; margin: 12px 0; background: var(--surface, #fff); color: var(--text, #262922); }
 .workflow-panel summary { cursor: pointer; font-weight: 750; }
-.workflow-panel p,.workflow-set p,.workflow-export span { font-size: 12px; line-height: 1.65; margin: 10px 0; }
+.workflow-panel p,.workflow-set p { font-size: 12px; line-height: 1.65; margin: 10px 0; }
 .workflow-actions { display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap; margin: 12px 0; }
 .workflow-actions button { min-height: 36px; }
 .workflow-actions a { font-size: 12px; text-decoration: underline; }
@@ -20,7 +20,6 @@
 .workflow-panel li { font-size: 12px; line-height: 1.7; }
 .preflight-action { display: flex; color: inherit; text-decoration: underline; }
 .workflow-panel [data-severity="error"],.workflow-panel [data-severity="warning"] { color: #9d3e17; }
-.workflow-export { padding: 0 22px; }
 .workflow-panel .error,.workflow-set .error,.workflow-copy .error { color: #b33728; }
 .dashboard-projects { margin: 36px 0; }
 .dashboard-projects a { color: inherit; text-decoration: underline; }

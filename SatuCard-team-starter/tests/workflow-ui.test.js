@@ -91,10 +91,12 @@ test('free editing can paste a photo, make a format copy and export WebP or clip
     input('export-format', 'webp');
     $('download-button').click();
     await until(() => !($('download-button').disabled));
+    $('export-review-download').click();
     assert.equal(app.downloads.at(-1).type, 'image/webp');
     assert.match($('download-status').textContent, /[1-9]\d* КБ/);
     $('download-set').click();
     await until(() => !($('download-set').disabled));
+    $('export-review-download').click();
     const archive = new TextDecoder().decode(await app.downloads.at(-1).arrayBuffer());
     assert.match(archive, /\.webp/);
 
@@ -125,6 +127,37 @@ test('export opens the needed field when the canvas is in focus mode', async () 
     assert.equal($('canvas-focus-mode').getAttribute('aria-pressed'), 'false');
     assert.equal(dom.window.document.activeElement, $('old-price'));
   } finally { dom.window.close(); }
+});
+
+test('export warns before downloading and can return to the demo field or continue once', async () => {
+  const app = await setup();
+  const { $, input, w, downloads } = app;
+  try {
+    $('canvas-focus-mode').click();
+    $('download-button').click();
+    await until(() => $('export-review').open);
+    assert.equal(downloads.length, 0);
+    const description = [...$('export-review-results').querySelectorAll('button')]
+      .find(button => button.getAttribute('aria-label').includes('«Описание»'));
+    description.click();
+    assert.equal($('export-review').open, false);
+    assert.equal(w.document.activeElement, $('product-description'));
+
+    input('product-description', 'Материал корпуса: металл.');
+    $('download-button').click();
+    await until(() => $('export-review').open);
+    assert.doesNotMatch($('export-review-results').textContent, /«Описание» осталось из примера/);
+    input('export-format', 'webp');
+    assert.equal($('export-review').open, false);
+    $('export-review-download').click();
+    assert.equal(downloads.length, 0, 'a changed format discards the prepared file');
+
+    $('download-button').click();
+    await until(() => $('export-review').open);
+    $('export-review-download').click();
+    $('export-review-download').click();
+    assert.deepEqual(downloads.map(file => file.type), ['image/webp']);
+  } finally { app.dom.window.close(); }
 });
 
 test('copy previews are explicit, cancelable and cannot overwrite newer fields or helper inputs', async () => {
@@ -182,7 +215,11 @@ test('ZIP includes every view and report; preflight and background tools are rea
   const app = await setup();
   try {
     app.$('make-set').click(); app.$('download-set').click(); await until(() => !app.$('download-set').disabled);
-    assert.ok(app.downloads.at(-1), app.$('set-status').textContent); assert.equal(app.downloads.at(-1).type, 'application/zip');
+    assert.equal(app.downloads.length, 0);
+    assert.equal(app.$('export-review').open, true);
+    assert.match(app.$('export-review-results').textContent, /Преимущества · /);
+    app.$('export-review-download').click();
+    assert.equal(app.downloads.at(-1).type, 'application/zip');
     const bytes = new Uint8Array(await app.downloads.at(-1).arrayBuffer());
     assert.equal(new DataView(bytes.buffer).getUint16(bytes.length - 12, true), 4, '3 images + report');
     app.$('check-export').click(); await until(() => !app.$('check-export').disabled); assert.ok(app.$('preflight-results').children.length >= 5);
@@ -205,7 +242,7 @@ test('the assistant opens the local report and a title warning focuses the edito
     assert.equal($('preflight-panel').open, true);
     assert.equal(w.document.activeElement, $('preflight-status'));
     assert.match($('preflight-status').textContent, /Есть ошибки/);
-    const fixTitle = $('preflight-results').querySelector('button');
+    const fixTitle = [...$('preflight-results').querySelectorAll('button')].find(button => button.textContent === 'Перейти к заголовку');
     assert.equal(fixTitle.textContent, 'Перейти к заголовку');
     fixTitle.click();
     assert.equal($('tab-content').getAttribute('aria-selected'), 'true');
@@ -258,6 +295,7 @@ test('card thumbnails reorder ZIP and brand application preserves content and pu
     assert.ok(views.every(view => view.settings.brandName === 'Aru Store' && view.settings.customColors));
     assert.equal(views[0].settings.purpose, 'advantages'); assert.equal(views[1].settings.purpose, 'cover');
     $('download-set').click(); await until(() => !$('download-set').disabled);
+    $('export-review-download').click();
     const bytes = new Uint8Array(await app.downloads.at(-1).arrayBuffer()); const nameLength = new DataView(bytes.buffer).getUint16(26, true);
     assert.equal(new TextDecoder().decode(bytes.slice(30, 30 + nameLength)), '01-Преимущества.png');
     $('undo-button').click(); assert.notEqual(editor.snapshot().model.views[1].settings.brandName, 'Aru Store');
