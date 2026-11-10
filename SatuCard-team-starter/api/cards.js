@@ -5,6 +5,8 @@ import { readBoundedBody } from '../lib/request-body.js';
 
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 const STYLES = new Set(['studio', 'accent', 'minimal', 'noir', 'neon', 'editorial', 'bloom', 'bold']);
+// Public cards are already-rendered images. Keep their category readable by the shared database.
+const styleAliases = { showcase: 'accent', blueprint: 'neon', matcha: 'studio', pop: 'bold', graphite: 'editorial', cloud: 'bloom' };
 const FORMATS = new Set(['portrait', 'portrait34', 'square', 'story']);
 
 function json(data, status = 200) {
@@ -49,7 +51,8 @@ export async function POST(request) {
   const brandName = String(form.get('brandName') ?? '').trim();
   const price = priceInCents(String(form.get('price') ?? '').trim());
   const oldPrice = priceInCents(String(form.get('oldPrice') ?? '').trim(), true);
-  const style = String(form.get('style') ?? '');
+  const requestedStyle = String(form.get('style') ?? '');
+  const style = Object.hasOwn(styleAliases, requestedStyle) ? styleAliases[requestedStyle] : requestedStyle;
   const format = String(form.get('format') ?? '');
   const image = form.get('image');
 

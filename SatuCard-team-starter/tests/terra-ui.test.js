@@ -57,7 +57,7 @@ test('AI sends text only by default, requires renewed seller review, and applies
     await generate(app);
     assert.equal(app.requests[0].imageDataUrl, undefined);
     assert.equal($('copy-photo').checked, false); assert.equal($('copy-apply-template').checked, false);
-    assert.equal($('copy-template').options.length, 8); assert.equal($('copy-apply').disabled, true);
+    assert.equal($('copy-template').options.length, 14); assert.equal($('copy-apply').disabled, true);
     $('copy-apply').click(); assert.equal($('product-name').value, before.title);
     check(app, 'copy-reviewed'); app.input('copy-edit-title', 'Reviewed title'); assert.equal($('copy-reviewed').checked, false);
     check(app, 'copy-apply-template'); check(app, 'copy-reviewed'); $('copy-apply').click();

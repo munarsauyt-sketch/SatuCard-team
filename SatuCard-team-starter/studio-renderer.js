@@ -12,7 +12,20 @@
     neon: { label: 'Неон', description: 'Светящиеся линии и цифровой ритм', background: '#071522', accent: '#45e5da', textColor: '#eaffff' },
     editorial: { label: 'Журнал', description: 'Крупная типографика и разворот', background: '#eee9df', accent: '#b44836', textColor: '#292720' },
     bloom: { label: 'Цветение', description: 'Пастельная палитра и мягкие круги', background: '#ece3f5', accent: '#8759bd', textColor: '#402c57' },
-    bold: { label: 'Постер', description: 'Контраст, крупный текст и характер', background: '#f1f35b', accent: '#ed5d32', textColor: '#20221b' }
+    bold: { label: 'Постер', description: 'Контраст, крупный текст и характер', background: '#f1f35b', accent: '#ed5d32', textColor: '#20221b' },
+    showcase: { label: 'Витрина', description: 'Тёплый фон и рамка вокруг товара', background: '#fff4e5', accent: '#a4482c', textColor: '#39231d' },
+    blueprint: { label: 'Чертёж', description: 'Индиго, тонкая сетка и разворот', background: '#17254b', accent: '#9fd5ff', textColor: '#eff6ff', layout: 'editorial' },
+    matcha: { label: 'Матча', description: 'Оливковый фон с мягкими арками', background: '#e8edcb', accent: '#486134', textColor: '#25351d' },
+    pop: { label: 'Поп-арт', description: 'Кобальт, лайм и крупная геометрия', background: '#2937b8', accent: '#e9fc78', textColor: '#ffffff' },
+    graphite: { label: 'Графит', description: 'Монохромный разворот с холодным акцентом', background: '#212427', accent: '#a8ccdb', textColor: '#f3f4f4', layout: 'editorial' },
+    cloud: { label: 'Облако', description: 'Ледяной градиент и воздушные кольца', background: '#e8f7ff', accent: '#24619a', textColor: '#183858' }
+  };
+  const fonts = {
+    manrope: { label: 'Manrope', family: 'Manrope' },
+    dejavu: { label: 'DejaVu Sans', family: '"DejaVu Sans"' },
+    golos: { label: 'Golos Text', family: '"Golos Text"' },
+    noto: { label: 'Noto Serif', family: '"Noto Serif"' },
+    plex: { label: 'IBM Plex Mono', family: '"IBM Plex Mono"' }
   };
   const formats = {
     portrait: { label: 'Пост · 4:5', width: 900, height: 1125, file: '4x5' },
@@ -53,7 +66,7 @@
       background: source.customColors === true ? hex(source.background, palette.background) : palette.background,
       accent: source.customColors === true ? hex(source.accent, palette.accent) : palette.accent,
       textColor: source.customColors === true ? hex(source.textColor, palette.textColor) : palette.textColor,
-      font: source.font === 'dejavu' ? 'dejavu' : 'manrope',
+      font: Object.hasOwn(fonts, source.font) ? source.font : 'manrope',
       textScale: clamp(source.textScale, 80, 120, 100),
       textAlign: source.textAlign === 'center' ? 'center' : 'left',
       showPrice: source.showPrice !== false, showBrand: source.showBrand !== false,
@@ -95,7 +108,7 @@
   function line(ctx, x1, y1, x2, y2, color, width = 1) {
     ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.strokeStyle = color; ctx.lineWidth = width; ctx.stroke();
   }
-  const fontFamily = state => state.font === 'dejavu' ? '"DejaVu Sans", Arial, sans-serif' : 'Manrope, Arial, sans-serif';
+  const fontFamily = state => `${fonts[state.font].family}, Arial, sans-serif`;
   function font(ctx, state, size, weight = 600) {
     ctx.font = `${weight} ${size}px ${fontFamily(state)}`;
   }
@@ -172,7 +185,36 @@
   function background(ctx, state, height) {
     ctx.fillStyle = state.background; ctx.fillRect(0, 0, 900, height);
     const accent = state.accent;
-    if (state.template === 'studio') {
+    if (state.template === 'showcase') {
+      box(ctx, 24, 24, 852, height - 48, 8, null, rgba(accent, 0.42));
+      box(ctx, 54, 89, 110, 4, 2, accent);
+      box(ctx, 750, height - 30, 96, 5, 2, accent);
+    } else if (state.template === 'blueprint') {
+      for (let x = 30; x < 900; x += 60) line(ctx, x, 92, x, height - 32, rgba(accent, 0.11));
+      for (let y = 92; y < height - 32; y += 60) line(ctx, 30, y, 870, y, rgba(accent, 0.11));
+      box(ctx, 24, 24, 852, height - 48, 0, null, rgba(accent, 0.32));
+    } else if (state.template === 'matcha') {
+      box(ctx, 500, height * 0.22, 530, height * 0.8, 265, rgba(accent, 0.11));
+      circle(ctx, 30, height * 0.76, 150, rgba(accent, 0.08));
+    } else if (state.template === 'pop') {
+      circle(ctx, 810, height * 0.57, 300, rgba(accent, 0.22));
+      ctx.save(); ctx.translate(860, 63); ctx.rotate(-0.3);
+      box(ctx, -53, -34, 100, 52, 6, accent); ctx.restore();
+      box(ctx, 44, height - 28, 60, 6, 0, accent);
+    } else if (state.template === 'graphite') {
+      box(ctx, 427, 101, 473, height - 149, 0, rgba(accent, 0.10));
+      line(ctx, 54, 89, 846, 89, rgba(accent, 0.56));
+      line(ctx, 54, height - 38, 846, height - 38, rgba(accent, 0.56));
+    } else if (state.template === 'cloud') {
+      const gradient = ctx.createLinearGradient(0, 0, 900, height);
+      gradient.addColorStop(0, rgba('#ffffff', 0.62));
+      gradient.addColorStop(1, rgba(accent, 0.14));
+      ctx.fillStyle = gradient; ctx.fillRect(0, 0, 900, height);
+      for (const radius of [120, 170, 220]) {
+        ctx.beginPath(); ctx.arc(780, height - 50, radius, 0, Math.PI * 2);
+        ctx.strokeStyle = rgba(accent, 0.16); ctx.lineWidth = 2; ctx.stroke();
+      }
+    } else if (state.template === 'studio') {
       const gradient = ctx.createLinearGradient(0, 0, 900, height);
       gradient.addColorStop(0, rgba('#ffffff', 0.35)); gradient.addColorStop(1, rgba(accent, 0.12));
       ctx.fillStyle = gradient; ctx.fillRect(0, 0, 900, height);
@@ -436,30 +478,38 @@
     const area = (field, value, rect, options = {}) => {
       if (!value) return;
       const metrics = fitText(ctx, state, value, rect, options);
-      hitAreas.push({ field, ...rect, fontSize: metrics.fontSize });
+      hitAreas.push({ field, ...rect, height: options.compact ? metrics.height : rect.height, fontSize: metrics.fontSize });
       return metrics;
     };
-    label(ctx, state, purposes[state.purpose].label.toLocaleUpperCase('ru-RU'), 54, 111, state.accent, 16);
-    const { fontSize: titleFontSize } = area('product-name', state.title, { x: 54, y: 145, width: 792, height: 110 }, { size: 49, weight: 850, spacing: 1.08 });
-    area('product-subtitle', state.subtitle, { x: 54, y: 268, width: 792, height: 57 }, { size: 23, weight: 500 });
-    const top = state.subtitle ? 348 : 280;
-    const footer = height - 145;
-    const bottom = state.description ? footer - 105 : footer - 20;
+    label(ctx, state, purposes[state.purpose].label.toLocaleUpperCase('ru-RU'), 54, 103, state.accent, 19);
+    const title = area('product-name', state.title, { x: 54, y: 135, width: 792, height: 120 },
+      { size: 57, weight: 850, spacing: 1.08, compact: true });
+    const subtitleY = 135 + title.height + 13;
+    const subtitle = area('product-subtitle', state.subtitle, { x: 54, y: subtitleY, width: 792, height: 62 },
+      { size: 27, weight: 500, compact: true });
+    const top = subtitleY + (subtitle?.height || 0) + 20;
+    const priceHeight = state.showPrice ? (state.oldPrice === null ? 74 : 91) : 0;
+    const footer = height - 48 - priceHeight;
+    const descriptionHeight = state.description ? 74 : 0;
+    const descriptionY = footer - descriptionHeight - (priceHeight && descriptionHeight ? 15 : 0);
+    const bottom = descriptionY - 18;
     const bodyHeight = bottom - top;
     const primary = assets.photo || (Array.isArray(assets.photos) ? assets.photos[0] : null);
+    const extra = (Array.isArray(assets.photos) ? assets.photos : []).filter(image => image && image !== primary).slice(0, 2);
     const drawPhoto = (image, rect, main = false) => {
-      if (main && state.purpose !== 'contents') {
+      if (main && extra.length && state.purpose !== 'contents') {
         const gallery = photoGallery(ctx, state, assets, rect);
         photoRects.push(...gallery.photoRects);
         photoScale = gallery.photoScale;
         return;
       }
-      // Additional views use neutral framing; dragging and adjustments apply to the primary.
-      const scale = photo(ctx, main ? state : { ...state, photo: { ...state.photo, zoom: 1, x: 50, y: 50, rotation: 0, flip: false, warmth: 0, blur: 0 } }, image, rect);
-      photoRects.push(rect);
+      const photoState = main ? state : { ...state, photo: { ...state.photo, zoom: 1, x: 50, y: 50, rotation: 0, flip: false, warmth: 0, blur: 0 } };
+      const frame = snugFrame(image, rect, photoState.photo);
+      const scale = photo(ctx, photoState, image, frame);
+      photoRects.push(frame);
       if (main) {
         photoScale = scale;
-        badge(ctx, state, rect);
+        badge(ctx, state, frame);
       }
     };
     const rows = (rect, mode) => {
@@ -475,39 +525,57 @@
           line(ctx, rect.x, y + step - 5, rect.x + rect.width, y + step - 5, rgba(state.textColor, 0.18));
           label(ctx, state, String(index + 1).padStart(2, '0'), rect.x, y + 12, state.accent, 13);
         } else circle(ctx, rect.x + 6, y + 23, 5, state.accent);
-        area('feature-' + (index + 1), value, { x: rect.x + numberWidth, y: y + 9, width: rect.width - numberWidth, height: step - 23 }, { size: mode === 'steps' ? 29 : 27, minSize: 16, align: 'left', verticalCenter: true });
+        area('feature-' + (index + 1), value, { x: rect.x + numberWidth, y: y + 7, width: rect.width - numberWidth, height: step - 14 }, { size: 33, minSize: 19, align: 'left', verticalCenter: true });
       });
     };
-    if (state.purpose === 'advantages') {
-      drawPhoto(primary, { x: 54, y: top, width: 432, height: bodyHeight }, true);
-      rows({ x: 518, y: top, width: 328, height: bodyHeight }, 'features');
-    } else if (['specifications', 'dimensions'].includes(state.purpose)) {
-      drawPhoto(primary, { x: 54, y: top, width: 300, height: bodyHeight }, true);
-      box(ctx, 380, top, 466, bodyHeight, 20, rgba(state.textColor, 0.045));
-      rows({ x: 402, y: top + 12, width: 422, height: bodyHeight - 24 }, 'specs');
-    } else if (state.purpose === 'contents') {
-      const supplied = Array.isArray(assets.photos) ? assets.photos.filter(Boolean) : [];
-      // photos includes the primary image at index 0; assets.photo remains authoritative.
-      const extra = supplied.filter(image => image !== primary).slice(0, 2);
-      const collageHeight = state.features.length ? bodyHeight * 0.68 : bodyHeight;
+    if (state.purpose === 'contents') {
+      const rowHeight = state.features.length ? Math.min(116, bodyHeight * 0.28) : 0;
+      const collageHeight = bodyHeight - (rowHeight ? rowHeight + 18 : 0);
       drawPhoto(primary, { x: 54, y: top, width: extra.length ? 510 : 792, height: collageHeight }, true);
       extra.forEach((image, index) => drawPhoto(image, { x: 588, y: top + index * (collageHeight + 18) / extra.length, width: 258, height: (collageHeight - 18 * (extra.length - 1)) / extra.length }));
       if (state.features.length) {
-        const y = top + collageHeight + 18, rowHeight = bodyHeight - collageHeight - 18;
+        const y = top + collageHeight + 18;
         const width = (792 - (state.features.length - 1) * 18) / state.features.length;
-        state.features.forEach((value, index) => area('feature-' + (index + 1), value, { x: 54 + index * (width + 18), y, width, height: rowHeight }, { size: 23, minSize: 13, align: 'left' }));
+        state.features.forEach((value, index) => {
+          const x = 54 + index * (width + 18);
+          box(ctx, x, y, width, rowHeight, 14, rgba(state.textColor, 0.07));
+          area('feature-' + (index + 1), value, { x: x + 14, y: y + 8, width: width - 28, height: rowHeight - 16 },
+            { size: 29, minSize: 17, align: 'left', verticalCenter: true });
+        });
       }
-    } else {
-      const imageHeight = Math.min(bodyHeight * 0.34, 270);
+    } else if (!state.features.length) {
+      drawPhoto(primary, { x: 54, y: top, width: 792, height: bodyHeight }, true);
+    } else if (state.purpose === 'instructions' && height > 900) {
+      const imageHeight = bodyHeight * 0.55;
       drawPhoto(primary, { x: 54, y: top, width: 792, height: imageHeight }, true);
-      rows({ x: 54, y: top + imageHeight + 24, width: 792, height: bodyHeight - imageHeight - 24 }, 'steps');
+      rows({ x: 54, y: top + imageHeight + 14, width: 792, height: bodyHeight - imageHeight - 14 }, 'steps');
+    } else {
+      const mode = state.purpose === 'instructions' ? 'steps' : state.purpose === 'advantages' ? 'features' : 'specs';
+      drawPhoto(primary, { x: 54, y: top, width: 416, height: bodyHeight }, true);
+      const listHeight = Math.min(bodyHeight, state.features.length * 120 + 24);
+      const listTop = top + (bodyHeight - listHeight) / 2;
+      box(ctx, 492, listTop, 354, listHeight, 18, rgba(state.textColor, 0.07));
+      rows({ x: 506, y: listTop + 12, width: 326, height: listHeight - 24 }, mode);
     }
-    area('product-description', state.description, { x: 54, y: footer - 88, width: 792, height: 78 }, { size: 22, minSize: 15, weight: 500 });
+    area('product-description', state.description, { x: 54, y: descriptionY, width: 792, height: descriptionHeight }, { size: 27, minSize: 18, weight: 500 });
     if (state.showPrice) {
-      price(ctx, state, { x: 451, y: footer + 15, width: 395, height: 91 });
-      hitAreas.push({ field: 'product-price', x: 451, y: footer + 15, width: 395, height: 91 });
+      const rect = { x: 451, y: footer, width: 395, height: priceHeight };
+      price(ctx, state, rect);
+      hitAreas.push({ field: 'product-price', ...rect });
     }
-    return { photoRect: photoRects[0], photoRects, photoScale, hitAreas, titleFontSize };
+    return { photoRect: photoRects[0], photoRects, photoScale, hitAreas, titleFontSize: title.fontSize };
+  }
+
+  function snugFrame(image, rect, settings) {
+    if (!image || settings.fit === 'cover') return rect;
+    const width = image.naturalWidth || image.width, height = image.naturalHeight || image.height;
+    if (!(width > 0 && height > 0)) return rect;
+    const angle = settings.rotation * Math.PI / 180;
+    const cos = Math.abs(Math.cos(angle)), sin = Math.abs(Math.sin(angle));
+    const ratio = Math.max(0.45, Math.min(2.5, (width * cos + height * sin) / (width * sin + height * cos)));
+    const frameWidth = Math.min(rect.width, rect.height * ratio);
+    const frameHeight = frameWidth / ratio;
+    return { x: rect.x + (rect.width - frameWidth) / 2, y: rect.y + (rect.height - frameHeight) / 2, width: frameWidth, height: frameHeight };
   }
 
   function render(canvas, input, assets = {}, options = {}) {
@@ -525,7 +593,8 @@
     background(ctx, state, format.height);
     brand(ctx, state, assets);
     const layout = state.purpose === 'cover'
-      ? (state.template === 'editorial' ? editorialLayout(ctx, state, assets, format.height) : stackedLayout(ctx, state, assets, format.height))
+      ? (state.template === 'editorial' || templates[state.template].layout === 'editorial'
+        ? editorialLayout(ctx, state, assets, format.height) : stackedLayout(ctx, state, assets, format.height))
       : purposeLayout(ctx, state, assets, format.height);
     ctx.restore();
     let titleContrast;
@@ -536,5 +605,5 @@
     }
     return { ...layout, photoRects: layout.photoRects || [layout.photoRect], hitAreas: layout.hitAreas || [], width: format.width, height: format.height, titleContrast };
   }
-  root.SATUCARD_RENDERER = { templates, formats, purposes, categories, normalize, render };
+  root.SATUCARD_RENDERER = { templates, fonts, formats, purposes, categories, normalize, render };
 })();

@@ -2,7 +2,7 @@
 .studio-page {
   --editor-header: 59px;
   --editor-toolbar: 59px;
-  --editor-stage-height: clamp(340px, calc(100dvh - 330px), 720px);
+  --editor-stage-height: clamp(340px, calc(100dvh - 218px), 900px);
   --editor-action: #4948e8;
   --editor-action-hover: #3e3ccc;
   --editor-on-action: #fff;
@@ -248,7 +248,7 @@ html[data-theme="dark"] .studio-export-status.error { color: #ffb4a6; }
 .studio-page .studio-workspace :is(a,button,input):focus-visible { outline-color: var(--editor-signal); }
 .studio-stage {
   height: var(--editor-stage-height);
-  padding: 24px;
+  padding: 14px;
   background-image: radial-gradient(circle, #abaaff36 1px, transparent 1px),
     radial-gradient(ellipse at 50% 36%, #6f70a84d, transparent 67%);
   background-size: 18px 18px, 100% 100%;
@@ -259,7 +259,7 @@ html[data-theme="dark"] .studio-export-status.error { color: #ffb4a6; }
 .workspace-bottom-bar > p { font-size: 11px; }
 .workspace-zoom { gap: 8px; min-width: 0; }
 .workspace-zoom .studio-icon-button { width: 32px; height: 32px; }
-.workspace-zoom output { color: var(--editor-canvas-muted); }
+.workspace-zoom output { width: 58px; flex: none; text-align: right; color: var(--editor-canvas-muted); }
 
 .studio-deck {
   margin-top: 12px;
@@ -339,7 +339,7 @@ html[data-theme="dark"] .studio-export-status.error { color: #ffb4a6; }
   .studio-page {
     --editor-header: 55px;
     --editor-toolbar: 89px;
-    --editor-stage-height: clamp(290px, 48dvh, 520px);
+    --editor-stage-height: clamp(310px, 54dvh, 560px);
     padding-bottom: max(76px, calc(env(safe-area-inset-bottom) + 64px));
   }
   .studio-main { padding-inline: 10px; }
@@ -372,6 +372,10 @@ html[data-theme="dark"] .studio-export-status.error { color: #ffb4a6; }
   .studio-page .ai-floating-launch { margin-left: 0; }
 }
 @media (max-width: 430px) {
+  .workspace-heading { flex-direction: column; align-items: stretch; gap: 6px; }
+  .workspace-heading .workspace-identity { flex-wrap: nowrap; }
+  .workspace-heading .workspace-identity #format-description { flex-basis: auto; padding: 0; width: auto; }
+  .workspace-heading .studio-canvas-tools { justify-content: flex-end; }
   .studio-project-tools #start-tour { font-size: 0; width: 32px; min-width: 32px; }
   .studio-project-tools #start-tour::before { content: "?"; font-size: 15px; }
   .studio-project-tools .export-controls select { width: 47px; }

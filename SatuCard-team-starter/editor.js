@@ -28,6 +28,7 @@
   let model = { settings: renderer.normalize({ ...samples.headphones, brandName: 'SatuCard.', template: 'neon', format: 'portrait' }), photoId: null, photoIds: [], libraryIds: [], logoId: null, productContextId: 0 };
   let initialModel, history, geometry, dragging, pendingDraft;
   let framePending = false, initialized = false, publishing = false, exporting = false;
+  let previewFont;
   let historyTimer, draftTimer, thumbTimer, lastPublished = '';
   let photoVersion = 0, logoVersion = 0, projectVersion = 0;
   let draftQueue = Promise.resolve();
@@ -189,6 +190,11 @@
   function clearPublished() { $('publish-result').hidden = true; if (!publishing) status('publish-status', ''); }
   function renderNow() {
     framePending = false; geometry = renderer.render(canvas, model.settings, imageAssets());
+    if (previewFont !== model.settings.font) {
+      previewFont = model.settings.font;
+      readyFonts(model.settings).then(() => requestRender(true))
+        .catch(() => status('project-status', 'Шрифт недоступен. Используется запасной шрифт.', true));
+    }
     const size = renderer.formats[model.settings.format];
     $('format-description').textContent = `${size.label} · ${size.width} × ${size.height}`;
     const cardName = model.settings.title ? 'Карточка: ' + model.settings.title : 'Карточка без названия';
@@ -213,7 +219,9 @@
   function renderThumbnails() {
     document.querySelectorAll('[data-template]').forEach(button => renderer.render(button.querySelector('canvas'), { ...model.settings, template: button.dataset.template, customColors: false, format: 'portrait' }, imageAssets(), { scale: 0.16 }));
   }
-  function buildTemplates() {
+  function buildDesignOptions() {
+    $('template-count').textContent = `${Object.keys(renderer.templates).length} стилей`;
+    for (const [key, font] of Object.entries(renderer.fonts)) $('font-family').add(new Option(font.label, key));
     for (const [key, template] of Object.entries(renderer.templates)) {
       const button = document.createElement('button'); button.type = 'button'; button.className = 'template-card'; button.dataset.template = key;
       button.setAttribute('aria-label', template.label + '. ' + template.description); button.setAttribute('aria-pressed', 'false');
@@ -368,18 +376,27 @@
     document.querySelectorAll('[data-editor-tab]').forEach(button => { const active = button.dataset.editorTab === key; button.setAttribute('aria-selected', String(active)); button.tabIndex = active ? 0 : -1; button.classList.toggle('is-active', active); if (active && focus) button.focus(); });
     document.querySelectorAll('[data-editor-panel]').forEach(panel => { panel.hidden = panel.dataset.editorPanel !== key; });
   }
-  function fitPreview() {
+  function applyPreviewZoom() {
+    const zoom = Number($('preview-zoom').value);
+    $('canvas-frame').style.width = Number($('canvas-frame').dataset.baseWidth) * zoom / 100 + 'px';
+    $('preview-zoom-value').value = zoom === 100 ? 'Вписано' : `${zoom}%`;
+  }
+  function fitPreview(resetZoom = true) {
     const stage = $('preview-stage'), size = renderer.formats[model.settings.format];
-    const availableHeight = Math.max(220, stage.clientHeight - 64);
-    const width = Math.max(140, Math.min(model.settings.format === 'story' ? 360 : 500, stage.clientWidth - 48, availableHeight * size.width / size.height));
-    $('canvas-frame').style.width = width + 'px'; $('canvas-frame').dataset.baseWidth = width;
-    $('preview-zoom').value = '100'; $('preview-zoom-value').value = '100%'; canvas.style.aspectRatio = `${size.width} / ${size.height}`;
+    const availableHeight = Math.max(180, stage.clientHeight - 28);
+    const width = Math.max(140, Math.min(stage.clientWidth - 28, availableHeight * size.width / size.height));
+    $('canvas-frame').dataset.baseWidth = width;
+    if (resetZoom) $('preview-zoom').value = '100';
+    canvas.style.aspectRatio = `${size.width} / ${size.height}`;
+    applyPreviewZoom();
   }
   function blobFromCanvas(surface, type, quality) { return new Promise((resolve, reject) => surface.toBlob(blob => blob ? resolve(blob) : reject(new Error('Браузер не смог подготовить изображение.')), type, quality)); }
   async function readyFonts(settings) {
     if (!document.fonts) return;
-    const family = settings.font === 'dejavu' ? '"DejaVu Sans"' : 'Manrope';
-    await Promise.all([document.fonts.load(`600 24px ${family}`, settings.title), document.fonts.load(`750 24px ${family}`, settings.title)]);
+    const family = renderer.fonts[settings.font].family;
+    const text = [settings.title, settings.subtitle, settings.description, settings.brandName, settings.badge, ...settings.features,
+      'Товар / Тауар 0123456789 ₸ ӘҒҚҢӨҰҮҺІ'].join(' ');
+    await Promise.all([500, 650, 750, 850].map(weight => document.fonts.load(`${weight} 24px ${family}`, text)));
     await document.fonts.ready;
   }
   function downloadBlob(blob, name) {
@@ -510,7 +527,7 @@
 
   form.addEventListener('submit', event => event.preventDefault());
   form.addEventListener('input', event => { if (event.target.type === 'file' || event.target.closest('[data-workflow-control]')) return; readForm(); edited(false, false); if (event.target.id === 'card-format') fitPreview(); if (['card-purpose', 'product-category'].includes(event.target.id)) updateContentHints(); });
-  form.addEventListener('change', event => { if (event.target.type === 'file' || event.target.closest('[data-workflow-control]')) return; readForm(); commit(); requestRender(true); if (event.target.id === 'card-format') fitPreview(); if (['card-purpose', 'product-category'].includes(event.target.id)) updateContentHints(); if (event.target.id === 'font-family') readyFonts(model.settings).then(() => requestRender(true)).catch(() => status('project-status', 'Шрифт недоступен. Используется запасной шрифт.', true)); });
+  form.addEventListener('change', event => { if (event.target.type === 'file' || event.target.closest('[data-workflow-control]')) return; readForm(); commit(); requestRender(true); if (event.target.id === 'card-format') fitPreview(); if (['card-purpose', 'product-category'].includes(event.target.id)) updateContentHints(); });
   form.addEventListener('focusout', commit);
   $('photo-input').addEventListener('change', event => { loadPhotos([...event.target.files]); event.target.value = ''; });
   document.addEventListener('paste', event => {
@@ -554,8 +571,9 @@
     if (['z', 'y'].includes(event.key.toLowerCase())) { event.preventDefault(); undoRedo(event.shiftKey || event.key.toLowerCase() === 'y' ? 'redo' : 'undo'); }
   });
   $('reset-button').addEventListener('click', () => { if (!initialModel) return; cancelDrag(); commit(); ++photoVersion; ++logoVersion; ++projectVersion; model = clone(initialModel); changeProductContext(); syncForm(); edited(true); fitPreview(); status('file-status', 'Исходный демонстрационный товар. Сброс можно отменить.'); status('brand-logo-status', ''); });
-  $('preview-zoom').addEventListener('input', () => { $('canvas-frame').style.width = Number($('canvas-frame').dataset.baseWidth || 460) * Number($('preview-zoom').value) / 100 + 'px'; $('preview-zoom-value').value = $('preview-zoom').value + '%'; });
-  $('preview-fit-button').addEventListener('click', fitPreview); window.addEventListener('resize', fitPreview);
+  $('preview-zoom').addEventListener('input', applyPreviewZoom);
+  $('preview-fit-button').addEventListener('click', () => fitPreview());
+  window.addEventListener('resize', () => fitPreview(false));
   const focusMode = $('canvas-focus-mode');
   function setFocusMode(active) {
     focusMode.closest('.studio-layout').classList.toggle('is-canvas-focus', active);
@@ -619,7 +637,7 @@
   async function updateAuth() { const session = Boolean(await window.SATUCARD_AUTH?.getSession()); $('publish-login').hidden = session; if ($('publish-login-note')) $('publish-login-note').hidden = session; }
   document.addEventListener('satucard:authchange', updateAuth); updateAuth();
   async function initialize() {
-    buildTemplates(); activateTab('photo'); syncForm(); fitPreview(); const params = new URLSearchParams(location.search);
+    buildDesignOptions(); activateTab('photo'); syncForm(); fitPreview(); const params = new URLSearchParams(location.search);
     document.querySelectorAll('[data-palette]').forEach(button => { const chip = button.querySelector('i'); palettes[button.dataset.palette].forEach((color, index) => chip.style.setProperty('--palette-' + ['a', 'b', 'c'][index], color)); });
     if (renderer.templates[params.get('style')]) model.settings.template = params.get('style'); if (renderer.formats[params.get('format')]) model.settings.format = params.get('format');
     await loadSample(Object.hasOwn(samples, params.get('photo')) ? params.get('photo') : 'headphones', true);

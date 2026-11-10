@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { configuration } from '../lib/supabase.js';
 import { readAccount, AccountError, accountJson as json, accountFailure } from '../lib/account.js';
-import { projectId, readProjectBody, validateProject } from '../lib/projects.js';
+import { newFonts, newTemplates, projectId, readProjectBody, validateProject } from '../lib/projects.js';
 
 const fields = 'id,title,updated_at,version';
 const metadata = row => ({ id: row.id, title: row.title, updatedAt: row.updated_at, version: row.version });
@@ -47,6 +47,9 @@ export async function POST(request) {
     if (process.env.VERCEL_ENV === 'preview') {
       // Preview and Production can share storage. Older versions cannot read these settings.
       const settings = [payload.settings, ...(payload.views || []).map(view => view.settings)];
+      if (settings.some(entry => newFonts.includes(entry.font) || newTemplates.includes(entry.template))) {
+        throw new AccountError('Скачайте файл проекта, чтобы сохранить новые шрифты и шаблоны черновика.', 409, 'preview_design_local');
+      }
       const photos = settings.map(entry => entry.photo).filter(Boolean);
       if (photos.some(photo => photo.warmth || photo.blur)) {
         throw new AccountError('Скачайте проект, чтобы сохранить новые эффекты.', 409, 'preview_photo_effects_local');

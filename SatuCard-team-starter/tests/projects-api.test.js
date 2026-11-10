@@ -69,6 +69,20 @@ test('stale updates and foreign IDs cannot overwrite a project', async () => {
   const response = await POST(req({ id, version: 1, title: 'Test', payload: payload() }));
   assert.equal(response.status, 409); assert.equal((await response.json()).code, 'version_conflict');
 });
+test('new draft designs cannot enter the older shared cloud project format', async () => {
+  const calls = setup();
+  process.env.VERCEL_ENV = 'preview';
+  for (const settings of [{ font: 'golos' }, { template: 'blueprint' }]) {
+    const p = payload();
+    p.views = [{ id: 'draft', label: 'Черновик', settings }];
+    p.activeViewId = 'draft';
+    const response = await POST(req({ title: 'Test', payload: p }));
+    assert.equal(response.status, 409);
+    assert.equal((await response.json()).code, 'preview_design_local');
+  }
+  assert.equal(calls.length, 0);
+});
+
 test('preview preserves shared-project compatibility when saving new photo settings', async () => {
   const calls = setup();
   process.env.VERCEL_ENV = 'preview';

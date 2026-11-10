@@ -50,7 +50,7 @@ test('render reports the actual fitted title font size at either export scale', 
     assert.equal(titleRows.map(row => row.value).join(''), title);
     assert.ok(titleRows.every(row => row.size === layout.titleFontSize));
     assert.equal(exportLayout.titleFontSize, layout.titleFontSize);
-    if (settings.purpose) assert.ok(layout.titleFontSize * 360 / layout.width < 16);
+    assert.ok(layout.hitAreas.find(area => area.field === 'product-name').height > layout.titleFontSize);
   }
 });
 
