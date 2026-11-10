@@ -242,9 +242,16 @@
 .checkout-summary > div { display: flex; justify-content: space-between; gap: 12px; padding-block: 6px; }
 .checkout-summary dd { margin: 0; font-weight: 800; text-align: right; }
 .checkout-summary > .checkout-total { margin-top: 6px; padding-top: 12px; border-top: 1px solid var(--brand-line); }
-.checkout-actions { display: grid; gap: 8px; margin-top: 12px; }
+.transfer-requisites { display: grid; gap: 10px; margin-block: 20px; padding: 16px; border: 1px solid var(--brand-line); border-radius: 12px; background: var(--brand-soft); }
+.transfer-requisites label { color: var(--brand-muted); font-size: 13px; }
+.transfer-requisites input { width: 100%; min-width: 0; min-height: 44px; padding: 8px; border: 1px solid var(--brand-line); border-radius: 6px; background: var(--brand-surface); color: var(--brand-ink); font: inherit; font-size: clamp(16px, 4.5vw, 22px); font-weight: 800; text-align: center; }
+.transfer-status { min-height: 1.5em; color: var(--brand-muted); font-size: 13px; }
+.transfer-instructions { font-size: 14px; line-height: 1.6; }
+.transfer-instructions h3 { font-size: 17px; }
+.transfer-instructions ol { display: grid; gap: 10px; padding-left: 22px; margin-block: 12px; }
+.transfer-instructions p { color: var(--brand-muted); }
+.transfer-instructions a { color: var(--brand-accent-ink); text-decoration: underline; }
 .pricing-back { display: inline-flex; align-items: center; min-height: 40px; margin-top: 6px; padding: 4px 0; border: 0; background: transparent; color: var(--brand-ink); text-decoration: underline; }
-.demo-result { margin-top: 12px; padding: 14px; border: 1px solid var(--brand-line); border-radius: 12px; background: var(--brand-soft); white-space: pre-line; }
 
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
   .pricing-card:hover {
