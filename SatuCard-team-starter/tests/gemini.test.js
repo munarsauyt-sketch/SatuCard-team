@@ -8,7 +8,7 @@ const result = {reply:'Предлагаю лаконичный вариант.',
 const answer = (value=result, finishReason='STOP') => ({candidates:[{finishReason,content:{role:'model',parts:[{text:JSON.stringify(value)}]}}]});
 const keys=['SATUCARD_AI_PROVIDER','GEMINI_CHAT_ENABLED','GEMINI_CHAT_MODEL','GEMINI_API_KEY','GEMINI_ALLOWED_USER_IDS','GEMINI_ADMIN_USER_ID','GROQ_CHAT_FALLBACK_ENABLED','GROQ_API_KEY','SUPABASE_URL','SUPABASE_SECRET_KEY',
  'VERCEL_ENV','SAI_PREVIEW_FALLBACKS','SAI_PREVIEW_EVALUATION','MISTRAL_API_KEY','CLOUDFLARE_API_TOKEN','CLOUDFLARE_ACCOUNT_ID','COHERE_API_KEY','ALIBABA_API_KEY','SCALEWAY_API_KEY',
- 'SAI_PREVIEW_ANYMODEL_ENABLED','SAI_PRODUCTION_ANYMODEL_ENABLED','ANYMODEL_API_KEY'];
+ 'SAI_PREVIEW_ANYMODEL_ENABLED','SAI_PRODUCTION_ANYMODEL_ENABLED','ANYMODEL_API_KEY','SAI_PAID_ACCESS_ENABLED'];
 const saved=Object.fromEntries(keys.map(k=>[k,process.env[k]])), oldFetch=globalThis.fetch;
 afterEach(()=>{globalThis.fetch=oldFetch;for(const k of keys){if(saved[k]===undefined)delete process.env[k];else process.env[k]=saved[k]}});
 test('Gemini uses only its endpoint, header key, bounded schema and shared output validation',async()=>{
@@ -220,16 +220,22 @@ test('a trial evaluation is authenticated, quota-limited, and sends only the bui
  assert.deepEqual(calls, []);
 });
 
-test('production Sol is owner-only and works even when the shared quota is exhausted', async () => {
+test('the production owner can select all AnyModel models with subscriptions disabled', async () => {
  const owner = '11111111-1111-4111-8111-111111111111';
  const member = '22222222-2222-4222-8222-222222222222';
  Object.assign(process.env, {
   SATUCARD_AI_PROVIDER:'gemini', GEMINI_CHAT_ENABLED:'true', GEMINI_CHAT_MODEL:'gemini-3.1-flash-lite', GEMINI_API_KEY:'test',
   GEMINI_ALLOWED_USER_IDS:[owner, member].join(','), GEMINI_ADMIN_USER_ID:owner,
   SUPABASE_URL:'https://example.supabase.co', SUPABASE_SECRET_KEY:'private',
-  VERCEL_ENV:'production', SAI_PREVIEW_ANYMODEL_ENABLED:'true', SAI_PRODUCTION_ANYMODEL_ENABLED:'false', ANYMODEL_API_KEY:'test'
+  VERCEL_ENV:'production', SAI_PREVIEW_ANYMODEL_ENABLED:'true', SAI_PRODUCTION_ANYMODEL_ENABLED:'false',
+  ANYMODEL_API_KEY:'test', SAI_PAID_ACCESS_ENABLED:'false'
  });
  const calls = [];
+ const expectedModels = [
+  'ag/gemini-2.5-flash', 'cx/gpt-6-luna', 'cc/claude-sonnet-5-5',
+  'cx/gpt-6.1-terra', 'cx/gpt-6-sol', 'cc/claude-opus-4-8',
+  'cx/gpt-6-astra', 'cx/gpt-6.1-sol', 'cc/claude-opus-5-5'
+ ];
  globalThis.fetch = async (url, init) => {
   if (url.endsWith('/auth/v1/user')) {
    const id = init.headers.Authorization === 'Bearer owner' ? owner : member;
@@ -240,27 +246,40 @@ test('production Sol is owner-only and works even when the shared quota is exhau
    calls.push('quota');
    return Response.json({ allowed:false });
   }
-  calls.push(url);
-  assert.equal(JSON.parse(init.body).model, 'cx/gpt-6.1-sol');
+  assert.equal(url, 'https://anymodel.org/v1/chat/completions');
+  calls.push(JSON.parse(init.body).model);
   return Response.json({ choices:[{ finish_reason:'stop', message:{ role:'assistant', content:JSON.stringify(result) } }] });
  };
- const request = (token, method = 'GET') => new Request('https://example.com/api/chat', {
+ const request = (token, method = 'GET', selectedModel) => new Request('https://example.com/api/chat', {
   method, headers:{ authorization:'Bearer ' + token, 'content-type':'application/json' },
-  ...(method === 'POST' ? { body:JSON.stringify({ ...input, selectedProvider:'anymodel' }) } : {})
+  ...(method === 'POST' ? { body:JSON.stringify({ ...input, selectedProvider:'anymodel', selectedModel }) } : {})
  });
- assert.equal((await (await GET(request('owner'))).json()).selectableProviders, undefined);
+ const unconfigured = await (await GET(request('owner'))).json();
+ assert.equal(unconfigured.selectableProviders, undefined);
+ assert.equal(unconfigured.models, undefined);
  process.env.SAI_PRODUCTION_ANYMODEL_ENABLED = 'true';
  const publicStatus = await (await GET()).json();
  assert.equal(publicStatus.available, true);
  assert.equal(publicStatus.selectableProviders, undefined);
- assert.equal((await (await GET(request('member'))).json()).selectableProviders, undefined);
- assert.deepEqual((await (await GET(request('owner'))).json()).selectableProviders.map(p => p.id), ['anymodel']);
- const denied = await POST(request('member', 'POST'));
+ assert.equal(publicStatus.models, undefined);
+ const memberStatus = await (await GET(request('member'))).json();
+ assert.equal(memberStatus.selectableProviders, undefined);
+ assert.equal(memberStatus.models, undefined);
+ const ownerStatus = await (await GET(request('owner'))).json();
+ assert.equal(ownerStatus.adminOnly, true);
+ assert.deepEqual(ownerStatus.selectableProviders.map(p => p.id), ['anymodel']);
+ assert.deepEqual(ownerStatus.models.map(model => model.id), expectedModels);
+ const denied = await POST(request('member', 'POST', 'cx/gpt-6-astra'));
  assert.equal(denied.status, 403);
  assert.equal((await denied.json()).code, 'ai_subscription_required');
  assert.deepEqual(calls, []);
- assert.deepEqual(await (await POST(request('owner', 'POST'))).json(), { ...result, providerUsed:'anymodel' });
- assert.deepEqual(calls.splice(0), ['https://anymodel.org/v1/chat/completions']);
+ for (const model of expectedModels) {
+  const response = await POST(request('owner', 'POST', model));
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { ...result, providerUsed:'anymodel', modelUsed:model });
+ }
+ assert.equal((await (await POST(request('owner', 'POST'))).json()).modelUsed, 'cx/gpt-6.1-sol');
+ assert.deepEqual(calls.splice(0), [...expectedModels, 'cx/gpt-6.1-sol']);
  process.env.VERCEL_ENV = 'preview';
  assert.equal((await (await POST(request('owner', 'POST'))).json()).code, 'ai_rate_limited');
  assert.deepEqual(calls, ['quota']);

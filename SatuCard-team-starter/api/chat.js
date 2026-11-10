@@ -5,7 +5,7 @@ import { readAccount, accountFailure, accountJson } from '../lib/account.js';
 import { validateChatInput as validateInput, generateChat as generateCopy, MAX_CHAT_REQUEST_BYTES as MAX_REQUEST_BYTES } from '../lib/chat.js';
 import { COPY_MODEL } from '../lib/copy.js';
 import { reserveCopyQuota } from '../lib/copy-quota.js';
-import { AI_ACCESS_MESSAGE, accountAiAccess, hasAiAccess, isAiAdmin } from '../lib/ai-access.js';
+import { AI_ACCESS_MESSAGE, accountAiAccess, isAiAdmin } from '../lib/ai-access.js';
 import { availableAiModels } from '../lib/ai-models.js';
 import { generatePaidChat } from '../lib/paid-chat.js';
 import { paidAccessEnabled } from '../lib/billing.js';
@@ -57,11 +57,11 @@ export async function GET(request) {
   const paidEnabled = paidAccessEnabled();
   const anymodel = configuredSol();
   let access = { isAdmin: false, hasAccess: false, ready: false, active: null };
-  if (!paidEnabled) access.hasAccess = await hasAiAccess(request, config);
-  else if (config && request?.headers.get('authorization')) {
+  if (config && request?.headers.get('authorization')) {
     try {
       const { user } = await readAccount(request, config, { complete: true });
       access = await accountAiAccess(config, user);
+      if (access.isAdmin && !users.has(user.id.toLowerCase())) access.hasAccess = false;
     } catch {}
   }
   const { hasAccess } = access;
@@ -71,7 +71,9 @@ export async function GET(request) {
   const evaluationProviders = !paidCustomer && available && geminiSelected() ? availableEvaluations() : [];
   const sol = !paidCustomer && available && geminiSelected() && hasAccess ? anymodel : null;
   return accountJson({ available, hasAccess, adminOnly: !paidEnabled, modelVerified: false,
-    ...(paidEnabled && hasAccess ? { paidCustomer, models: anymodel ? availableAiModels(access) : [] } : {}),
+    ...(hasAccess && (paidEnabled || sol) ? {
+      paidCustomer, models: (paidCustomer ? anymodel : sol) ? availableAiModels(access) : []
+    } : {}),
     ...(geminiSelected() ? { provider: 'gemini', model: geminiModel(), singleUserPilot: available && userCount === 1 } : {}),
     ...(fallbackProviders.length ? { fallbackProviders } : {}),
     ...(evaluationProviders.length ? { evaluationProviders } : {}),
@@ -120,7 +122,6 @@ export async function POST(request) {
   const models = wantsSol ? availableAiModels(access) : [];
   const modelId = input?.selectedModel || (access.isAdmin ? ANYMODEL_MODEL : models[0]?.id);
   const selectedModel = models.find(model => model.id === modelId);
-  if (input?.selectedModel && !paidAccessEnabled() && modelId !== ANYMODEL_MODEL) return accountJson({ error: 'Эта модель пока недоступна.', code: 'model_unavailable' }, 403);
   if (wantsSol && !selectedModel) return accountJson({ error: 'Для выбранной модели нужен другой тариф.', code: 'plan_required' }, 403);
   if (wantsSol && (input.imageDataUrl || input.fallbackProvider || input.groqFallbackConsent)) {
     return accountJson({ error: 'Для этой модели отправьте текстовый запрос без фото и резерва.', code: 'invalid_input' }, 400);
@@ -150,14 +151,14 @@ export async function POST(request) {
       const result = access.isAdmin
         ? await generateCopy({ ...input, history: input.history.slice(-4) }, { key: sol.key, provider: 'anymodel', providerModel: selectedModel.id, timeoutMs: 45000 })
         : await generatePaidChat(input, { config, user, model: selectedModel, key: sol.key });
-      return accountJson({ ...result, providerUsed: 'anymodel', ...(paidAccessEnabled() ? { modelUsed: selectedModel.id } : {}) });
+      return accountJson({ ...result, providerUsed: 'anymodel', modelUsed: selectedModel.id });
     } catch (error) {
       if (error.status && error.code) return accountFailure(error);
       const status = logFailure('anymodel', error);
       if (status === 402) return accountJson({ error: 'AnyModel отклонил запрос из-за баланса или лимита ключа.', code: 'sol_balance' }, 402);
       if (status === 429) return accountJson({ error: 'AnyModel ограничивает запросы. Попробуйте позже.', code: 'sol_quota' }, 429);
-      if (error.message === 'Provider timeout') return accountJson({ error: 'Sol не успел ответить. Запрос мог учитываться в расходе токенов.', code: 'sol_timeout' }, 504);
-      return accountJson({ error: 'Sol не вернул подходящий ответ. Проверьте доступ к модели и попробуйте позже.', code: 'sol_failed' }, 502);
+      if (error.message === 'Provider timeout') return accountJson({ error: `Модель ${selectedModel.label} не успела ответить. Запрос мог учитываться в расходе токенов.`, code: 'sol_timeout' }, 504);
+      return accountJson({ error: `Модель ${selectedModel.label} не вернула подходящий ответ. Попробуйте позже.`, code: 'sol_failed' }, 502);
     }
   }
   const primary = geminiSelected() ? 'gemini' : 'openai';
