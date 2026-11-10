@@ -8,6 +8,8 @@
   form.inert = true;
   ['download-button', 'copy-card-image', 'publish-button', 'save-project-button', 'load-project-input'].forEach(id => { $(id).disabled = true; });
   const canvas = $('product-canvas'), assets = new Map(), pendingAssets = new Set();
+  const miniPreview = $('mini-preview'), miniCanvas = $('mini-preview-canvas'), miniToggle = $('mini-preview-toggle');
+  const previewStage = $('preview-stage'), toolbar = document.querySelector('.studio-project-bar');
   const palettes = {
     forest: ['#e1e8d9', '#466343', '#233126'], orange: ['#fff0e5', '#f06435', '#35251f'],
     ocean: ['#dcedf5', '#087da1', '#112c3d'], violet: ['#ece5ff', '#8053df', '#2a2041'], rose: ['#fce5ed', '#c34f7a', '#462232']
@@ -188,6 +190,25 @@
     $('purpose-help').textContent = 'Макет меняет расположение элементов. Категория подсказывает поля, но не добавляет факты за вас.';
   }
   function clearPublished() { $('publish-result').hidden = true; if (!publishing) status('publish-status', ''); }
+  function drawMiniPreview() {
+    const scale = 420 / Math.max(canvas.width, canvas.height);
+    const width = Math.round(canvas.width * scale), height = Math.round(canvas.height * scale);
+    if (miniCanvas.width !== width) miniCanvas.width = width;
+    if (miniCanvas.height !== height) miniCanvas.height = height;
+    const context = miniCanvas.getContext('2d');
+    if (!context) return;
+    context.clearRect(0, 0, width, height);
+    context.drawImage(canvas, 0, 0, width, height);
+    miniCanvas.setAttribute('aria-label', canvas.getAttribute('aria-label'));
+  }
+  function updateMiniPreview(redraw = false) {
+    if (!geometry) return;
+    const bottom = Math.min(canvas.getBoundingClientRect().bottom, previewStage.getBoundingClientRect().bottom);
+    const visible = bottom < toolbar.getBoundingClientRect().bottom && focusMode?.getAttribute('aria-pressed') !== 'true';
+    const justShown = visible && miniPreview.hidden;
+    miniPreview.hidden = !visible;
+    if (visible && !miniCanvas.hidden && (redraw || justShown)) drawMiniPreview();
+  }
   function renderNow() {
     framePending = false; geometry = renderer.render(canvas, model.settings, imageAssets());
     if (previewFont !== model.settings.font) {
@@ -200,6 +221,7 @@
     const cardName = model.settings.title ? 'Карточка: ' + model.settings.title : 'Карточка без названия';
     $('preview-caption').textContent = cardName + '. Шаблон ' + renderer.templates[model.settings.template].label + '.';
     canvas.setAttribute('aria-label', $('preview-caption').textContent);
+    updateMiniPreview(true);
     $('download-button').querySelector('span').textContent = 'Скачать ' + selectedExportFormat().label;
     document.querySelectorAll('[data-template]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.template === model.settings.template)));
     document.querySelectorAll('[data-sample]').forEach(button => button.setAttribute('aria-pressed', String(model.photoId === 'sample-' + button.dataset.sample)));
@@ -581,11 +603,31 @@
   $('preview-fit-button').addEventListener('click', () => fitPreview());
   window.addEventListener('resize', () => fitPreview(false));
   const focusMode = $('canvas-focus-mode');
+  let miniPreviewFrame = 0;
+  function scheduleMiniPreview() {
+    if (miniPreviewFrame) return;
+    miniPreviewFrame = requestAnimationFrame(() => {
+      miniPreviewFrame = 0;
+      updateMiniPreview();
+    });
+  }
+  window.addEventListener('scroll', scheduleMiniPreview, { passive: true });
+  window.addEventListener('resize', scheduleMiniPreview);
+  if (typeof ResizeObserver === 'function') {
+    const previewObserver = new ResizeObserver(scheduleMiniPreview);
+    [canvas, previewStage, toolbar].forEach(element => previewObserver.observe(element));
+  }
+  miniToggle.addEventListener('click', () => {
+    miniCanvas.hidden = !miniCanvas.hidden;
+    miniToggle.setAttribute('aria-expanded', String(!miniCanvas.hidden));
+    updateMiniPreview(true);
+  });
   function setFocusMode(active) {
     focusMode.closest('.studio-layout').classList.toggle('is-canvas-focus', active);
     focusMode.setAttribute('aria-pressed', String(active));
     focusMode.textContent = active ? 'Вернуть инструменты' : 'Фокус';
     fitPreview();
+    scheduleMiniPreview();
   }
   if (focusMode) {
     focusMode.addEventListener('click', () => setFocusMode(focusMode.getAttribute('aria-pressed') !== 'true'));
