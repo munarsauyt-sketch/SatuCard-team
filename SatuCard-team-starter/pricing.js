@@ -22,11 +22,15 @@ for (const plan of BILLING_PLANS) {
   const price = document.createElement('p'); price.className = 'pricing-price'; price.textContent = money(plan.priceKzt);
   const period = document.createElement('p'); period.className = 'pricing-period'; period.textContent = 'за ' + ACCESS_DAYS + ' дней';
   const includes = document.createElement('p'); includes.className = 'pricing-includes';
-  includes.textContent = plan.includes ? 'Все модели ' + plan.includes + ' и дополнительно' : 'Для повседневных задач';
-  if (plan.id === 'max3') includes.textContent = 'Те же модели Max';
+  includes.textContent = plan.includes ? 'Модели ' + plan.includes + ' и дополнительно' : 'Модели тарифа';
+  if (plan.id === 'max3') includes.textContent = 'Модели Max';
   const list = document.createElement('ul');
+  list.setAttribute('role', 'list');
   for (const feature of [...plan.models, ...(plan.benefits || [])]) {
-    const item = document.createElement('li'); item.textContent = feature; list.append(item);
+    const item = document.createElement('li');
+    item.textContent = feature;
+    if (plan.benefits?.includes(feature)) item.dataset.planBenefit = '';
+    list.append(item);
   }
   const button = document.createElement('button');
   button.type = 'button'; button.className = 'pricing-button'; button.textContent = 'Проверить оплату';

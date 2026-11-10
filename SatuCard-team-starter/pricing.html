@@ -18,29 +18,27 @@
   <header class="site-header"><div class="container header-inner">
     <a class="brand" href="index.html" aria-label="SatuCard — главная"><img class="brand-logo-icon" src="assets/favicon.svg" alt="">SatuCard<span class="brand-dot">.</span></a>
     <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="main-nav" aria-label="Открыть меню">☰</button>
-    <nav id="main-nav" aria-label="Основная навигация"><a href="index.html">Главная</a><a href="editor.html">Редактор</a><a href="pricing.html" aria-current="page">Тарифы</a></nav>
+    <nav id="main-nav" aria-label="Основная навигация"><a href="index.html">Главная</a><a href="editor.html">Редактор</a><a href="examples.html">Шаблоны</a><a href="pricing.html" aria-current="page">Тарифы</a></nav>
     <button class="theme-toggle" type="button" data-theme-toggle aria-label="Тёмная тема" aria-pressed="false"><span aria-hidden="true">◐</span><span class="theme-toggle-text">Тема</span></button>
     <a class="header-account" data-account-link href="auth.html">Войти</a>
   </div></header>
   <main id="main" class="container pricing-main">
-    <p class="pricing-banner">Черновик тарифов · демонстрационная оплата</p>
     <section class="pricing-intro" aria-labelledby="pricing-title">
-      <p class="pricing-eyebrow">sAI / ВАШ РАБОЧИЙ РИТМ</p>
-      <h1 id="pricing-title">Больше идей.<br>Больше возможностей<span class="brand-dot">.</span></h1>
-      <p>Выберите модели и объём под свои товары. Каждый тариф рассчитан на 30 дней с разовой оплатой.</p>
-      <p class="pricing-preview-note">Это проверка будущего экрана покупки. Сумма списания в деморежиме — 0 ₸. Карта для проверки не нужна.</p>
+      <div>
+        <h1 id="pricing-title">Тарифы sAI<span class="brand-dot">.</span></h1>
+        <p>Доступ на 30 дней с разовой оплатой.</p>
+      </div>
+      <p class="pricing-banner">Демонстрационная оплата <strong>0 ₸</strong></p>
     </section>
     <section id="pricing-plans" class="pricing-grid" aria-label="Тарифы на 30 дней"></section>
     <noscript><p>Включите JavaScript, чтобы открыть тарифы и демонстрационную оплату.</p></noscript>
-    <section class="pricing-explainer" aria-labelledby="limits-title">
-      <div><h2 id="limits-title">Лимиты использования</h2><p>Доступный объём помощи зависит от тарифа. Длинные переписки и сложные запросы расходуют его быстрее.</p></div>
-      <div><h2>Один платёж на 30 дней</h2><p>Новый период покупается отдельно. Для продления можно снова выбрать подходящий тариф.</p></div>
-      <div><h2>Статус черновика</h2><p>Состав моделей и объёмы предложены для запуска. Рабочий ИИ сейчас доступен администратору. Приём платежей подключается после оформления платёжного аккаунта.</p></div>
-    </section>
+    <div class="pricing-footnote">
+      <p>Тарифы готовятся к запуску. В демо можно проверить оформление без карты.</p>
+      <a class="text-link" href="dashboard.html#billing-title">Тариф в кабинете <span aria-hidden="true">↗</span></a>
+    </div>
   </main>
   <dialog id="demo-checkout" class="pricing-dialog" aria-labelledby="checkout-title">
     <form method="dialog"><button class="pricing-close" aria-label="Закрыть окно оплаты">×</button></form>
-    <p class="pricing-eyebrow">ДЕМОНСТРАЦИЯ</p>
     <h2 id="checkout-title">Тестовая оплата</h2>
     <p id="checkout-plan"></p>
     <dl class="checkout-summary">
@@ -48,7 +46,7 @@
       <div><dt>Период</dt><dd>30 дней</dd></div>
       <div class="checkout-total"><dt>Списание в деморежиме</dt><dd>0 ₸</dd></div>
     </dl>
-    <p>Выберите результат, чтобы проверить поведение экрана оплаты.</p>
+    <p>Выберите исход тестового платежа.</p>
     <div id="checkout-actions" class="checkout-actions">
       <button type="button" class="pricing-button" data-payment-result="success">Успешная оплата</button>
       <button type="button" class="pricing-button pricing-button-secondary" data-payment-result="declined">Платёж отклонён</button>

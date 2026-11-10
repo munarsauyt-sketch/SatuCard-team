@@ -60,20 +60,34 @@
     });
     updateCatalogStatus();
   }
-  document.querySelectorAll('[data-hero-style]').forEach(button => {
+  const heroLink = document.querySelector('[data-hero-open]');
+  const heroStyles = document.querySelectorAll('[data-hero-style]');
+  heroStyles.forEach(button => {
     button.addEventListener('click', () => {
       const canvas = document.getElementById('hero-card'); if (!canvas) return;
-      canvas.dataset.template = button.dataset.heroStyle;
-      document.querySelectorAll('[data-hero-style]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
-      document.getElementById('hero-style-status').textContent = 'Шаблон ' + renderer.templates[button.dataset.heroStyle].label;
-      canvas.setAttribute('aria-label', samples[canvas.dataset.photo].title + ' в шаблоне ' + renderer.templates[button.dataset.heroStyle].label);
+      const style = button.dataset.heroStyle;
+      canvas.dataset.template = style;
+      heroStyles.forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+      document.getElementById('hero-style-status').textContent = 'Шаблон ' + renderer.templates[style].label;
+      canvas.setAttribute('aria-label', samples[canvas.dataset.photo].title + ' в шаблоне ' + renderer.templates[style].label);
       renderCard(canvas);
+      if (heroLink) {
+        heroLink.closest('[data-comparison]').dataset.style = style;
+        const url = new URL(heroLink.href, location.href);
+        url.searchParams.set('style', style);
+        heroLink.href = url.href;
+      }
       const wrap = canvas.closest('.hero-primary'); wrap.classList.remove('is-swapping');
       requestAnimationFrame(() => wrap.classList.add('is-swapping'));
     });
   });
   document.querySelectorAll('[data-compare-range]').forEach(input => {
-    input.addEventListener('input', () => input.closest('[data-comparison]').style.setProperty('--compare', `${input.value}%`));
+    const updateComparison = () => {
+      input.closest('[data-comparison]').style.setProperty('--compare', `${input.value}%`);
+      input.setAttribute('aria-valuetext', `Исходное фото: ${input.value}%`);
+    };
+    input.addEventListener('input', updateComparison);
+    updateComparison();
   });
   document.querySelectorAll('[data-template-filter]').forEach(button => {
     button.addEventListener('click', () => {
