@@ -2,6 +2,7 @@ import { configuration } from '../lib/supabase.js';
 import { readAccount, accountFailure, accountJson } from '../lib/account.js';
 import { validateInput, generateCopy, COPY_MODEL, MAX_REQUEST_BYTES } from '../lib/copy.js';
 import { reserveCopyQuota } from '../lib/copy-quota.js';
+import { AI_ACCESS_MESSAGE, hasAiAccess, isAiAdmin } from '../lib/ai-access.js';
 
 // Paid generation is closed by default. Only explicitly trusted account UUIDs
 // may use it; self-service signup is not permission to spend the owner's key.
@@ -12,8 +13,10 @@ function allowedUsers() {
 function enabled() {
   return process.env.OPENAI_COPY_ENABLED === 'true' && (!process.env.OPENAI_COPY_MODEL?.trim() || process.env.OPENAI_COPY_MODEL.trim() === COPY_MODEL);
 }
-export function GET() {
-  return accountJson({ available: Boolean(enabled() && configuration() && process.env.OPENAI_API_KEY?.trim() && allowedUsers().size) });
+export async function GET(request) {
+  const config = configuration();
+  const available = Boolean(enabled() && config && process.env.OPENAI_API_KEY?.trim() && allowedUsers().size);
+  return accountJson({ available, hasAccess: await hasAiAccess(request, config), adminOnly: true });
 }
 export async function POST(request) {
   const config = configuration();
@@ -21,6 +24,7 @@ export async function POST(request) {
   let user;
   try { ({ user } = await readAccount(request, config, { complete: true })); }
   catch (error) { return accountFailure(error); }
+  if (!isAiAdmin(user)) return accountJson({ error: AI_ACCESS_MESSAGE, code: 'ai_subscription_required' }, 403);
   const key = process.env.OPENAI_API_KEY?.trim();
   if (!key) return accountJson({ error: 'ИИ-помощник пока не настроен. Можно использовать локальный шаблон.', code: 'ai_unavailable' }, 503);
   if (!allowedUsers().has(user.id.toLowerCase())) return accountJson({ error: 'ИИ доступен только аккаунтам, подключённым владельцем сайта. Используйте локальный шаблон.', code: 'ai_access_required' }, 403);

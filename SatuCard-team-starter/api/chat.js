@@ -5,6 +5,7 @@ import { readAccount, accountFailure, accountJson } from '../lib/account.js';
 import { validateChatInput as validateInput, generateChat as generateCopy, MAX_CHAT_REQUEST_BYTES as MAX_REQUEST_BYTES } from '../lib/chat.js';
 import { COPY_MODEL } from '../lib/copy.js';
 import { reserveCopyQuota } from '../lib/copy-quota.js';
+import { AI_ACCESS_MESSAGE, hasAiAccess, isAiAdmin } from '../lib/ai-access.js';
 
 const GEMINI_TIMEOUT_MS = 60000;
 const RESERVE_TIMEOUT_MS = 12000;
@@ -43,23 +44,18 @@ function enabled() {
   return process.env.OPENAI_COPY_ENABLED === 'true' && (!process.env.OPENAI_COPY_MODEL?.trim() || process.env.OPENAI_COPY_MODEL.trim() === COPY_MODEL);
 }
 function apiKey() { return (geminiSelected() ? process.env.GEMINI_API_KEY : process.env.OPENAI_API_KEY)?.trim(); }
-function isGeminiOwner(user) { return user.id.toLowerCase() === process.env.GEMINI_ADMIN_USER_ID?.trim().toLowerCase(); }
 
 export async function GET(request) {
   const config = configuration();
   const users = allowedUsers();
   const userCount = users.size;
   const available = Boolean(enabled() && config && apiKey() && userCount);
+  const hasAccess = await hasAiAccess(request, config);
   const fallbackProviders = available && geminiSelected() ? availableFallbacks() : [];
   const evaluationProviders = available && geminiSelected() ? availableEvaluations() : [];
   let sol = available && geminiSelected() ? configuredSol() : null;
-  if (sol && process.env.VERCEL_ENV === 'production') {
-    try {
-      const { user } = request?.headers.get('authorization') ? await readAccount(request, config, { complete: true }) : {};
-      if (!user || !users.has(user.id.toLowerCase()) || !isGeminiOwner(user)) sol = null;
-    } catch { sol = null; }
-  }
-  return accountJson({ available, modelVerified: false,
+  if (!hasAccess) sol = null;
+  return accountJson({ available, hasAccess, adminOnly: true, modelVerified: false,
     ...(geminiSelected() ? { provider: 'gemini', model: geminiModel(), singleUserPilot: available && userCount === 1 } : {}),
     ...(fallbackProviders.length ? { fallbackProviders } : {}),
     ...(evaluationProviders.length ? { evaluationProviders } : {}),
@@ -72,6 +68,7 @@ export async function POST(request) {
   let user;
   try { ({ user } = await readAccount(request, config, { complete: true })); }
   catch (error) { return accountFailure(error); }
+  if (!isAiAdmin(user)) return accountJson({ error: AI_ACCESS_MESSAGE, code: 'ai_subscription_required' }, 403);
   const key = apiKey();
   if (!key) return accountJson({ error: 'ИИ-помощник пока не настроен. Можно использовать локальный шаблон.', code: 'ai_unavailable' }, 503);
   if (!allowedUsers().has(user.id.toLowerCase())) return accountJson({ error: 'ИИ доступен только аккаунтам, подключённым владельцем сайта. Используйте локальный шаблон.', code: 'ai_access_required' }, 403);
@@ -100,10 +97,7 @@ export async function POST(request) {
   const sol = wantsSol && geminiSelected() ? configuredSol() : null;
   if (wantsSol && !sol) return accountJson({ error: 'Sol сейчас недоступен. Выберите Gemini в чате.', code: 'sol_unavailable' }, 503);
   const isProduction = process.env.VERCEL_ENV === 'production';
-  const isOwner = geminiSelected() && isGeminiOwner(user);
-  if (sol && isProduction && !isOwner) {
-    return accountJson({ error: 'Sol доступен только владельцу сайта. Выберите Gemini в чате.', code: 'sol_access_required' }, 403);
-  }
+  const isOwner = geminiSelected() && isAiAdmin(user);
   // Owner chat uses provider limits. Preview Sol and evaluations use the shared quota.
   const usesSiteQuota = Boolean(evaluation) || !isOwner || Boolean(sol && !isProduction);
   if (usesSiteQuota) {

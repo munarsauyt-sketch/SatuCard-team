@@ -40,7 +40,7 @@ const draft = { title: 'Terra title', subtitle: 'Subtitle', description: 'Cotton
 async function aiApp(options = {}) {
   const requests = [];
   const app = await setup({ ...options, fetch: async (url, init = {}) => {
-    if (!init.method) return Response.json({ available: true });
+    if (!init.method) return Response.json({ available: true, hasAccess: true, adminOnly: true });
     requests.push(JSON.parse(init.body)); return options.reply ? options.reply(init) : Response.json(draft);
   } });
   await until(() => !app.$('copy-ai').disabled);

@@ -32,7 +32,8 @@ test('Gemini activation requires explicit model key allowlist and database quota
  process.env.GEMINI_CHAT_MODEL='unknown';assert.equal((await (await GET()).json()).available,false);delete process.env.GEMINI_CHAT_MODEL;
  let providerCalls=0;
  globalThis.fetch=async(url)=>{if(url.endsWith('/auth/v1/user'))return Response.json({id,email_confirmed_at:'today'});if(url.includes('/rest/v1/profiles?'))return Response.json([{id,profile_completed_at:'today',mail_proof_required:false}]);if(url.includes('/rpc/'))return new Response('',{status:404});providerCalls++;throw Error('Must not call model')};
- const response=await POST(new Request('https://example.com/api/chat',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer test.token.signature'},body:JSON.stringify(input)}));assert.equal(response.status,503);assert.equal(providerCalls,0);
+ delete process.env.GEMINI_ADMIN_USER_ID;
+ const response=await POST(new Request('https://example.com/api/chat',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer test.token.signature'},body:JSON.stringify(input)}));assert.equal(response.status,403);assert.equal(providerCalls,0);
  process.env.GEMINI_ALLOWED_USER_IDS='*';assert.equal((await (await GET()).json()).available,false);
 });
 
@@ -63,22 +64,22 @@ test('only the verified and allowlisted Gemini administrator skips the SatuCard 
  assert.deepEqual(await response.json(), result);
  assert.equal(quotaCalls, 0);
  signedInId = memberId;
- assert.equal((await POST(request())).status, 429);
- assert.equal(quotaCalls, 1);
+ assert.equal((await POST(request())).status, 403);
+ assert.equal(quotaCalls, 0);
  signedInId = adminId;
  process.env.GEMINI_ALLOWED_USER_IDS = memberId;
  assert.equal((await POST(request())).status, 403);
  assert.equal(modelCalls, 1);
 });
 
-test('Groq requires opt-in and a Gemini 429, uses one quota reservation and receives no image', async () => {
+test('owner Groq fallback requires opt-in and a Gemini 429 and receives no image', async () => {
  const id = '33333333-3333-4333-8333-333333333333';
  Object.assign(process.env, {
   SATUCARD_AI_PROVIDER:'gemini', GEMINI_CHAT_ENABLED:'true', GEMINI_CHAT_MODEL:'gemini-3.1-flash-lite', GEMINI_API_KEY:'test',
   GEMINI_ALLOWED_USER_IDS:id, GROQ_CHAT_FALLBACK_ENABLED:'true', GROQ_API_KEY:'groq-test',
   SUPABASE_URL:'https://example.supabase.co', SUPABASE_SECRET_KEY:'private'
  });
- delete process.env.GEMINI_ADMIN_USER_ID;
+ process.env.GEMINI_ADMIN_USER_ID = id;
  assert.equal((await (await GET()).json()).groqFallbackAvailable, true);
  const calls = [];
  let primaryStatus = 429, groqStatus = 200, allowed = true;
@@ -109,18 +110,18 @@ test('Groq requires opt-in and a Gemini 429, uses one quota reservation and rece
   body:JSON.stringify({ ...input, imageConsent:true, imageDataUrl, groqFallbackConsent:consent })
  });
  assert.equal((await (await POST(request(false))).json()).code, 'gemini_quota');
- assert.deepEqual(calls.splice(0), ['quota', 'gemini']);
+ assert.deepEqual(calls.splice(0), ['gemini']);
  assert.deepEqual(await (await POST(request(true))).json(), { ...result, providerUsed:'groq' });
- assert.deepEqual(calls.splice(0), ['quota', 'gemini', 'groq']);
+ assert.deepEqual(calls.splice(0), ['gemini', 'groq']);
  groqStatus = 429;
  assert.equal((await (await POST(request(true))).json()).code, 'groq_quota');
- assert.deepEqual(calls.splice(0), ['quota', 'gemini', 'groq']);
+ assert.deepEqual(calls.splice(0), ['gemini', 'groq']);
  primaryStatus = 503;
  assert.equal((await (await POST(request(true))).json()).code, 'ai_failed');
- assert.deepEqual(calls.splice(0), ['quota', 'gemini']);
+ assert.deepEqual(calls.splice(0), ['gemini']);
  allowed = false;
- assert.equal((await (await POST(request(true))).json()).code, 'ai_rate_limited');
- assert.deepEqual(calls, ['quota']);
+ assert.equal((await (await POST(request(true))).json()).code, 'ai_failed');
+ assert.deepEqual(calls, ['gemini']);
  delete process.env.GROQ_API_KEY;
  assert.equal((await (await GET()).json()).groqFallbackAvailable, undefined);
 });
@@ -135,7 +136,7 @@ test('only the chosen Preview reserve receives the chat after a Gemini 429', asy
   MISTRAL_API_KEY:'mistral-test', COHERE_API_KEY:'cohere-test', CLOUDFLARE_API_TOKEN:'cloudflare-test', CLOUDFLARE_ACCOUNT_ID:'wrong',
   SAI_PREVIEW_EVALUATION:'alibaba', ALIBABA_API_KEY:'alibaba-test'
  });
- delete process.env.GEMINI_ADMIN_USER_ID;
+ process.env.GEMINI_ADMIN_USER_ID = id;
  const options = await (await GET()).json();
  assert.deepEqual(options.fallbackProviders.map(p => p.id), ['groq','mistral','cohere']);
  assert.deepEqual(options.evaluationProviders, [{ id:'alibaba', label:'Alibaba Cloud' }]);
@@ -163,17 +164,17 @@ test('only the chosen Preview reserve receives the chat after a Gemini 429', asy
  assert.equal((await POST(request('alibaba'))).status, 400);
  assert.deepEqual(calls, []);
  assert.equal((await (await POST(request())).json()).code, 'gemini_quota');
- assert.deepEqual(calls.splice(0), ['quota', 'gemini']);
+ assert.deepEqual(calls.splice(0), ['gemini']);
  assert.deepEqual(await (await POST(request('mistral'))).json(), { ...result, providerUsed:'mistral' });
- assert.deepEqual(calls.splice(0), ['quota', 'gemini', 'mistral']);
+ assert.deepEqual(calls.splice(0), ['gemini', 'mistral']);
  fallbackStatus = 429;
  assert.equal((await (await POST(request('mistral'))).json()).code, 'fallback_quota');
- assert.deepEqual(calls.splice(0), ['quota', 'gemini', 'mistral']);
+ assert.deepEqual(calls.splice(0), ['gemini', 'mistral']);
  process.env.VERCEL_ENV = 'production';
  assert.deepEqual((await (await GET()).json()).fallbackProviders.map(p => p.id), ['groq']);
  assert.equal((await (await GET()).json()).evaluationProviders, undefined);
  assert.equal((await (await POST(request('mistral'))).json()).code, 'gemini_quota');
- assert.deepEqual(calls, ['quota', 'gemini']);
+ assert.deepEqual(calls, ['gemini']);
 });
 
 test('a trial evaluation is authenticated, quota-limited, and sends only the built-in sample in Preview', async () => {
@@ -256,7 +257,7 @@ test('production Sol is owner-only and works even when the shared quota is exhau
  assert.deepEqual((await (await GET(request('owner'))).json()).selectableProviders.map(p => p.id), ['anymodel']);
  const denied = await POST(request('member', 'POST'));
  assert.equal(denied.status, 403);
- assert.equal((await denied.json()).code, 'sol_access_required');
+ assert.equal((await denied.json()).code, 'ai_subscription_required');
  assert.deepEqual(calls, []);
  assert.deepEqual(await (await POST(request('owner', 'POST'))).json(), { ...result, providerUsed:'anymodel' });
  assert.deepEqual(calls.splice(0), ['https://anymodel.org/v1/chat/completions']);
