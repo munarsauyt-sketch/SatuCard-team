@@ -9,6 +9,9 @@
   ['download-button', 'copy-card-image', 'publish-button', 'save-project-button', 'load-project-input'].forEach(id => { $(id).disabled = true; });
   const canvas = $('product-canvas'), assets = new Map(), pendingAssets = new Set();
   const miniPreview = $('mini-preview'), miniCanvas = $('mini-preview-canvas'), miniToggle = $('mini-preview-toggle');
+  const miniResize = $('mini-preview-resize'), miniMove = $('mini-preview-move');
+  const miniHeading = miniToggle.closest('.mini-preview-heading');
+  const mobileNavigation = document.querySelector('.studio-mobile-view');
   const previewStage = $('preview-stage'), toolbar = document.querySelector('.studio-project-bar');
   const palettes = {
     forest: ['#e1e8d9', '#466343', '#233126'], orange: ['#fff0e5', '#f06435', '#35251f'],
@@ -191,10 +194,13 @@
   }
   function clearPublished() { $('publish-result').hidden = true; if (!publishing) status('publish-status', ''); }
   function drawMiniPreview() {
-    const scale = 420 / Math.max(canvas.width, canvas.height);
+    const scale = 720 / Math.max(canvas.width, canvas.height);
     const width = Math.round(canvas.width * scale), height = Math.round(canvas.height * scale);
-    if (miniCanvas.width !== width) miniCanvas.width = width;
-    if (miniCanvas.height !== height) miniCanvas.height = height;
+    if (miniCanvas.width !== width || miniCanvas.height !== height) {
+      miniCanvas.width = width;
+      miniCanvas.height = height;
+      scheduleMiniPreview();
+    }
     const context = miniCanvas.getContext('2d');
     if (!context) return;
     context.clearRect(0, 0, width, height);
@@ -208,6 +214,7 @@
     const justShown = visible && miniPreview.hidden;
     miniPreview.hidden = !visible;
     if (visible && !miniCanvas.hidden && (redraw || justShown)) drawMiniPreview();
+    if (justShown) layoutMiniPreview();
   }
   function renderNow() {
     framePending = false; geometry = renderer.render(canvas, model.settings, imageAssets());
@@ -604,11 +611,83 @@
   window.addEventListener('resize', () => fitPreview(false));
   const focusMode = $('canvas-focus-mode');
   let miniPreviewFrame = 0;
+  let miniWidth, miniPosition;
+  function layoutMiniPreview() {
+    if (miniPreview.hidden || !miniPreview.getClientRects().length) return;
+    const viewport = document.documentElement;
+    const margin = 12;
+    const navigation = mobileNavigation.getBoundingClientRect();
+    const bottomEdge = navigation.height ? navigation.top - 8 : viewport.clientHeight - margin;
+    const topEdge = Math.max(margin, toolbar.getBoundingClientRect().bottom + 8);
+    const frameHeight = miniHeading.offsetHeight + 18;
+    const pictureHeight = Math.max(1, bottomEdge - topEdge - frameHeight);
+    const defaultWidth = parseFloat(getComputedStyle(miniPreview).getPropertyValue('--mini-default-width'));
+    const minimumWidth = 174;
+    const maximumWidth = Math.min(viewport.clientWidth - margin * 2, 560,
+      Math.max(minimumWidth, pictureHeight * miniCanvas.width / miniCanvas.height + 14));
+    const width = miniCanvas.hidden ? Math.min(defaultWidth, maximumWidth)
+      : Math.min(maximumWidth, Math.max(minimumWidth, miniWidth ?? defaultWidth));
+    miniPreview.style.width = `${Math.floor(width)}px`;
+    miniPreview.style.setProperty('--mini-picture-height', `${pictureHeight}px`);
+
+    const minimumBottom = viewport.clientHeight - bottomEdge;
+    const maximumBottom = viewport.clientHeight - topEdge - miniPreview.offsetHeight;
+    const maximumRight = viewport.clientWidth - miniPreview.offsetWidth - margin;
+    const right = Math.max(margin, Math.min(maximumRight, miniPosition?.right ?? 20));
+    const bottom = Math.max(minimumBottom, Math.min(maximumBottom, miniPosition?.bottom ?? 20));
+    miniPreview.style.right = `${Math.round(right)}px`;
+    miniPreview.style.bottom = `${Math.round(bottom)}px`;
+  }
+  function miniPreviewBounds() {
+    const rect = miniPreview.getBoundingClientRect();
+    return {
+      width: rect.width,
+      right: document.documentElement.clientWidth - rect.right,
+      bottom: document.documentElement.clientHeight - rect.bottom
+    };
+  }
+  function bindMiniGesture(handle, resize) {
+    let start;
+    function apply(bounds, x, y) {
+      miniPosition = { right: bounds.right, bottom: bounds.bottom };
+      if (resize) {
+        const vertical = y * miniCanvas.width / miniCanvas.height;
+        miniWidth = bounds.width - (Math.abs(x) >= Math.abs(vertical) ? x : vertical);
+      } else {
+        miniPosition.right -= x;
+        miniPosition.bottom -= y;
+      }
+      layoutMiniPreview();
+    }
+    handle.addEventListener('pointerdown', event => {
+      if (!event.isPrimary || event.button !== 0) return;
+      start = { id: event.pointerId, x: event.clientX, y: event.clientY, bounds: miniPreviewBounds() };
+      handle.setPointerCapture(event.pointerId);
+    });
+    handle.addEventListener('pointermove', event => {
+      if (start?.id === event.pointerId) apply(start.bounds, event.clientX - start.x, event.clientY - start.y);
+    });
+    handle.addEventListener('lostpointercapture', () => { start = null; });
+    handle.addEventListener('keydown', event => {
+      const steps = { ArrowLeft: [-20, 0], ArrowRight: [20, 0], ArrowUp: [0, -20], ArrowDown: [0, 20] };
+      const step = steps[event.key];
+      if (!step) return;
+      event.preventDefault();
+      apply(miniPreviewBounds(), ...step);
+    });
+  }
+  bindMiniGesture(miniMove, false);
+  bindMiniGesture(miniResize, true);
+  $('mini-preview-reset').addEventListener('click', () => {
+    miniWidth = miniPosition = undefined;
+    layoutMiniPreview();
+  });
   function scheduleMiniPreview() {
     if (miniPreviewFrame) return;
     miniPreviewFrame = requestAnimationFrame(() => {
       miniPreviewFrame = 0;
       updateMiniPreview();
+      layoutMiniPreview();
     });
   }
   window.addEventListener('scroll', scheduleMiniPreview, { passive: true });
@@ -619,8 +698,11 @@
   }
   miniToggle.addEventListener('click', () => {
     miniCanvas.hidden = !miniCanvas.hidden;
+    miniResize.hidden = miniCanvas.hidden;
     miniToggle.setAttribute('aria-expanded', String(!miniCanvas.hidden));
+    miniToggle.setAttribute('aria-label', miniCanvas.hidden ? 'Развернуть мини-превью' : 'Свернуть мини-превью');
     updateMiniPreview(true);
+    layoutMiniPreview();
   });
   function setFocusMode(active) {
     focusMode.closest('.studio-layout').classList.toggle('is-canvas-focus', active);
