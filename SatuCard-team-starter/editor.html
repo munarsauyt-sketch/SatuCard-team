@@ -17,13 +17,13 @@
   <script src="studio-tools.js?v=export-review-1" defer></script>
   <script src="studio-copy.js?v=workflow-1" defer></script>
   <script src="cloud-projects.js?v=workflow-1" defer></script>
-  <script src="editor.js?v=mini-preview-2" defer></script>
+  <script src="editor.js?v=mini-preview-3" defer></script>
   <script src="studio-workflow.js?v=export-review-1" defer></script>
   <script src="studio-chat.js?v=reply-model-1" defer></script>
   <link rel="stylesheet" href="studio-chat.css?v=studio-refresh-1">
   <link rel="stylesheet" href="studio-workflow.css?v=export-review-1">
   <link rel="stylesheet" href="editor-tour.css?v=20261105">
-  <link rel="stylesheet" href="editor-preview.css?v=mini-preview-2">
+  <link rel="stylesheet" href="editor-preview.css?v=mini-preview-3">
   <link rel="stylesheet" href="editor-fonts.css?v=larger-canvas-1">
   <script src="editor-tour.js?v=wide-tools-1" defer></script>
 </head>
@@ -199,14 +199,18 @@
 
   <aside id="mini-preview" class="studio-mini-preview" aria-label="Мини-превью карточки" hidden>
     <div class="mini-preview-heading">
-      <button id="mini-preview-resize" type="button" title="Потяните за угол или используйте стрелки" aria-label="Изменить размер мини-превью">
+      <button id="mini-preview-resize" type="button" data-mini-resize="proportional" title="Потяните за угол для пропорционального масштаба" aria-label="Пропорционально изменить размер мини-превью">
         <svg class="studio-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10V4h6m10 10v6h-6M4 4l16 16"/></svg>
       </button>
       <button id="mini-preview-move" type="button" title="Перетащите заголовок или используйте стрелки" aria-label="Переместить мини-превью">Мини-превью</button>
       <button id="mini-preview-reset" type="button" title="Вернуть размер и положение" aria-label="Сбросить размер и положение мини-превью"><svg class="studio-icon" aria-hidden="true"><use href="#i-reset"/></svg></button>
-      <button id="mini-preview-toggle" type="button" aria-label="Свернуть мини-превью" aria-controls="mini-preview-canvas" aria-expanded="true"><span class="mini-preview-chevron" aria-hidden="true"></span></button>
+      <button id="mini-preview-toggle" type="button" aria-label="Свернуть мини-превью" aria-controls="mini-preview-picture" aria-expanded="true"><span class="mini-preview-chevron" aria-hidden="true"></span></button>
     </div>
-    <canvas id="mini-preview-canvas" role="img" aria-label="Предварительный просмотр карточки товара"></canvas>
+    <div id="mini-preview-picture" class="mini-preview-picture">
+      <canvas id="mini-preview-canvas" role="img" aria-label="Предварительный просмотр карточки товара"></canvas>
+      <button type="button" class="mini-preview-edge" data-mini-resize="height" title="Потяните за верхний край" aria-label="Изменить высоту мини-превью"></button>
+      <button type="button" class="mini-preview-edge" data-mini-resize="width" title="Потяните за левый край" aria-label="Изменить ширину мини-превью"></button>
+    </div>
   </aside>
 
   <aside id="ai-chat" class="ai-chat" role="dialog" aria-modal="false" aria-labelledby="ai-chat-title" hidden>

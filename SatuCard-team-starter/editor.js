@@ -9,6 +9,7 @@
   ['download-button', 'copy-card-image', 'publish-button', 'save-project-button', 'load-project-input'].forEach(id => { $(id).disabled = true; });
   const canvas = $('product-canvas'), assets = new Map(), pendingAssets = new Set();
   const miniPreview = $('mini-preview'), miniCanvas = $('mini-preview-canvas'), miniToggle = $('mini-preview-toggle');
+  const miniPicture = $('mini-preview-picture');
   const miniResize = $('mini-preview-resize'), miniMove = $('mini-preview-move');
   const miniHeading = miniToggle.closest('.mini-preview-heading');
   const mobileNavigation = document.querySelector('.studio-mobile-view');
@@ -213,7 +214,7 @@
     const visible = bottom < toolbar.getBoundingClientRect().bottom && focusMode?.getAttribute('aria-pressed') !== 'true';
     const justShown = visible && miniPreview.hidden;
     miniPreview.hidden = !visible;
-    if (visible && !miniCanvas.hidden && (redraw || justShown)) drawMiniPreview();
+    if (visible && !miniPicture.hidden && (redraw || justShown)) drawMiniPreview();
     if (justShown) layoutMiniPreview();
   }
   function renderNow() {
@@ -611,7 +612,8 @@
   window.addEventListener('resize', () => fitPreview(false));
   const focusMode = $('canvas-focus-mode');
   let miniPreviewFrame = 0;
-  let miniWidth, miniPosition;
+  let miniSize, miniPosition;
+  const miniCardAspect = () => miniCanvas.width / miniCanvas.height;
   function layoutMiniPreview() {
     if (miniPreview.hidden || !miniPreview.getClientRects().length) return;
     const viewport = document.documentElement;
@@ -619,16 +621,27 @@
     const navigation = mobileNavigation.getBoundingClientRect();
     const bottomEdge = navigation.height ? navigation.top - 8 : viewport.clientHeight - margin;
     const topEdge = Math.max(margin, toolbar.getBoundingClientRect().bottom + 8);
-    const frameHeight = miniHeading.offsetHeight + 18;
-    const pictureHeight = Math.max(1, bottomEdge - topEdge - frameHeight);
-    const defaultWidth = parseFloat(getComputedStyle(miniPreview).getPropertyValue('--mini-default-width'));
-    const minimumWidth = 174;
-    const maximumWidth = Math.min(viewport.clientWidth - margin * 2, 560,
-      Math.max(minimumWidth, pictureHeight * miniCanvas.width / miniCanvas.height + 14));
-    const width = miniCanvas.hidden ? Math.min(defaultWidth, maximumWidth)
-      : Math.min(maximumWidth, Math.max(minimumWidth, miniWidth ?? defaultWidth));
-    miniPreview.style.width = `${Math.floor(width)}px`;
-    miniPreview.style.setProperty('--mini-picture-height', `${pictureHeight}px`);
+    if (!miniPicture.hidden) {
+      const maxWidth = Math.max(1, Math.min(viewport.clientWidth - margin * 2, 680));
+      const maxHeight = Math.max(1, bottomEdge - topEdge - miniHeading.offsetHeight - 8);
+      const defaultWidth = parseFloat(getComputedStyle(miniPreview).getPropertyValue('--mini-default-width'));
+      const aspect = miniCardAspect();
+      let width = miniSize?.width ?? defaultWidth;
+      // Keep the chosen stretch relative to the active card's format.
+      let height = (miniSize ? miniSize.height * miniSize.cardAspect : defaultWidth) / aspect;
+      if (!miniSize || miniSize.proportional) {
+        const minScale = Math.max(174 / width, 96 / height);
+        const maxScale = Math.min(maxWidth / width, maxHeight / height);
+        const scale = Math.min(maxScale, Math.max(1, minScale));
+        width *= scale;
+        height *= scale;
+      } else {
+        width = Math.min(maxWidth, Math.max(174, width));
+        height = Math.min(maxHeight, Math.max(96, height));
+      }
+      miniPicture.style.width = `${Math.max(1, Math.floor(width))}px`;
+      miniPicture.style.height = `${Math.max(1, Math.floor(height))}px`;
+    }
 
     const minimumBottom = viewport.clientHeight - bottomEdge;
     const maximumBottom = viewport.clientHeight - topEdge - miniPreview.offsetHeight;
@@ -639,23 +652,36 @@
     miniPreview.style.bottom = `${Math.round(bottom)}px`;
   }
   function miniPreviewBounds() {
-    const rect = miniPreview.getBoundingClientRect();
+    const rect = miniPreview.getBoundingClientRect(), picture = miniPicture.getBoundingClientRect();
     return {
-      width: rect.width,
+      width: picture.width,
+      height: picture.height,
       right: document.documentElement.clientWidth - rect.right,
       bottom: document.documentElement.clientHeight - rect.bottom
     };
   }
-  function bindMiniGesture(handle, resize) {
+  function bindMiniGesture(handle, mode) {
     let start;
     function apply(bounds, x, y) {
       miniPosition = { right: bounds.right, bottom: bounds.bottom };
-      if (resize) {
-        const vertical = y * miniCanvas.width / miniCanvas.height;
-        miniWidth = bounds.width - (Math.abs(x) >= Math.abs(vertical) ? x : vertical);
-      } else {
+      if (mode === 'move') {
         miniPosition.right -= x;
         miniPosition.bottom -= y;
+      } else {
+        let { width, height } = bounds;
+        const proportional = mode === 'proportional';
+        if (proportional) {
+          const horizontal = x / width, vertical = y / height;
+          const delta = Math.abs(horizontal) >= Math.abs(vertical) ? horizontal : vertical;
+          const scale = Math.max(0.01, 1 - delta);
+          width *= scale;
+          height *= scale;
+        } else if (mode === 'width') {
+          width = Math.max(174, width - x);
+        } else {
+          height = Math.max(96, height - y);
+        }
+        miniSize = { width, height, proportional, cardAspect: miniCardAspect() };
       }
       layoutMiniPreview();
     }
@@ -671,15 +697,15 @@
     handle.addEventListener('keydown', event => {
       const steps = { ArrowLeft: [-20, 0], ArrowRight: [20, 0], ArrowUp: [0, -20], ArrowDown: [0, 20] };
       const step = steps[event.key];
-      if (!step) return;
+      if (!step || (mode === 'width' && !step[0]) || (mode === 'height' && !step[1])) return;
       event.preventDefault();
       apply(miniPreviewBounds(), ...step);
     });
   }
-  bindMiniGesture(miniMove, false);
-  bindMiniGesture(miniResize, true);
+  bindMiniGesture(miniMove, 'move');
+  miniPreview.querySelectorAll('[data-mini-resize]').forEach(handle => bindMiniGesture(handle, handle.dataset.miniResize));
   $('mini-preview-reset').addEventListener('click', () => {
-    miniWidth = miniPosition = undefined;
+    miniSize = miniPosition = undefined;
     layoutMiniPreview();
   });
   function scheduleMiniPreview() {
@@ -697,10 +723,10 @@
     [canvas, previewStage, toolbar].forEach(element => previewObserver.observe(element));
   }
   miniToggle.addEventListener('click', () => {
-    miniCanvas.hidden = !miniCanvas.hidden;
-    miniResize.hidden = miniCanvas.hidden;
-    miniToggle.setAttribute('aria-expanded', String(!miniCanvas.hidden));
-    miniToggle.setAttribute('aria-label', miniCanvas.hidden ? 'Развернуть мини-превью' : 'Свернуть мини-превью');
+    miniPicture.hidden = !miniPicture.hidden;
+    miniResize.hidden = miniPicture.hidden;
+    miniToggle.setAttribute('aria-expanded', String(!miniPicture.hidden));
+    miniToggle.setAttribute('aria-label', miniPicture.hidden ? 'Развернуть мини-превью' : 'Свернуть мини-превью');
     updateMiniPreview(true);
     layoutMiniPreview();
   });
