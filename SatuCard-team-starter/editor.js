@@ -561,8 +561,14 @@
   document.querySelectorAll('[data-editor-tab]').forEach(button => {
     button.addEventListener('click', () => activateTab(button.dataset.editorTab));
     button.addEventListener('keydown', event => {
-      const keys = ['photo', 'content', 'design'], index = keys.indexOf(button.dataset.editorTab);
-      if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) { event.preventDefault(); activateTab(event.key === 'Home' ? keys[0] : event.key === 'End' ? keys[2] : keys[(index + (event.key === 'ArrowRight' ? 1 : 2)) % 3], true); }
+      const keys = [...document.querySelectorAll('[data-editor-tab]')].map(tab => tab.dataset.editorTab);
+      const index = keys.indexOf(button.dataset.editorTab);
+      if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+        event.preventDefault();
+        const next = event.key === 'Home' ? 0 : event.key === 'End' ? keys.length - 1
+          : (index + (event.key === 'ArrowRight' ? 1 : keys.length - 1)) % keys.length;
+        activateTab(keys[next], true);
+      }
     });
   });
   $('undo-button').addEventListener('click', () => undoRedo('undo')); $('redo-button').addEventListener('click', () => undoRedo('redo'));
@@ -583,9 +589,9 @@
   }
   if (focusMode) {
     focusMode.addEventListener('click', () => setFocusMode(focusMode.getAttribute('aria-pressed') !== 'true'));
-    document.querySelector('.studio-mobile-view a[href="#studio-settings"]')?.addEventListener('click', () => {
+    document.querySelectorAll('a[href="#studio-settings"]').forEach(link => link.addEventListener('click', () => {
       if (focusMode.getAttribute('aria-pressed') === 'true') setFocusMode(false);
-    });
+    }));
     document.addEventListener('keydown', event => {
       if (event.key === 'Escape' && !event.defaultPrevented && !document.querySelector('dialog[open]') &&
           focusMode.getAttribute('aria-pressed') === 'true') setFocusMode(false);

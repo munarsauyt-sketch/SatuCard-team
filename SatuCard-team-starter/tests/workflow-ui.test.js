@@ -109,6 +109,22 @@ test('free editing can paste a photo, make a format copy and export WebP or clip
   } finally { app.dom.window.close(); }
 });
 
+test('all four tool sections remain reachable with the keyboard', async () => {
+  const app = await setup();
+  const { $, w } = app;
+  try {
+    $('tab-photo').focus();
+    $('tab-photo').dispatchEvent(new w.KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+    assert.equal($('tab-templates').getAttribute('aria-selected'), 'true');
+    assert.equal($('panel-templates').hidden, false);
+    assert.equal(w.document.activeElement, $('tab-templates'));
+    $('tab-templates').dispatchEvent(new w.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    assert.equal($('tab-photo').getAttribute('aria-selected'), 'true');
+    assert.equal($('panel-templates').hidden, true);
+    assert.equal($('template-grid').closest('[data-editor-panel]').id, 'panel-templates');
+  } finally { app.dom.window.close(); }
+});
+
 test('export opens the needed field when the canvas is in focus mode', async () => {
   const app = await setup();
   const { $, input, dom } = app;
