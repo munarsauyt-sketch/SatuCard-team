@@ -724,7 +724,8 @@
     const previewObserver = new ResizeObserver(scheduleMiniPreview);
     [canvas, previewStage, toolbar].forEach(element => previewObserver.observe(element));
   }
-  const mobilePreview = window.matchMedia?.('(max-width: 800px)');
+  // Fold into the bottom navigation only while that navigation is available.
+  const mobilePreview = window.matchMedia?.('(max-width: 760px)');
   function setMiniExpanded(expanded) {
     miniPicture.hidden = miniResize.hidden = !expanded;
     miniToggle.setAttribute('aria-expanded', String(expanded));
