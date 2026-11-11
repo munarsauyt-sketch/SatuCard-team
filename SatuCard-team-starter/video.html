@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>SatuCard Video — студия роликов</title>
+  <meta name="description" content="Черновая видеостудия SatuCard: короткие ролики для товаров, шаблоны, музыка и монтаж.">
+  <meta name="robots" content="noindex,nofollow">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="editor-fonts.css"><link rel="stylesheet" href="video.css">
+  <script type="module" src="video-editor.js"></script>
+</head>
+<body>
+<div id="workspace">
+  <header class="topbar">
+    <a class="wordmark" href="index.html" aria-label="SatuCard, на главную"><span class="brand-icon">◈</span> SatuCard<span class="video-word">Video</span></a>
+    <span class="draft-badge">ЧЕРНОВИК</span>
+    <div class="project-heading"><input id="project-name" aria-label="Название проекта" maxlength="100" value="Новый дроп"><span id="save-status" role="status">Загружаем студию…</span></div>
+    <div class="history-actions"><button id="undo" title="Отменить · Ctrl+Z" aria-label="Отменить">↶</button><button id="redo" title="Повторить · Ctrl+Shift+Z" aria-label="Повторить">↷</button></div>
+    <button id="open-project">Открыть</button><button id="save-file">Сохранить файл</button><button id="export" class="primary">Экспорт <span>↗</span></button>
+  </header>
+  <main class="studio">
+    <nav class="rail" aria-label="Инструменты студии">
+      <button data-panel="templates" class="active" aria-label="Шаблоны"><span aria-hidden="true">▦</span>Шаблоны</button>
+      <button data-panel="media" aria-label="Медиа"><span aria-hidden="true">▧</span>Медиа</button>
+      <button data-panel="text" aria-label="Текст"><span aria-hidden="true">T</span>Текст</button>
+      <button data-panel="audio" aria-label="Звук"><span aria-hidden="true">♫</span>Звук</button>
+      <button data-panel="brand" aria-label="Бренд"><span aria-hidden="true">◈</span>Бренд</button>
+      <a href="editor.html"><span>↗</span>Карточки</a>
+    </nav>
+    <aside class="library">
+      <section data-library="templates"><div class="panel-heading"><h1>Начните с идеи</h1><span>10</span></div><p class="muted">Готовый ритм. Ваш товар.</p>
+        <div class="chips" id="template-filters"><button data-filter="Все" class="active">Все</button><button data-filter="Товар">Товар</button><button data-filter="Акция">Акции</button><button data-filter="История">Истории</button></div>
+        <div id="template-list" class="template-grid"></div><button id="blank-project" class="full subtle">＋ Собрать с нуля</button>
+      </section>
+      <section data-library="media" hidden><div class="panel-heading"><h1>Ваши материалы</h1><span>＋</span></div><p class="muted">Фото, клипы, музыка. До 40 МБ на файл и 100 МБ на проект.</p><button id="import-media" class="upload-card">↑<strong>Добавить файлы</strong><span>JPG · PNG · WebP · MP4 · WebM · аудио</span></button><div id="media-list" class="media-list"></div></section>
+      <section data-library="text" hidden><div class="panel-heading"><h1>Скажите главное</h1><span>T</span></div><p class="muted">Слои можно двигать прямо на холсте.</p><button id="add-text" class="add-title full">Добавить заголовок <span>＋</span></button><button id="add-shape" class="full subtle">＋ Цветная плашка</button><hr><h2>Субтитры</h2><p class="muted">Русский и қазақша. Введите текст с таймкодами или загрузите SRT / VTT.</p><textarea id="subtitle-source" rows="6" aria-label="Субтитры SRT" placeholder="1&#10;00:00:00,000 --> 00:00:03,000&#10;Ваш текст"></textarea><div class="button-row"><button id="subtitle-import">Загрузить SRT</button><button id="subtitle-add">Добавить</button></div></section>
+      <section data-library="audio" hidden><div class="panel-heading"><h1>Задайте настроение</h1><span>♫</span></div><p class="muted">Три оригинальные синтезированные дорожки и короткие эффекты.</p><div id="music-list"></div><h2>Звуковые акценты</h2><div id="sfx-list" class="sfx-grid"></div><hr><label class="inline-label">Темп, BPM <input id="bpm" type="number" min="40" max="240" value="120"></label><button id="detect-beats" class="full subtle">Определить биты в музыке</button><button id="fit-beats" class="full subtle">Привязать сцены к битам</button><p id="beat-status" class="muted">Можно использовать сетку BPM.</p><button id="import-audio" class="full">↑ Загрузить свой звук</button></section>
+      <section data-library="brand" hidden><div class="panel-heading"><h1>Всё о вашем товаре</h1><span>◈</span></div><p class="muted">Меняйте содержание, сохраняя монтаж.</p><form id="product-form"><label>Товар<input name="title" maxlength="120"></label><label>Цена<input name="price" maxlength="60"></label><label>Магазин<input name="brand" maxlength="80"></label><label>Призыв к действию<input name="cta" maxlength="120"></label><label>Три преимущества<textarea name="features" rows="3" maxlength="360"></textarea></label><button class="primary full" type="submit">Обновить ролик</button></form><hr><h2>Стиль магазина</h2><label>Акцентный цвет<input id="brand-color" type="color" value="#b8c5ff"></label><label>Шрифт<select id="brand-font"><option>Golos Text</option><option>Manrope</option><option>Noto Serif</option><option>IBM Plex Mono</option></select></label><div class="button-row"><button id="brand-save">Запомнить стиль</button><button id="brand-apply">Применить</button></div><button id="brand-logo" class="full subtle">↑ Добавить логотип</button><p class="muted">Стиль и проекты сохраняются в этом браузере. Скачайте файл проекта для переноса.</p></section>
+      <button id="save-file-mobile" class="full subtle">↓ Скачать файл проекта</button>
+    </aside>
+    <section class="center" aria-label="Предпросмотр ролика">
+      <div class="stage-toolbar"><select id="format" aria-label="Формат ролика"><option value="vertical">9:16 · Истории</option><option value="square">1:1 · Каталог</option><option value="wide">16:9 · Видео</option></select><label class="safe-label"><input id="safe-zones" type="checkbox"> Безопасные зоны</label><span class="preview-label">ПРЕВЬЮ</span></div>
+      <div class="stage"><canvas id="preview" width="540" height="960" tabindex="0" aria-label="Холст ролика: выберите и переместите объект"></canvas><div class="stage-caption">ВАША СЛЕДУЮЩАЯ ИСТОРИЯ</div></div>
+      <div class="transport"><button id="previous" aria-label="Назад на один кадр">‹</button><button id="play" class="play-button" aria-label="Воспроизвести">▶</button><button id="next" aria-label="Вперёд на один кадр">›</button><output id="time-display">00:00.00 / 00:12</output><label class="duration-label">Длина <input id="duration" type="number" min="0.5" max="30" step="0.5" value="12"> с</label><select id="fps" aria-label="Частота кадров"><option value="24">24 fps</option><option value="30" selected>30 fps</option><option value="60">60 fps</option></select></div>
+    </section>
+    <aside class="inspector"><div class="panel-heading"><h2>Свойства</h2><span>◌</span></div><div id="inspector-content"><div class="empty-inspector">Выберите объект на холсте или слой на монтажной шкале.</div></div></aside>
+    <section class="timeline" aria-label="Монтажная шкала"><div class="timeline-toolbar"><span class="timeline-label">МОНТАЖ</span><span id="layer-count"></span><div class="timeline-actions"><button id="split" title="Разрезать выбранный слой в позиции курсора">Разрезать</button><button id="duplicate">Дублировать</button><button id="layer-down" title="Слой ниже">↓</button><button id="layer-up" title="Слой выше">↑</button><button id="delete-layer" title="Удалить слой">⌫</button></div><label class="zoom-label">Масштаб <input id="timeline-zoom" type="range" min="25" max="100" value="55"></label></div><div id="timeline-scroll"><div id="timeline-inner"><div id="ruler"></div><div id="tracks"></div><div id="playhead"><span></span></div></div></div></section>
+  </main>
+</div>
+<input id="media-input" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,audio/*" multiple hidden>
+<input id="project-input" type="file" accept=".json" hidden><input id="srt-input" type="file" accept=".srt,.vtt,text/plain" hidden><input id="logo-input" type="file" accept="image/png,image/webp,image/jpeg" hidden>
+<div id="toast" role="status" aria-live="polite"></div>
+<dialog id="export-dialog"><form method="dialog" class="dialog-top"><span class="eyebrow">ФИНАЛЬНЫЙ ШТРИХ</span><button aria-label="Закрыть" id="export-close">×</button></form><h2>Готов к публикации</h2><p>MP4 · H.264 + AAC · без водяного знака</p><label>Качество<select id="export-quality"><option value="1280">HD · длинная сторона 1280 px</option><option value="1920">Full HD · длинная сторона 1920 px</option></select></label><p class="muted">Экспорт выполняется на вашем устройстве. Для MP4 используйте актуальный Chrome или Edge. Не закрывайте вкладку.</p><progress id="export-progress" max="1" value="0" hidden></progress><p id="export-status" role="status"></p><video id="export-result" controls playsinline hidden></video><div class="button-row"><button id="export-cancel" hidden>Отменить</button><button id="export-start" class="primary full">Собрать MP4 ↗</button><a id="export-download" class="button primary full" hidden>Скачать MP4 ↓</a></div></dialog>
+<noscript>Для работы студии включите JavaScript.</noscript>
+</body></html>
