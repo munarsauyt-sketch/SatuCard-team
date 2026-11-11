@@ -300,3 +300,7 @@ html[data-theme="dark"] .auth-shell { box-shadow: none; }
   .card-error-mark { width: 70px; height: 90px; flex-basis: 90px; font-size: 47px; }
   .shared-card-error > div > div { flex-direction: column; }
 }
+
+.publication-actions { display:flex; gap:12px; padding:12px; flex-wrap:wrap; align-items:center; }
+.publication-actions button,.publication-actions a { min-height:44px; padding:8px; }
+.shared-card-main [hidden] { display:none!important; }

@@ -152,3 +152,5 @@ h3{font-size:22px;letter-spacing:-.035em;line-height:1.25}
   *,*:before,*:after{animation:none!important;transition:none!important}
   html.js-ready [data-reveal]{opacity:1;transform:none}
 }
+
+.interface-language select { font:inherit; color:inherit; background:transparent; border:1px solid #8886; border-radius:8px; padding:8px; min-height:44px; max-width:110px; }

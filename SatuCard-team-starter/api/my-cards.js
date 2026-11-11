@@ -16,7 +16,7 @@ export async function GET(request) {
   catch (error) { return accountFailure(error); }
   const query = new URLSearchParams({
     user_id: `eq.${user.id}`,
-    select: 'id,title,price_kzt,style,format,created_at,image_path',
+    select: '*',
     order: 'created_at.desc',
     limit: '30'
   });
@@ -34,6 +34,10 @@ export async function GET(request) {
       style: row.style,
       format: row.format,
       createdAt: row.created_at,
+      imagePath: row.image_path,
+      contactUrl: row.contact_url || '',
+      showPrice: row.show_price !== false,
+      showBrand: row.show_brand !== false,
       imageUrl: `${config.base}/storage/v1/object/public/cards/${encodeURIComponent(row.image_path)}`
     })) });
   } catch (_) {

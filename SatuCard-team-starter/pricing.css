@@ -268,3 +268,14 @@
   .pricing-main { padding-bottom: 36px; }
   .pricing-grid { grid-template-columns: minmax(0, 1fr); }
 }
+
+.pricing-explanation { max-width:900px; margin:48px auto; padding:0 20px; line-height:1.6; }
+.pricing-purpose { min-height:3em; line-height:1.5; }
+.pricing-card details { margin-bottom:20px; }
+.pricing-card summary { cursor:pointer; min-height:44px; }
+@media(max-width:600px) {
+ .pricing-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+ .pricing-card { padding:16px 12px; min-width:0; }
+ .pricing-card .pricing-price { font-size:28px; }
+ .pricing-card .pricing-button { padding:10px 6px; min-height:44px; }
+}

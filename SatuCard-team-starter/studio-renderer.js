@@ -582,7 +582,7 @@
     const state = normalize(input);
     if (!state.title) state.title = 'Название вашего товара';
     const format = formats[state.format];
-    const scale = clamp(options.scale, 0.25, 4, 1);
+    const scale = clamp(options.scale, 0.1, 4, 1);
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Canvas 2D недоступен.');
     canvas.width = Math.round(format.width * scale); canvas.height = Math.round(format.height * scale);

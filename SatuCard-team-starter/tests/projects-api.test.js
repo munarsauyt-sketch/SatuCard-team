@@ -39,7 +39,7 @@ test('all cloud access requires authenticated confirmed complete account', async
 test('list excludes payload and secrets; read is owner-filtered with service key', async () => {
   const calls = setup();
   const list = await GET(req()); assert.equal(list.status, 200);
-  assert.deepEqual(Object.keys((await list.json()).projects[0]).sort(), ['id','title','updatedAt','version']);
+  assert.deepEqual(Object.keys((await list.json()).projects[0]).sort(), ['archived','id','thumbnail','title','updatedAt','version']);
   assert.equal(calls[0].url.searchParams.get('user_id'), `eq.${uid}`);
   assert.equal(calls[0].url.searchParams.get('limit'), '50');
   assert.ok(!calls[0].url.searchParams.get('select').includes('payload'));

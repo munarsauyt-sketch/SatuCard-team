@@ -51,9 +51,11 @@ window.SATUCARD_AUTH = (() => {
   function rememberEmailBilling() {
     if (!accountContext.billing && !accountPlans.has(accountContext.plan)) return;
     try {
-      sessionStorage.setItem(emailFlowKey, JSON.stringify({
+      const flow = JSON.stringify({
         ...accountContext, theme: accountTheme(), createdAt: Date.now()
-      }));
+      });
+      sessionStorage.setItem(emailFlowKey, flow);
+      localStorage.setItem(emailFlowKey, flow);
     } catch (_) { /* Email still works when storage is unavailable. */ }
   }
 
@@ -85,14 +87,20 @@ window.SATUCARD_AUTH = (() => {
         cache: 'no-store', signal: controller.signal
       });
     } catch (error) {
-      if (error.name === 'AbortError') throw new Error('Сервер долго не отвечает. Повторите попытку.');
-      throw new Error('Нет соединения с сервером. Проверьте интернет.');
+      const unavailable = new Error(error.name === 'AbortError' ? 'Сервер долго не отвечает. Повторите попытку.' : 'Нет соединения с сервером. Проверьте интернет.');
+      unavailable.transient = true;
+      throw unavailable;
     } finally {
       clearTimeout(timeout);
     }
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
       const code = data.error_code || data.code || '';
+      if (response.status >= 500 || response.status === 429) {
+        const temporary = new Error('Сервис входа временно недоступен. Повторите попытку.');
+        temporary.transient = true;
+        throw temporary;
+      }
       const errorText = `${data.msg || ''} ${data.message || ''} ${data.error_description || ''}`;
       if (errorText.includes('MAILBOX_PROOF_REQUIRED')) throw new Error('Старый аккаунт требует подтверждения почты. Войдите через Google или по коду из письма.');
       if (errorText.includes('EMAIL_CONFIRMATION_REQUIRED')) throw new Error('Сначала подтвердите email по письму или войдите через Google.');
@@ -128,7 +136,11 @@ window.SATUCARD_AUTH = (() => {
         if (!data.access_token || !data.refresh_token) throw new Error('Сессия истекла.');
         save({ ...data, expires_at: Math.floor(Date.now() / 1000) + data.expires_in });
         return session;
-      }).catch(() => { save(null); return null; }).finally(() => { refreshPromise = null; });
+      }).catch(error => {
+        // Keep refresh credentials after a network failure, but never send an expired access token.
+        if (!error.transient) save(null);
+        return null;
+      }).finally(() => { refreshPromise = null; });
     }
     return refreshPromise;
   }
@@ -185,8 +197,9 @@ window.SATUCARD_AUTH = (() => {
     }
     const data = saveAuthResponse(await request('/auth/v1/verify', { method: 'POST', body: JSON.stringify({ token_hash: token, type }) }));
     try {
-      const context = JSON.parse(sessionStorage.getItem(emailFlowKey) || 'null');
+      const context = JSON.parse(sessionStorage.getItem(emailFlowKey) || localStorage.getItem(emailFlowKey) || 'null');
       sessionStorage.removeItem(emailFlowKey);
+      localStorage.removeItem(emailFlowKey);
       const age = Date.now() - context?.createdAt;
       if (age >= 0 && age < 60 * 60 * 1000 && !accountContext.billing && !accountPlans.has(accountContext.plan)) {
         restoreAccountContext(context);
@@ -426,7 +439,22 @@ window.SATUCARD_AUTH = (() => {
   });
   getSession().then(active => { updateAccountLinks(); if (active && document.querySelectorAll('[data-account-link]').length) getProfile().catch(() => {}); });
 
-  return { getSession, signUp, signIn, sendEmailCode, verifyEmailCode, isEmailCallback, completeEmailSignIn,
+  function editorReturn() {
+    if (accountContext.billing || accountPlans.has(accountContext.plan)) return null;
+    try {
+      const value = sessionStorage.getItem('satucard-editor-return') || localStorage.getItem('satucard-editor-return');
+      if (!value) return null;
+      const flow = JSON.parse(value);
+      sessionStorage.removeItem('satucard-editor-return');
+      localStorage.removeItem('satucard-editor-return');
+      const age = Date.now() - flow.createdAt;
+      if (!(age >= 0 && age < 3600000)) return null;
+      const url = new URL(flow.path, location.origin);
+      if (url.origin !== location.origin || url.pathname !== '/editor.html') return null;
+      return url.href;
+    } catch (_) { return null; }
+  }
+  return { editorReturn, getSession, signUp, signIn, sendEmailCode, verifyEmailCode, isEmailCallback, completeEmailSignIn,
     signInWithGoogle, isGoogleCallback, completeGoogleSignIn, getAuthIntent: () => completedIntent,
     signOut, getProfile, saveProfile, getMyCards, accountPage };
 })();

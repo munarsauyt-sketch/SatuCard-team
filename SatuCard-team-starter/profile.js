@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const firstName = $('first-name').value.trim(), lastName = $('last-name').value.trim();
     if (!firstName || !lastName) return show('Заполните имя и фамилию.');
     busy = true; enable(false); form.setAttribute('aria-busy', 'true'); show('Сохраняем профиль…', 'loading');
-    try { await auth.saveProfile(firstName, lastName); location.replace(auth.accountPage('dashboard.html')); }
+    try { await auth.saveProfile(firstName, lastName); location.replace(auth.editorReturn?.() || auth.accountPage('dashboard.html')); }
     catch (error) { show(error.message || 'Не удалось сохранить профиль.'); enable(true); }
     finally { busy = false; form.setAttribute('aria-busy', 'false'); }
   });

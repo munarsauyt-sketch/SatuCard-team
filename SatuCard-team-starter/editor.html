@@ -11,13 +11,13 @@
   <link rel="stylesheet" href="studio.css?v=rebrand-20261012">
   <script src="auth-client.js?v=verified-auth-20261026" defer></script>
   <script src="site.js?v=rebrand-20261012" defer></script>
-  <script src="assets/demo-images.js" defer></script><script src="assets/demo-ceramics.js" defer></script><script src="assets/demo-bag.js" defer></script><script src="assets/demo-jewelry.js" defer></script><script src="assets/demo-decor.js" defer></script><script src="assets/demo-kitchen.js" defer></script><script src="product-samples.js" defer></script>
+  <script src="product-samples.js" defer></script>
   <script src="studio-renderer.js?v=larger-canvas-1" defer></script>
   <script src="studio-project.js?v=studio-refresh-1" defer></script>
   <script src="studio-tools.js?v=export-review-1" defer></script>
   <script src="studio-copy.js?v=workflow-1" defer></script>
   <script src="cloud-projects.js?v=workflow-1" defer></script>
-  <script src="editor.js?v=mini-preview-5" defer></script>
+  <script src="photo-import.js" defer></script><script src="editor.js?v=mini-preview-5" defer></script>
   <script src="studio-workflow.js?v=export-review-1" defer></script>
   <script src="studio-chat.js?v=reply-model-1" defer></script>
   <link rel="stylesheet" href="studio-chat.css?v=studio-refresh-1">
@@ -25,7 +25,9 @@
   <link rel="stylesheet" href="editor-tour.css?v=20261105">
   <link rel="stylesheet" href="editor-preview.css?v=mini-preview-5">
   <link rel="stylesheet" href="editor-fonts.css?v=larger-canvas-1">
-  <script src="editor-tour.js?v=wide-tools-1" defer></script>
+  <script src="store-profile.js" defer></script>
+  <script src="local-projects.js" defer></script><script src="editor-tour.js?v=wide-tools-1" defer></script>
+  <script src="interface-language.js" defer></script>
 </head>
 <body class="studio-page">
   <a class="skip-link" href="#main">К редактору</a>
@@ -79,6 +81,18 @@
       <p id="download-status" class="studio-export-status" role="status"></p>
     </div>
     <p id="project-status" class="project-status" role="status" aria-live="polite"></p>
+    <div class="studio-start">
+      <button id="upload-own-photo" class="studio-primary-button" type="button">Загрузить своё фото</button>
+      <label for="quick-purpose">Создать для</label>
+      <select id="quick-purpose"><option value="">Выберите задачу</option><option value="catalog">Каталога · 1:1</option><option value="marketplace">Маркетплейса · 3:4</option><option value="post">Поста · 4:5</option><option value="story">Истории · 9:16</option><option value="advantages">Преимуществ товара</option></select>
+      <button id="open-local-projects" class="studio-quiet-button" type="button">Мои черновики</button>
+    </div>
+    <dialog id="local-projects-dialog" aria-labelledby="local-projects-title">
+      <form method="dialog"><button class="studio-small-button">Закрыть</button></form>
+      <h2 id="local-projects-title">Проекты на этом устройстве</h2>
+      <label for="local-project-search">Найти товар</label><input id="local-project-search" type="search">
+      <p id="local-project-status" role="status"></p><ul id="local-project-list" class="local-project-list"></ul>
+    </dialog>
     <div id="draft-restore-banner" class="draft-banner" hidden><div><strong>Ваш черновик на месте</strong><p>Продолжите с сохранёнными настройками и фотографией.</p></div><div><button id="restore-draft-button" class="studio-small-button" type="button">Восстановить</button><button id="discard-draft-button" class="studio-text-button" type="button">Начать заново</button></div></div>
     <noscript><p class="notice">Включите JavaScript, чтобы редактировать карточку и сохранить изображение.</p></noscript>
 
@@ -86,21 +100,21 @@
       <section id="preview" class="studio-workspace" aria-labelledby="preview-heading">
         <div class="workspace-heading">
           <div class="workspace-identity"><span class="workspace-live-dot" aria-hidden="true"></span><h2 id="preview-heading">Холст</h2><span id="format-description">4:5 · 900 × 1125</span></div>
-          <div class="studio-canvas-tools"><a href="#studio-settings" class="studio-quiet-button tool-settings-link">Инструменты ↓</a>
-            <button id="canvas-focus-mode" class="studio-quiet-button" type="button" aria-pressed="false">Фокус</button>
+          <details class="canvas-tools-menu"><summary>Вид и кадрирование</summary><div class="studio-canvas-tools"><a href="#studio-settings" class="studio-quiet-button tool-settings-link">Инструменты ↓</a>
+            <button id="crop-photo" class="studio-quiet-button" type="button" aria-pressed="false">Кадрировать</button><button id="card-text-preview" class="studio-quiet-button" type="button">Текст карточки</button><button id="canvas-focus-mode" class="studio-quiet-button" type="button" aria-pressed="false">Фокус</button>
             <button id="phone-preview-button" class="studio-quiet-button" type="button" title="Предпросмотр на телефоне">На телефоне</button>
             <button id="fullscreen-button" class="studio-icon-button" type="button" title="Открыть крупно" aria-label="Развернуть предварительный просмотр"><svg class="studio-icon" aria-hidden="true"><use href="#i-expand"/></svg></button>
-          </div>
+          </div></details>
         </div>
         <div id="preview-stage" class="studio-stage"><div class="stage-corner stage-corner-top" aria-hidden="true"></div><div class="stage-corner stage-corner-bottom" aria-hidden="true"></div><figure id="canvas-frame" class="studio-canvas-frame"><canvas id="product-canvas" width="900" height="1125" role="img" aria-label="Предварительный просмотр карточки товара">Предварительный просмотр карточки товара</canvas><figcaption id="preview-caption" class="sr-only" aria-live="polite"></figcaption></figure></div>
-        <div class="workspace-bottom-bar"><p id="preview-hint"><svg class="studio-icon"><use href="#i-image"/></svg>Перетаскивайте фото · дважды нажмите на текст для правки</p><button id="open-ai-chat" class="ai-floating-launch" type="button" data-open-ai aria-controls="ai-chat" aria-expanded="false" aria-label="Открыть чат sAI"><svg class="studio-icon" aria-hidden="true"><use href="#i-spark"/></svg>sAI</button><div class="workspace-zoom"><button id="preview-fit-button" type="button" class="studio-icon-button" aria-label="Вписать карточку в окно" title="Вписать в окно"><svg class="studio-icon"><use href="#i-fit"/></svg></button><label for="preview-zoom" class="sr-only">Масштаб просмотра</label><input id="preview-zoom" type="range" min="50" max="200" value="100"><output id="preview-zoom-value" for="preview-zoom">Вписано</output></div></div>
+        <div class="workspace-bottom-bar"><p id="preview-hint"><svg class="studio-icon"><use href="#i-image"/></svg>Кадрируйте фото или откройте тексты</p><button id="open-ai-chat" class="ai-floating-launch" type="button" data-open-ai aria-controls="ai-chat" aria-expanded="false" aria-label="Открыть чат sAI"><svg class="studio-icon" aria-hidden="true"><use href="#i-spark"/></svg>sAI</button><div class="workspace-zoom"><button id="preview-fit-button" type="button" class="studio-icon-button" aria-label="Вписать карточку в окно" title="Вписать в окно"><svg class="studio-icon"><use href="#i-fit"/></svg></button><label for="preview-zoom" class="sr-only">Масштаб просмотра</label><input id="preview-zoom" type="range" min="50" max="200" value="100"><output id="preview-zoom-value" for="preview-zoom">Вписано</output></div></div>
       </section>
       <aside id="studio-settings" class="studio-sidebar" aria-label="Настройки карточки">
         <div class="studio-tool-heading"><div class="studio-tabs" role="tablist" aria-label="Разделы редактора"><button id="tab-photo" type="button" role="tab" data-editor-tab="photo" aria-controls="panel-photo" aria-selected="true"><svg class="studio-icon"><use href="#i-image"/></svg>Фото</button><button id="tab-content" type="button" role="tab" data-editor-tab="content" aria-controls="panel-content" aria-selected="false" tabindex="-1"><svg class="studio-icon"><use href="#i-text"/></svg>Тексты</button><button id="tab-design" type="button" role="tab" data-editor-tab="design" aria-controls="panel-design" aria-selected="false" tabindex="-1"><svg class="studio-icon"><use href="#i-design"/></svg>Дизайн</button><button id="tab-templates" type="button" role="tab" data-editor-tab="templates" aria-controls="panel-templates" aria-selected="false" tabindex="-1"><svg class="studio-icon"><use href="#i-design"/></svg>Шаблоны</button></div><a href="#preview" class="studio-quiet-button tool-canvas-link">К холсту ↑</a></div>
         <form id="editor-form" class="studio-form" novalidate>
           <section id="panel-photo" data-editor-panel="photo" role="tabpanel" aria-labelledby="tab-photo" tabindex="0">
             <div class="panel-intro"><h2>Фотографии</h2></div>
-            <div class="tool-group tool-library"><div id="drop-zone" class="studio-upload"><input type="file" id="photo-input" multiple accept="image/jpeg,image/png,image/webp" aria-describedby="upload-help file-status"><label for="photo-input"><span class="upload-symbol"><svg class="studio-icon"><use href="#i-upload"/></svg></span><strong>Загрузить фотографии</strong><span>Перетащите сюда или выберите файлы</span><small id="upload-help">JPG, PNG, WebP · до 10 МБ<br>Вставить фото: Ctrl+V или Cmd+V</small></label></div>
+            <div class="tool-group tool-library"><div id="drop-zone" class="studio-upload"><input type="file" id="photo-input" multiple accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" aria-describedby="upload-help file-status"><label for="photo-input"><span class="upload-symbol"><svg class="studio-icon"><use href="#i-upload"/></svg></span><strong>Загрузить фотографии</strong><span>Перетащите сюда или выберите файлы</span><small id="upload-help">JPG, PNG, WebP, HEIC · до 10 МБ<br>Вставить фото: Ctrl+V или Cmd+V</small></label></div>
             <p id="file-status" class="studio-help" role="status">Сейчас используется фото из примера.</p>
             <section class="photo-manager" aria-label="Фотографии проекта" data-workflow-control><div class="control-section-heading"><h3>Фото этой карточки</h3></div><p id="photo-count" class="studio-help"></p><div id="photo-library" class="photo-library"></div><div id="selected-photos" class="selected-photos"></div><p class="studio-help">Выберите до трёх фото. Стрелки меняют порядок. Обработка применяется к главному фото.</p></section>
             <details class="studio-accordion" data-workflow-control><summary>Удалить однотонный фон</summary><div class="accordion-content">
@@ -178,25 +192,26 @@
         <div class="studio-project-files">
           <label for="load-project-input" class="studio-quiet-button"><svg class="studio-icon" aria-hidden="true"><use href="#i-folder"/></svg><span>Открыть проект</span></label>
           <input id="load-project-input" class="studio-file-input" type="file" accept="application/json,.json">
-          <button id="save-project-button" class="studio-quiet-button" type="button"><svg class="studio-icon" aria-hidden="true"><use href="#i-download"/></svg><span>Сохранить проект</span></button>
+          <button id="save-project-button" class="studio-quiet-button" type="button"><svg class="studio-icon" aria-hidden="true"><use href="#i-download"/></svg><span>Скачать проект</span></button>
           <button id="reset-button" class="studio-icon-button reset-project" type="button" title="Начать заново" aria-label="Сбросить проект"><svg class="studio-icon" aria-hidden="true"><use href="#i-reset"/></svg></button>
-          <button id="publish-button" class="studio-secondary-button" type="button" disabled><svg class="studio-icon" aria-hidden="true"><use href="#i-share"/></svg>Опубликовать</button>
+          <label class="publication-contact" for="seller-contact">Ссылка для покупки или связи<input id="seller-contact" type="url" maxlength="2000" placeholder="https://wa.me/77001234567"><small>Магазин, товар или WhatsApp. Необязательно.</small></label><button id="publish-button" class="studio-secondary-button" type="button" disabled><svg class="studio-icon" aria-hidden="true"><use href="#i-share"/></svg>Опубликовать</button>
         </div>
         <details id="preflight-panel" class="workflow-panel"><summary>Проверка для маркетплейса</summary><label for="marketplace">Площадка</label><select id="marketplace"><option value="general">Общая проверка</option><option value="kaspi">Kaspi</option><option value="wildberries">Wildberries</option><option value="ozon">Ozon</option></select><button id="check-export" type="button" class="studio-small-button" disabled>Проверить текущую карточку</button><p>Техническая проверка и рекомендации, не гарантия приёма. Актуальные правила вашей категории проверяйте в кабинете продавца.</p><p id="preflight-status" role="status"></p><ul id="preflight-results"></ul></details>
         <div class="workspace-status"><p id="publish-status" role="status" aria-live="polite"></p></div>
         <p id="publish-login-note" class="studio-publish-note"><a id="publish-login" href="auth.html">Войдите</a>, чтобы сохранить публикацию в кабинете. Скачать изображение можно без аккаунта.</p>
         <div id="publish-result" class="studio-publish-result" hidden><label for="published-url">Ссылка на карточку</label><div><input id="published-url" type="text" readonly><button id="copy-link-button" class="studio-small-button" type="button">Копировать</button></div><a id="published-card-link" class="studio-text-button" href="card.html">Открыть карточку ↗</a></div>
         <details class="workflow-panel studio-privacy"><summary>Где хранятся данные</summary><p>Скачивание и удаление фона работают локально. Облако сохраняет проект в вашем аккаунте. Публикация делает готовую карточку доступной по ссылке. sAI получает текст и фото после вашего подтверждения.</p></details>
-    <details class="workflow-panel cloud-panel"><summary>Облачные проекты</summary>
+    <details class="workflow-panel cloud-panel"><summary>Сохранить работу в облаке</summary>
       <p>Кнопка «Сохранить в облаке» отправит фото, логотип, тексты и весь редактируемый комплект в ваш приватный аккаунт SatuCard. Это не публикация.</p>
       <div class="workflow-actions"><button id="cloud-save" type="button" class="studio-small-button" disabled>Сохранить в облаке</button><button id="cloud-copy" type="button" class="studio-quiet-button" disabled>Сохранить новую копию</button><button id="cloud-refresh" type="button" class="studio-quiet-button" disabled>Мои проекты</button><a href="auth.html">Войти / зарегистрироваться</a></div>
-      <p id="cloud-status" role="status" aria-live="polite">Облако сохраняется по кнопке. Авточерновик остаётся на этом устройстве.</p><ul id="cloud-project-list" class="workflow-project-list"></ul>
+      <p id="cloud-status" role="status" aria-live="polite">Облако сохраняется по кнопке, до 3,5 МБ. Локальный файл — до 17 МБ. <span id="cloud-size"></span></p><ul id="cloud-project-list" class="workflow-project-list"></ul>
     </details>
       </div>
     </section>
   </main>
 
 
+  <dialog id="card-text-dialog" aria-labelledby="card-text-title"><form method="dialog"><button class="studio-small-button">Закрыть</button></form><h2 id="card-text-title">Содержимое карточки</h2><div id="card-text-content"></div><button id="card-edit-text" class="studio-primary-button" type="button">Изменить тексты</button></dialog>
   <aside id="mini-preview" class="studio-mini-preview" aria-label="Мини-превью карточки" hidden>
     <div class="mini-preview-heading">
       <button id="mini-preview-resize" type="button" data-mini-resize="proportional" title="Потяните за угол для пропорционального масштаба" aria-label="Пропорционально изменить размер мини-превью">

@@ -174,11 +174,11 @@ test('export warns before downloading and can return to the demo field or contin
     $('download-button').click();
     await until(() => $('export-review').open);
     assert.equal(downloads.length, 0);
-    const description = [...$('export-review-results').querySelectorAll('button')]
-      .find(button => button.getAttribute('aria-label').includes('«Описание»'));
-    description.click();
+    const titleField = [...$('export-review-results').querySelectorAll('button')]
+      .find(button => button.getAttribute('aria-label').includes('«Название»'));
+    titleField.click();
     assert.equal($('export-review').open, false);
-    assert.equal(w.document.activeElement, $('product-description'));
+    assert.equal(w.document.activeElement, $('product-name'));
 
     input('product-description', 'Материал корпуса: металл.');
     $('download-button').click();
@@ -211,7 +211,7 @@ test('copy previews are explicit, cancelable and cannot overwrite newer fields o
   } finally { app.dom.window.close(); }
 });
 
-test('cloud save survives same-account refresh, conflicts are safe, and undo detaches identity', async () => {
+test('cloud save survives same-account refresh, conflicts are safe, and undo keeps the same cloud project', async () => {
   let app, writes = [], conflict = false, refreshOnSave = false;
   app = await setup({ fetch: async (url, init = {}) => {
     if (url === 'api/copy') return Response.json({ available: false });
@@ -227,7 +227,7 @@ test('cloud save survives same-account refresh, conflicts are safe, and undo det
     app.input('product-name', 'Changed'); app.$('cloud-save').click(); await until(() => !app.$('cloud-save').disabled);
     assert.equal(writes[1].id, '22222222-2222-4222-8222-222222222222'); assert.equal(writes[1].version, 1);
     conflict = true; app.$('cloud-save').click(); await until(() => !app.$('cloud-save').disabled); assert.match(app.$('cloud-status').textContent, /другом устройстве/);
-    conflict = false; app.$('undo-button').click(); app.$('cloud-save').click(); await until(() => !app.$('cloud-save').disabled); assert.equal(writes.at(-1).id, undefined);
+    conflict = false; app.$('undo-button').click(); app.$('cloud-save').click(); await until(() => !app.$('cloud-save').disabled); assert.equal(writes.at(-1).id, '22222222-2222-4222-8222-222222222222');
   } finally { app.dom.window.close(); }
 });
 

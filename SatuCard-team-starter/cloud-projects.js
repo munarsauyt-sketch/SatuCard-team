@@ -1,14 +1,15 @@
 'use strict';
 
 (() => {
-  async function request(id, body) {
+  async function request(id, body, method, params = {}) {
     if (location.protocol === 'file:') throw new Error('Облачные проекты доступны на сайте SatuCard. Локально скачайте файл проекта.');
     const session = await window.SATUCARD_AUTH?.getSession();
     if (!session) throw new Error('Войдите в аккаунт и завершите профиль, чтобы работать с облачными проектами.');
     const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 20000);
     try {
-      const response = await fetch('api/projects' + (id ? '?id=' + encodeURIComponent(id) : ''), {
-        method: body ? 'POST' : 'GET', cache: 'no-store', signal: controller.signal,
+      const query = new URLSearchParams({ ...params, ...(id ? { id } : {}) });
+      const response = await fetch('api/projects' + (query.size ? '?' + query : ''), {
+        method: method || (body ? 'POST' : 'GET'), cache: 'no-store', signal: controller.signal,
         headers: { Authorization: `Bearer ${session.access_token}`, ...(body ? { 'content-type': 'application/json' } : {}) },
         ...(body ? { body: JSON.stringify(body) } : {})
       });
@@ -23,5 +24,10 @@
       throw error;
     } finally { clearTimeout(timer); }
   }
-  window.SATUCARD_CLOUD = { list: () => request(), read: id => request(id), save: body => request(null, body) };
+  window.SATUCARD_CLOUD = {
+    list: params => request(null, null, 'GET', params),
+    read: id => request(id),
+    save: body => request(null, body),
+    remove: (id, version) => request(id, null, 'DELETE', { version: String(version) })
+  };
 })();

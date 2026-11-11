@@ -109,28 +109,74 @@
   async function openDraftDatabase() {
     if (!globalThis.indexedDB) throw new Error('Хранилище недоступно');
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open('satucard-studio', 1);
-      request.onupgradeneeded = () => request.result.createObjectStore('drafts');
+      const request = indexedDB.open('satucard-studio', 2);
+      request.onupgradeneeded = () => {
+        if (!request.result.objectStoreNames.contains('drafts')) request.result.createObjectStore('drafts');
+        if (!request.result.objectStoreNames.contains('brands')) request.result.createObjectStore('brands');
+      };
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
       request.onblocked = () => reject(new Error('Хранилище занято другой вкладкой'));
     });
   }
 
-  async function draftAction(action, value) {
+  async function draftAction(action, value, id = 'current') {
     const db = await openDraftDatabase();
     try {
       return await new Promise((resolve, reject) => {
         const tx = db.transaction('drafts', action === 'get' ? 'readonly' : 'readwrite');
         const objectStore = tx.objectStore('drafts');
-        const request = action === 'get' ? objectStore.get('current') :
-          action === 'put' ? objectStore.put(value, 'current') : objectStore.delete('current');
-        tx.oncomplete = () => resolve(request.result);
+        let request;
+        if (action === 'list') request = objectStore.getAll();
+        else if (action === 'get') request = objectStore.get(id);
+        else if (action === 'put') {
+          const payload = JSON.parse(value);
+          request = objectStore.put({ id, payload: value, title: payload.settings?.title || 'Без названия', updatedAt: new Date().toISOString() }, id);
+        } else request = objectStore.delete(id);
+        tx.oncomplete = () => {
+          const result = request.result;
+          resolve(action === 'get' ? (result?.payload || result) : result);
+        };
         tx.onerror = () => reject(tx.error);
         tx.onabort = () => reject(tx.error || new Error('Сохранение прервано'));
       });
     } finally { db.close(); }
   }
 
-  globalThis.SATUCARD_PROJECT = { createHistory, parseProject, serializeProject, draftAction };
+  function saveJournal(id, model) {
+    const views = model.views.map(({ id, label, settings, photoIds }) => ({ id, label, settings, photoIds }));
+    const value = { settings: model.settings, views, activeViewId: model.activeViewId };
+    localStorage.setItem('satucard-journal-' + id, JSON.stringify(value));
+  }
+
+  function recoverJournal(id, text) {
+    try {
+    const raw = localStorage.getItem('satucard-journal-' + id);
+    if (!raw || !text) return text;
+    const journal = JSON.parse(raw);
+    const payload = JSON.parse(text);
+    const ids = new Set((payload.photos || []).map(photo => photo.id));
+    if (!Array.isArray(journal.views) || journal.views.some(view => view.photoIds?.some(photoId => !ids.has(photoId)))) return text;
+    // Images remain in IndexedDB. The synchronous journal preserves the latest text.
+    const recovered = JSON.stringify({ ...payload, settings: journal.settings, views: journal.views, activeViewId: journal.activeViewId });
+    parseProject(recovered, globalThis.SATUCARD_RENDERER?.normalize || clone);
+    return recovered;
+    } catch (_) { return text; }
+  }
+
+  async function brandAction(action, value) {
+    const db = await openDraftDatabase();
+    try {
+      return await new Promise((resolve, reject) => {
+        const transaction = db.transaction('brands', action === 'get' ? 'readonly' : 'readwrite');
+        const store = transaction.objectStore('brands');
+        const request = action === 'get' ? store.get('store') : store.put(value, 'store');
+        transaction.oncomplete = () => resolve(request.result);
+        transaction.onerror = () => reject(transaction.error);
+        transaction.onabort = () => reject(transaction.error);
+      });
+    } finally { db.close(); }
+  }
+
+  globalThis.SATUCARD_PROJECT = { createHistory, parseProject, serializeProject, draftAction, saveJournal, recoverJournal, brandAction };
 })();

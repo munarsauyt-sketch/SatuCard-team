@@ -116,6 +116,20 @@ test('an email link in the same tab restores the tariff after verifying the emai
   assert.equal(callback.temporary.getItem(billingKey), null);
 });
 
+test('email verification in a new tab restores and consumes the selected tariff', async () => {
+  const billingKey = 'satucard-email-billing-v1';
+  const start = harness({ url: `${origin}/auth.html?plan=plus&billing=1&theme=dark` });
+  await start.auth.sendEmailCode('seller@example.com');
+  const callback = harness({
+    url: `${origin}/auth.html?token_hash=example-verification-token&type=email`,
+    saved: { [billingKey]: start.local.getItem(billingKey) },
+    responder: () => tokenResponse,
+  });
+  await callback.auth.completeEmailSignIn();
+  assert.equal(callback.auth.accountPage('dashboard.html'), `${origin}/dashboard.html?theme=dark&plan=plus#billing-title`);
+  assert.equal(callback.local.getItem(billingKey), null);
+});
+
 test('missing, expired or altered browser flow cannot exchange a callback code', async () => {
   const variants = [null, { ...storedFlow(), createdAt: Date.now() - 11 * 60 * 1000 },
     { ...storedFlow(), createdAt: Date.now() + 60000 },

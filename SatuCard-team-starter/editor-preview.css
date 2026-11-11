@@ -583,3 +583,45 @@ html[data-theme="dark"] .studio-export-status.error { color: #ffb4a6; }
   .studio-project-tools .history-tools .studio-icon-button { width: 26px; padding: 4px; }
   .studio-mobile-view:has(#mini-preview-mobile:not([hidden])) a .studio-icon { display: none; }
 }
+
+/* Keep the start action and saving state visible at every viewport size. */
+.studio-start { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:12px 0; }
+.studio-start label { font-size:13px; }
+.studio-start select { min-height:44px; max-width:100%; padding:8px; border-radius:9px; border:1px solid var(--editor-line); background:var(--editor-panel); color:inherit; }
+.studio-page #draft-status { display:inline-block; max-width:100%; font-size:11px; white-space:normal; }
+.studio-page #product-canvas { touch-action:pan-y; }
+.studio-page #product-canvas.crop-mode { touch-action:none; cursor:move; outline:2px solid var(--editor-signal); }
+.studio-page dialog { max-width:min(640px, calc(100vw - 24px)); max-height:85dvh; overflow:auto; }
+.local-project-list { list-style:none; padding:0; display:grid; gap:12px; }
+.local-project-list li { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:12px; border:1px solid #8885; border-radius:12px; }
+.local-project-list img { width:64px; height:80px; object-fit:cover; border-radius:6px; }
+.local-project-list a { flex:1; min-width:130px; }
+.local-project-list button { min-height:44px; }
+@media (min-width:1101px) {
+ .studio-page .studio-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(440px,1fr); grid-template-areas:"canvas tools"; align-items:start; gap:20px; }
+ .studio-page .studio-workspace { position:sticky; top:135px; }
+ .studio-page .studio-form > [data-editor-panel]:not([hidden]) { grid-template-columns:minmax(0,1fr); }
+ .studio-page .studio-stage { height:clamp(360px, 58dvh, 650px); }
+ .studio-page .studio-sidebar { height:auto; }
+}
+@media (max-width:800px) {
+ .studio-page .studio-project-title { width:100%; justify-content:space-between; padding-right:36px; }
+ .studio-page .studio-project-bar { position:relative; top:auto; }
+ .studio-page .studio-start { gap:8px; margin:10px 0; }
+ .studio-page .studio-start > button:first-child { flex:1; }
+ .studio-page .studio-start > label { display:none; }
+ .studio-page .studio-start select { flex:1; min-width:160px; }
+ .studio-page .studio-stage { height:310px; min-height:0; }
+ .studio-page .studio-canvas-tools { flex-wrap:wrap; gap:4px; }
+ .studio-page .studio-canvas-tools button { min-height:44px; }
+ .studio-page .studio-mobile-view { position:static; margin-top:12px; }
+ .studio-page .studio-tool-heading { scroll-margin-top:65px; }
+}
+
+.publication-contact { display:grid; gap:6px; min-width:220px; flex:1; }
+.publication-contact input { max-width:100%; min-height:44px; }
+
+.canvas-tools-menu { position:relative; margin-left:auto; }
+.canvas-tools-menu summary { min-height:44px; padding:10px; cursor:pointer; white-space:nowrap; }
+.canvas-tools-menu .studio-canvas-tools { position:absolute; right:0; top:44px; z-index:30; display:flex; flex-wrap:wrap; width:min(360px, calc(100vw - 44px)); padding:10px; border:1px solid var(--editor-canvas-line); border-radius:12px; background:var(--editor-canvas); box-shadow:0 14px 40px #0005; }
+.canvas-tools-menu .studio-canvas-tools button,.canvas-tools-menu .studio-canvas-tools a { min-height:44px; }

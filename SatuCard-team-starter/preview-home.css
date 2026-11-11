@@ -156,3 +156,9 @@
 @media (prefers-reduced-motion: reduce) {
   .preview-stage, .hero-style-picker button, .stage-open, .preview-example-art .render-wrap { transition: none; }
 }
+
+@media(max-width:600px) {
+ .preview-home .preview-source { display:none; }
+ .preview-home .hero-primary { width:62%; left:19%; transform:rotate(0); }
+ .preview-home .preview-stage { min-height:330px; }
+}

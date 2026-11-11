@@ -1,5 +1,12 @@
 # Product photo credits
 
+## HEIC import
+
+heic-to 1.6.7 by hoppergee, https://github.com/hoppergee/heic-to, LGPL-3.0-or-later.
+The unmodified CSP-compatible JavaScript bundle is loaded locally only for HEIC files.
+License and upstream README are in vendor/heic-to/. The corresponding release source
+is available at https://www.npmjs.com/package/heic-to/v/1.6.7 and in the upstream repository.
+
 - headphones.jpg — Matt Birchler, Unsplash, https://unsplash.com/photos/white-wireless-headphones-on-white-surface-IaTuyBQ4gTw — Unsplash License https://unsplash.com/license
 - sneaker.jpg — Mukesh Naik, Unsplash, https://unsplash.com/photos/white-nike-low-top-sneakers-jVerIoX3y7c — Unsplash License https://unsplash.com/license
 - skincare.jpg — Misolo Cosmetic, Pexels, https://www.pexels.com/photo/bottles-of-cosmetic-and-pipette-6767776/ — Pexels License https://www.pexels.com/license/

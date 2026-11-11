@@ -9,7 +9,7 @@ async function setup({ fail = false, delayed = false } = {}) {
   const dom = new JSDOM(source('examples.html'), { url: 'https://satucard.test/examples.html', runScripts: 'outside-only', pretendToBeVisual: true });
   const { window: w } = dom, renders = [], pending = [];
   w.eval(source('product-samples.js')); w.eval(source('assets/demo-images.js')); for (const key of ['ceramics', 'bag', 'jewelry', 'decor', 'kitchen']) w.eval(source(`assets/demo-${key}.js`));
-  w.SATUCARD_RENDERER = { templates: Object.fromEntries(['studio', 'neon', 'editorial', 'bold', 'noir', 'bloom', 'accent', 'minimal'].map(key => [key, { label: key }])), render: (canvas, settings, assets) => renders.push({ canvas, settings, source: assets.photo.src }) };
+  w.SATUCARD_RENDERER = { templates: Object.fromEntries(['studio', 'neon', 'editorial', 'bold', 'noir', 'bloom', 'accent', 'minimal', 'showcase', 'blueprint', 'matcha', 'pop', 'graphite', 'cloud'].map(key => [key, { label: key }])), render: (canvas, settings, assets) => renders.push({ canvas, settings, source: assets.photo.src }) };
   w.Image = class {
     set src(value) { this.value = value; const finish = () => fail ? this.onerror?.(new Error('unavailable')) : this.onload?.(); delayed ? pending.push(finish) : setTimeout(finish, 0); }
     get src() { return this.value; }
@@ -35,11 +35,11 @@ function assertConsistent(app) {
   }
 }
 
-test('gallery starts with eight different products and matching names, prices and links', async () => {
+test('gallery compares fourteen styles on the same product and matching names, prices and links', async () => {
   const app = await setup();
   try {
-    assert.equal(app.cards.length, 8); assert.equal(new Set(keys(app.cards)).size, 8); assert.equal(keys(app.cards).filter(key => key === 'headphones').length, 1);
-    assert.equal(app.select.value, 'mixed'); assertConsistent(app);
+    assert.equal(app.cards.length, 14); assert.equal(new Set(keys(app.cards)).size, 1); assert.equal(keys(app.cards).filter(key => key === 'headphones').length, 14);
+    assert.equal(app.select.value, 'headphones'); assertConsistent(app);
     for (const [key, data] of Object.entries(app.w.SATUCARD_SAMPLES)) {
       assert.ok(data.title && data.price > 0);
       const bytes = readFileSync(new URL(`../assets/images/${key}.jpg`, import.meta.url));
@@ -51,8 +51,8 @@ test('gallery starts with eight different products and matching names, prices an
 test('each product can be compared across all styles and mixed restores the original selection', async () => {
   const app = await setup();
   try {
-    const initial = keys(app.cards);
-    for (const key of Object.keys(app.w.SATUCARD_SAMPLES)) { await app.choose(key); assert.deepEqual(keys(app.cards), Array(8).fill(key)); assertConsistent(app); }
+    await app.choose('mixed'); const initial = keys(app.cards);
+    for (const key of Object.keys(app.w.SATUCARD_SAMPLES)) { await app.choose(key); assert.deepEqual(keys(app.cards), Array(14).fill(key)); assertConsistent(app); }
     await app.choose('mixed'); assert.deepEqual(keys(app.cards), initial); assertConsistent(app);
     await app.choose('skincare'); await app.choose('mixed'); assert.deepEqual(keys(app.cards), initial);
   } finally { app.dom.window.close(); }
@@ -62,14 +62,14 @@ test('filters, current theme, invalid values and browser-restored selections sta
   const app = await setup();
   try {
     app.w.document.querySelector('[data-template-filter="dark"]').click();
-    await app.choose('bag'); assert.equal(app.cards.filter(card => !card.hidden).length, 2);
-    assert.match(app.w.document.querySelector('#catalog-status').textContent, /2 из 8/);
+    await app.choose('bag'); assert.equal(app.cards.filter(card => !card.hidden).length, 4);
+    assert.match(app.w.document.querySelector('#catalog-status').textContent, /4 из 14/);
     app.w.document.documentElement.dataset.theme = 'dark';
     const link = app.cards[0].querySelector('a'); link.dispatchEvent(new app.w.MouseEvent('click', { cancelable: true }));
     assert.equal(new URL(link.href).searchParams.get('theme'), 'dark');
-    app.select.value = 'jewelry'; app.w.dispatchEvent(new app.w.Event('pageshow')); await tick(); assert.deepEqual(keys(app.cards), Array(8).fill('jewelry')); assertConsistent(app);
+    app.select.value = 'jewelry'; app.w.dispatchEvent(new app.w.Event('pageshow')); await tick(); assert.deepEqual(keys(app.cards), Array(14).fill('jewelry')); assertConsistent(app);
     await app.choose('invalid'); assert.equal(app.select.value, 'mixed'); assert.equal(new Set(keys(app.cards)).size, 8);
-    app.w.document.querySelector('[data-template-filter="all"]').click(); assert.equal(app.cards.filter(card => !card.hidden).length, 8);
+    app.w.document.querySelector('[data-template-filter="all"]').click(); assert.equal(app.cards.filter(card => !card.hidden).length, 14);
   } finally { app.dom.window.close(); }
 });
 

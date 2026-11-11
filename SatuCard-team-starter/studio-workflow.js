@@ -36,16 +36,36 @@
     };
     const setBusy = value => { cloudBusy = value; ['cloud-save', 'cloud-copy', 'cloud-refresh'].forEach(id => { $(id).disabled = value; }); };
     const safeName = value => String(value).replace(/[<>:"/\\|?*\u0000-\u001f]/g, '').trim().slice(0, 60) || 'Карточка';
+    const viewCache = new Map();
     function renderViews() {
       const { model, viewImages } = editor.snapshot();
-      $('product-views').replaceChildren();
+      const wanted = new Set(model.views.map(view => view.id));
+      for (const [id, entry] of viewCache) {
+        if (!wanted.has(id)) { entry.button.remove(); viewCache.delete(id); }
+      }
       for (const view of model.views) {
-        const button = document.createElement('button'); button.type = 'button'; button.className = 'view-thumbnail';
-        const preview = document.createElement('canvas'), label = document.createElement('span'); preview.setAttribute('aria-hidden', 'true'); label.textContent = `${model.views.indexOf(view) + 1}. ${view.label}`;
-        renderer.render(preview, view.settings, viewImages[view.id], { scale: 0.12 }); button.append(preview, label);
+        let entry = viewCache.get(view.id);
+        if (!entry) {
+          const button = document.createElement('button');
+          button.type = 'button'; button.className = 'view-thumbnail';
+          const preview = document.createElement('canvas'), label = document.createElement('span');
+          preview.setAttribute('aria-hidden', 'true');
+          button.append(preview, label);
+          button.addEventListener('click', () => editor.selectView(view.id));
+          entry = { button, preview, label };
+          viewCache.set(view.id, entry);
+        }
+        const { button, preview, label } = entry;
+        label.textContent = `${model.views.indexOf(view) + 1}. ${view.label}`;
+        const key = JSON.stringify(view);
+        const images = viewImages[view.id];
+        if (entry.key !== key || entry.photo !== images.photo || entry.logo !== images.logo) {
+          renderer.render(preview, view.settings, images, { scale: 0.12 });
+          entry.key = key; entry.photo = images.photo; entry.logo = images.logo;
+        }
         button.setAttribute('aria-label', `${view.label}. ${renderer.purposes[view.settings.purpose || 'cover'].label}`);
         button.setAttribute('aria-pressed', String(view.id === model.activeViewId));
-        button.addEventListener('click', () => editor.selectView(view.id)); $('product-views').append(button);
+        $('product-views').append(button);
       }
       if (document.activeElement !== $('view-label')) $('view-label').value = model.views.find(view => view.id === model.activeViewId).label;
       $('remove-view').disabled = model.views.length <= 1; $('add-view').disabled = model.views.length >= 8; $('make-set').disabled = model.views.length > 6;
@@ -97,13 +117,31 @@
         message('cloud-status', `Открыт «${project.title}». Дальнейшие изменения сохраняйте кнопкой «Сохранить в облаке».`);
       } catch (error) { message('cloud-status', error.message, true); } finally { setBusy(false); }
     }
+    function cloudThumbnail() {
+      const state = editor.snapshot();
+      const surface = document.createElement('canvas');
+      renderer.render(surface, state.model.settings, state.images, { scale: 0.16 });
+      return surface.toDataURL('image/jpeg', 0.65);
+    }
+    let cloudSizeTimer;
+    document.addEventListener('satucard:editor-change', () => {
+      clearTimeout(cloudSizeTimer);
+      if (!document.querySelector('.cloud-panel').open) return;
+      cloudSizeTimer = setTimeout(() => {
+        if (!$('cloud-size')) return;
+        try {
+          const bytes = new Blob([editor.snapshot(true).serialized]).size;
+          $('cloud-size').textContent = 'Размер проекта ' + (bytes / 1000000).toFixed(2) + ' МБ' + (bytes > 3450000 ? '. Для облака уменьшите фото или скачайте файл проекта.' : '.');
+        } catch (_) {}
+      }, 300);
+    });
     async function saveCloud(asCopy) {
       if (cloudBusy) return; setBusy(true); const generation = cloudGeneration, revision = editor.revision;
       message('cloud-status', 'Сохраняем приватный проект…');
       try {
         const { model, serialized } = editor.snapshot(true);
         const identity = asCopy ? null : cloudIdentity;
-        const body = { title: model.settings.title || 'Новый товар', payload: JSON.parse(serialized), ...(identity ? { id: identity.id, version: identity.version } : {}) };
+        const body = { thumbnail: cloudThumbnail(), title: model.settings.title || 'Новый товар', payload: JSON.parse(serialized), ...(identity ? { id: identity.id, version: identity.version } : {}) };
         if (new Blob([JSON.stringify(body)]).size > 3500000) throw new Error('Для облака проект должен быть меньше 3,5 МБ. Уменьшите фото или скачайте файл проекта, он сохранит всё без потерь.');
         const { project } = await window.SATUCARD_CLOUD.save(body); if (generation !== cloudGeneration) return;
         cloudIdentity = { id: project.id, version: project.version, title: project.title };
@@ -116,7 +154,7 @@
     const detachCloud = () => { cloudIdentity = null; cloudGeneration++; message('cloud-status', 'Этот локальный проект будет сохранён в облаке как новый.'); };
     // Import/reset must never silently replace a previously opened cloud project.
     ['load-project-input', 'reset-button', 'restore-draft-button'].forEach(id => $(id).addEventListener(id === 'load-project-input' ? 'change' : 'click', detachCloud));
-    document.addEventListener('satucard:history-navigation', detachCloud);
+    document.addEventListener('satucard:history-navigation', () => { if (cloudIdentity) message('cloud-status', 'Правки отменены локально. Сохраните проект в облаке по кнопке.'); });
     document.addEventListener('satucard:authchange', event => {
       const userId = event.detail?.user?.id || null;
       if (knownUserId !== undefined && userId !== knownUserId) { detachCloud(); $('copy-photo').checked = false; $('cloud-project-list').replaceChildren(); invalidateCopy('Аккаунт изменился. Создайте подсказку заново.'); }

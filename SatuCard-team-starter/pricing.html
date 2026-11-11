@@ -12,6 +12,7 @@
   <script src="auth-client.js" defer></script>
   <script src="site.js" defer></script>
   <script src="pricing.js" type="module"></script>
+  <script src="interface-language.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">К содержимому</a>
@@ -33,35 +34,10 @@
     <section id="pricing-plans" class="pricing-grid" aria-label="Тарифы на 30 дней"></section>
     <noscript><p>Включите JavaScript, чтобы открыть тарифы и реквизиты для перевода.</p></noscript>
     <div class="pricing-footnote">
-      <p>В сообщении к переводу укажите email аккаунта SatuCard. Тариф подключается после проверки поступления.</p>
+      <p>Создайте заявку в кабинете и получите реквизиты. Подключим тариф в течение 48 часов после перевода и проверки поступления.</p>
       <a class="text-link" href="dashboard.html#billing-title">Тариф в кабинете <span aria-hidden="true">↗</span></a>
     </div>
-  </main>
-  <dialog id="transfer-checkout" class="pricing-dialog" aria-labelledby="checkout-title" aria-describedby="checkout-instructions">
-    <form method="dialog"><button class="pricing-close" aria-label="Закрыть окно оплаты">×</button></form>
-    <h2 id="checkout-title">Оплата переводом</h2>
-    <p id="checkout-plan"></p>
-    <dl class="checkout-summary">
-      <div class="checkout-total"><dt>Сумма перевода</dt><dd id="checkout-price"></dd></div>
-      <div><dt>Период</dt><dd>30 дней</dd></div>
-    </dl>
-    <a id="checkout-account" class="pricing-back" href="dashboard.html#billing-title">Открыть тариф в кабинете</a>
-    <div class="transfer-requisites">
-      <label for="transfer-card">Номер карты для перевода</label>
-      <input id="transfer-card" type="text" readonly spellcheck="false">
-      <button id="copy-transfer-card" type="button" class="pricing-button">Скопировать номер карты</button>
-      <p id="copy-transfer-status" class="transfer-status" role="status"></p>
-    </div>
-    <div id="checkout-instructions" class="transfer-instructions">
-      <h3>Как оплатить</h3>
-      <ol>
-        <li>Откройте приложение вашего банка и переведите указанную сумму на эту карту.</li>
-        <li><strong>В сообщении к переводу обязательно напишите email вашего аккаунта SatuCard.</strong> По нему мы найдём аккаунт и подключим выбранный тариф.</li>
-        <li>Дождитесь проверки поступления. После подтверждения тариф появится в личном кабинете.</li>
-      </ol>
-      <p>Если в приложении банка нет сообщения к переводу, обратитесь в <a id="transfer-support">поддержку</a>, указав email аккаунта, тариф и данные перевода.</p>
-    </div>
-    <form method="dialog"><button class="pricing-back">Вернуться к тарифам</button></form>
-  </dialog>
+  <section class="pricing-explanation"><h2>Что входит в доступ</h2><p>Бесплатный редактор сохраняет карточки без подписки. Тариф открывает sAI на 30 дней без автосписания. Вы задаёте факты, помощник предлагает тексты и правки для проверки.</p><p>Расход зависит от модели, длины переписки и ответа. Точный остаток отображается в кабинете. Когда лимит исчерпан, новые запросы sAI недоступны до следующей покупки. Редактор и скачивание продолжают работать.</p><p>Сначала создайте заявку в кабинете. После перевода мы сверим поступление и подключим доступ в течение 48 часов. Если доступ не появился или требуется возврат, откройте поддержку из заявки и укажите её номер.</p></section></main>
+
 </body>
 </html>

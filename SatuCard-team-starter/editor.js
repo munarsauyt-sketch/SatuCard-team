@@ -37,8 +37,30 @@
   let framePending = false, initialized = false, publishing = false, exporting = false;
   let previewFont;
   let historyTimer, draftTimer, thumbTimer, lastPublished = '';
+  let publication = null;
   let photoVersion = 0, logoVersion = 0, projectVersion = 0;
   let draftQueue = Promise.resolve();
+  let draftId = crypto.randomUUID(), pendingDraftId = null, draftDirty = false;
+  try {
+    draftId = new URLSearchParams(location.search).get('draft') || sessionStorage.getItem('satucard-active-draft') || draftId;
+    sessionStorage.setItem('satucard-active-draft', draftId);
+  } catch (_) { /* IndexedDB still works when session storage is unavailable. */ }
+  // A duplicated tab gets its own writer while retaining the recoverable original.
+  function claimDraftWriter() {
+    if (!navigator.locks) return Promise.resolve();
+    return new Promise(ready => navigator.locks.request('satucard-draft-' + draftId, { ifAvailable: true }, async lock => {
+      if (!lock) {
+        draftId = crypto.randomUUID();
+        try { sessionStorage.setItem('satucard-active-draft', draftId); } catch (_) {}
+        await claimDraftWriter();
+        ready();
+        return;
+      }
+      ready();
+      await new Promise(resolve => window.addEventListener('pagehide', resolve, { once: true }));
+    }).catch(() => ready()));
+  }
+  let draftClaim = claimDraftWriter();
   let revision = 0, productContextVersion = 0;
   const activeView = () => model.views.find(view => view.id === model.activeViewId);
   function changeProductContext() { model.productContextId = ++productContextVersion; }
@@ -47,7 +69,7 @@
     const active = activeView();
     if (active) { active.settings = clone(model.settings); active.photoIds = [...model.photoIds]; }
   }
-  function notifyChange() { revision++; document.dispatchEvent(new Event("satucard:editor-change")); }
+  function notifyChange() { syncActiveView(); revision++; document.dispatchEvent(new Event("satucard:editor-change")); }
   const clone = value => JSON.parse(JSON.stringify(value));
   const imageAssets = (view = model) => {
     const photos = (view.photoIds || []).map(id => assets.get(id)?.image).filter(Boolean);
@@ -249,6 +271,7 @@
     if (thumbs) { clearTimeout(thumbTimer); thumbTimer = setTimeout(renderThumbnails, 220); }
   }
   function renderThumbnails() {
+    if ($('panel-templates').hidden) return;
     document.querySelectorAll('[data-template]').forEach(button => renderer.render(button.querySelector('canvas'), { ...model.settings, template: button.dataset.template, customColors: false, format: 'portrait' }, imageAssets(), { scale: 0.16 }));
   }
   function buildDesignOptions() {
@@ -302,14 +325,32 @@
       { views, activeViewId: model.activeViewId, photos: photoSources() });
   }
   function saveDraftSoon() {
-    if (!initialized) return; clearTimeout(draftTimer); status('draft-status', 'Сохраняем черновик…');
-    draftTimer = setTimeout(() => {
-      let value;
-      try { value = serialized(); } catch (_) { status('draft-status', 'Скачайте проект для сохранения.', true); return; }
-      draftQueue = draftQueue.catch(() => {}).then(() => project.draftAction('put', value));
-      draftQueue.then(() => status('draft-status', 'Сохранено на устройстве'), () => status('draft-status', 'Сохраните проект вручную', true));
-    }, 800);
+    if (!initialized) return;
+    clearTimeout(draftTimer);
+    syncActiveView();
+    draftDirty = true;
+    status('draft-status', 'Сохраняем черновик…');
+    try { project.saveJournal?.(draftId, model); } catch (_) { /* Full project is still saved in IndexedDB. */ }
+    const savedRevision = revision;
+    const savedDraftId = draftId;
+    let value;
+    try { value = serialized(); }
+    catch (_) { status('draft-status', 'Скачайте проект для сохранения.', true); return; }
+    draftQueue = draftQueue.catch(() => {}).then(() => project.draftAction('put', value, savedDraftId));
+    draftQueue.then(() => {
+      if (!form.isConnected || revision !== savedRevision || draftId !== savedDraftId) return;
+      draftDirty = false;
+      status('draft-status', 'Сохранено на устройстве');
+    }, () => { if (form.isConnected) status('draft-status', 'Ошибка сохранения — скачайте проект', true); });
   }
+  window.addEventListener('beforeunload', event => {
+    if (!draftDirty) return;
+    event.preventDefault();
+    event.returnValue = '';
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && draftDirty) saveDraftSoon();
+  });
   function decodeImage(source) {
     return new Promise((resolve, reject) => {
       const image = new Image(); image.onload = () => image.naturalWidth && image.naturalHeight ? resolve(image) : reject(new Error('Пустое изображение'));
@@ -318,13 +359,20 @@
   }
   async function registerAsset(source, id = 'asset-' + crypto.randomUUID()) {
     const image = await decodeImage(source);
-    const sampleKey = Object.keys(samples).find(key => window.SATUCARD_DEMO_IMAGES?.[key] === source);
+    let sampleKey = Object.keys(samples).find(key => window.SATUCARD_DEMO_IMAGES?.[key] === source);
+    if (!sampleKey && crypto.subtle && source.startsWith('data:image/jpeg;base64,')) {
+      const bytes = Uint8Array.from(atob(source.split(',')[1]), char => char.charCodeAt(0));
+      const digest = await crypto.subtle.digest('SHA-256', bytes);
+      const hex = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+      sampleKey = window.SATUCARD_SAMPLE_DIGESTS?.[hex];
+    }
     assets.set(id, { image, source, sampleKey }); pendingAssets.add(id); return id;
   }
   function readFile(file) {
     return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = () => reject(new Error('Файл недоступен.')); reader.readAsDataURL(file); });
   }
   async function optimizedImage(file, maxSize) {
+    if (window.SATUCARD_PHOTO_IMPORT) file = await window.SATUCARD_PHOTO_IMPORT.convert(file);
     const image = await decodeImage(await readFile(file));
     if (image.naturalWidth * image.naturalHeight > 60000000) throw new Error('Уменьшите изображение до 60 мегапикселей.');
     const ratio = Math.min(1, maxSize / Math.max(image.naturalWidth, image.naturalHeight)), surface = document.createElement('canvas');
@@ -348,7 +396,7 @@
   async function loadPhotos(files) {
     if (!files.length) return;
     if (model.libraryIds.length + files.length > 12) { status('file-status', 'В проекте до 12 фото. Удалите ненужные снимки.', true); return; }
-    if (files.some(file => !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 10 * 1024 * 1024)) { status('file-status', 'Выберите JPG, PNG или WebP до 10 МБ каждый.', true); return; }
+    if (files.some(file => !(window.SATUCARD_PHOTO_IMPORT?.accepts(file) ?? ['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) || file.size > 10 * 1024 * 1024)) { status('file-status', 'Выберите JPG, PNG, WebP или HEIC до 10 МБ каждый.', true); return; }
     const version = ++photoVersion, viewId = model.activeViewId, added = [];
     status('file-status', 'Добавляем фотографии…');
     try {
@@ -361,6 +409,11 @@
       const selected = model.photoIds.filter(id => !demoPhoto(id));
       const newProduct = replaceSelectedPhotos([...selected, ...added].slice(0, 3));
       syncForm(); edited(true);
+      if (newProduct) {
+        activateTab('content');
+        $('product-name').focus({ preventScroll: true });
+        $('product-name').scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+      }
       status('file-status', newProduct
         ? 'Фото загружено. Укажите название и данные своего товара.'
         : 'Добавлено фото: ' + added.length + '. Нажимайте миниатюры, чтобы выбрать до 3 для этой карточки.');
@@ -370,7 +423,16 @@
   async function loadSample(key, initialize = false) {
     if (!Object.hasOwn(samples, key)) return; const version = ++photoVersion; status('file-status', 'Загружаем пример…');
     try {
-      const id = 'sample-' + key; if (!assets.has(id)) await registerAsset(window.SATUCARD_DEMO_IMAGES[key], id);
+      const id = 'sample-' + key; if (!assets.has(id)) {
+        let source = window.SATUCARD_DEMO_IMAGES?.[key];
+        if (!source) {
+          const response = await fetch('assets/images/' + key + '.jpg');
+          if (!response.ok) throw new Error('Не удалось загрузить пример.');
+          source = await readFile(await response.blob());
+        }
+        await registerAsset(source, id);
+        assets.get(id).sampleKey = key;
+      }
       pendingAssets.delete(id); if (version !== photoVersion) return; if (!initialize) commit();
       if (!model.libraryIds.includes(id)) { if (model.libraryIds.length >= 12) throw new Error('В проекте до 12 фото. Удалите ненужный снимок.'); model.libraryIds.push(id); }
       setPhotoIds([id]);
@@ -407,6 +469,7 @@
     if (focusMode?.getAttribute('aria-pressed') === 'true') setFocusMode(false);
     document.querySelectorAll('[data-editor-tab]').forEach(button => { const active = button.dataset.editorTab === key; button.setAttribute('aria-selected', String(active)); button.tabIndex = active ? 0 : -1; button.classList.toggle('is-active', active); if (active && focus) button.focus(); });
     document.querySelectorAll('[data-editor-panel]').forEach(panel => { panel.hidden = panel.dataset.editorPanel !== key; });
+    if (key === 'templates') renderThumbnails();
   }
   function applyPreviewZoom() {
     const zoom = Number($('preview-zoom').value);
@@ -523,8 +586,13 @@
     }
   }
   async function publishCard() {
-    if (publishing) return; readForm(); commit(); if (!validDetails(true)) return;
+    if (publishing) return; readForm(); commit(); if (!validDetails(model.settings.showPrice)) return;
     if (location.protocol === 'file:') { status('publish-status', 'Для публикации откройте сайт SatuCard в интернете.', true); return; }
+    const contact = $('seller-contact').value.trim();
+    if (contact) {
+      try { const url = new URL(contact); if (url.protocol !== 'https:' || url.username || url.password) throw new Error(); }
+      catch (_) { status('publish-status', 'Укажите HTTPS-ссылку на магазин, товар или WhatsApp.', true); $('seller-contact').focus(); return; }
+    }
     const saved = clone(model.settings), photos = imageAssets(), surface = document.createElement('canvas');
     publishing = true; $('publish-button').disabled = true; $('publish-result').hidden = true; status('publish-status', 'Публикуем карточку…');
     try {
@@ -539,11 +607,18 @@
       await readyFonts(saved); renderer.render(surface, saved, photos);
       let blob; for (const quality of [0.9, 0.78, 0.64, 0.48]) { blob = await blobFromCanvas(surface, 'image/jpeg', quality); if (blob.size <= 2 * 1024 * 1024) break; }
       if (blob.size > 2 * 1024 * 1024) throw new Error('Изображение превышает 2 МБ. Скачайте его или используйте более простое фото.');
-      const data = new FormData(); data.set('image', blob, 'card.jpg'); data.set('title', saved.title); data.set('price', String(saved.price)); data.set('oldPrice', saved.oldPrice ?? '');
+      const data = new FormData(); data.set('image', blob, 'card.jpg'); data.set('title', saved.title); data.set('price', saved.price === null ? '' : String(saved.price)); data.set('oldPrice', saved.showPrice ? saved.oldPrice ?? '' : '');
+      data.set('showPrice', String(saved.showPrice));
+      data.set('showBrand', String(saved.showBrand));
+      data.set('contactUrl', $('seller-contact').value.trim());
+      if (publication) { data.set('id', publication.id); data.set('expectedImagePath', publication.imagePath); }
       data.set('style', saved.template); data.set('format', saved.format); data.set('brandName', saved.brandName);
       const response = await fetch('api/cards', { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}` }, body: data }), result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Не удалось опубликовать карточку.');
-      lastPublished = result.url; $('published-url').value = result.url; $('published-card-link').href = result.url;
+      lastPublished = new URL('api/share?id=' + encodeURIComponent(result.id), location.href).href;
+      try { localStorage.setItem('satucard-publication-draft-' + result.id, draftId); } catch (_) {}
+      if (publication) publication = { ...publication, imagePath: result.imagePath };
+      $('published-url').value = lastPublished; $('published-card-link').href = result.url;
       $('publish-dialog-link').href = result.url; $('publish-dialog-link').textContent = 'Открыть карточку'; $('publish-dialog-title').textContent = saved.title;
       $('publish-result').hidden = false; status('publish-status', 'Карточка опубликована и сохранена в личном кабинете.');
       if (typeof $('publish-dialog').showModal === 'function') $('publish-dialog').showModal();
@@ -758,7 +833,39 @@
           focusMode.getAttribute('aria-pressed') === 'true') setFocusMode(false);
     });
   }
+  $('crop-photo').addEventListener('click', () => {
+    const active = $('crop-photo').getAttribute('aria-pressed') !== 'true';
+    $('crop-photo').setAttribute('aria-pressed', String(active));
+    canvas.classList.toggle('crop-mode', active);
+    status('project-status', active ? 'Перетащите фото. Нажмите «Кадрировать» ещё раз, чтобы вернуться к прокрутке.' : '');
+  });
+  $('upload-own-photo').addEventListener('click', () => $('photo-input').click());
+  $('quick-purpose').addEventListener('change', event => {
+    const presets = { catalog: ['square', 'cover'], marketplace: ['portrait34', 'cover'], post: ['portrait', 'cover'], story: ['story', 'cover'], advantages: ['portrait', 'advantages'] };
+    const preset = presets[event.target.value];
+    if (!preset) return;
+    commit();
+    [model.settings.format, model.settings.purpose] = preset;
+    syncForm(); edited(true); fitPreview();
+    status('project-status', 'Формат выбран. Добавьте фото и данные товара.');
+  });
+  $('card-text-preview').addEventListener('click', () => {
+    const result = $('card-text-content');
+    result.replaceChildren();
+    const settings = model.settings;
+    const lines = [settings.showBrand ? settings.brandName : '', settings.title, settings.subtitle, settings.description, ...settings.features,
+      settings.showPrice ? (settings.price === null ? 'Цена по запросу' : new Intl.NumberFormat('ru-RU').format(settings.price) + ' ₸') : ''];
+    for (const value of lines.filter(Boolean)) { const p = document.createElement('p'); p.textContent = value; result.append(p); }
+    $('card-text-dialog').showModal();
+  });
+  $('card-edit-text').addEventListener('click', () => {
+    $('card-text-dialog').close();
+    activateTab('content');
+    $('product-name').focus();
+    $('product-name').scrollIntoView({ block: 'center' });
+  });
   canvas.addEventListener('pointerdown', event => {
+    if (event.pointerType === 'touch' && $('crop-photo')?.getAttribute('aria-pressed') !== 'true') return;
     if (!model.photoId || !geometry?.photoRect || event.button > 0) return;
     const box = canvas.getBoundingClientRect(), scale = 900 / box.width, point = { x: (event.clientX - box.left) * scale, y: (event.clientY - box.top) * scale }, rect = geometry.photoRect;
     if (point.x < rect.x || point.x > rect.x + rect.width || point.y < rect.y || point.y > rect.y + rect.height) return;
@@ -799,11 +906,37 @@
     }
     catch (error) { status('project-status', error.message, true); }
   });
-  $('restore-draft-button').addEventListener('click', async () => { try { if (!pendingDraft) return; await restoreProject(pendingDraft); pendingDraft = null; $('draft-restore-banner').hidden = true; status('project-status', 'Черновик восстановлен вместе с фотографией.'); } catch (error) { status('project-status', error.message, true); } });
-  $('discard-draft-button').addEventListener('click', async () => { pendingDraft = null; $('draft-restore-banner').hidden = true; clearTimeout(draftTimer); try { draftQueue = draftQueue.catch(() => {}).then(() => project.draftAction('delete')); await draftQueue; status('draft-status', 'Начните редактирование — черновик сохранится автоматически.'); } catch (_) { status('draft-status', 'Хранилище недоступно. Скачайте проект.'); } });
+  $('restore-draft-button').addEventListener('click', async () => {
+    try {
+      if (!pendingDraft) return;
+      await restoreProject(pendingDraft);
+      pendingDraft = null;
+      $('draft-restore-banner').hidden = true;
+      status('project-status', 'Черновик восстановлен вместе с фотографиями.');
+    } catch (error) { status('project-status', error.message, true); }
+  });
+  $('discard-draft-button').addEventListener('click', () => {
+    pendingDraft = null;
+    $('draft-restore-banner').hidden = true;
+    draftId = crypto.randomUUID();
+    draftClaim = claimDraftWriter();
+    try { sessionStorage.setItem('satucard-active-draft', draftId); } catch (_) {}
+    status('draft-status', 'Новый товар · предыдущие проекты в списке');
+  });
+  document.querySelectorAll('a[href="auth.html"]').forEach(link => link.addEventListener('click', () => {
+    saveDraftSoon();
+    try {
+      const returnUrl = new URL(location.href);
+      returnUrl.searchParams.set('draft', draftId);
+      const flow = JSON.stringify({ path: returnUrl.pathname + returnUrl.search, createdAt: Date.now() });
+      sessionStorage.setItem('satucard-editor-return', flow);
+      localStorage.setItem('satucard-editor-return', flow);
+    } catch (_) {}
+  }));
   async function updateAuth() { const session = Boolean(await window.SATUCARD_AUTH?.getSession()); $('publish-login').hidden = session; if ($('publish-login-note')) $('publish-login-note').hidden = session; }
   document.addEventListener('satucard:authchange', updateAuth); updateAuth();
   async function initialize() {
+    await draftClaim;
     buildDesignOptions(); activateTab('photo'); syncForm(); fitPreview(); const params = new URLSearchParams(location.search);
     document.querySelectorAll('[data-palette]').forEach(button => { const chip = button.querySelector('i'); palettes[button.dataset.palette].forEach((color, index) => chip.style.setProperty('--palette-' + ['a', 'b', 'c'][index], color)); });
     if (renderer.templates[params.get('style')]) model.settings.template = params.get('style'); if (renderer.formats[params.get('format')]) model.settings.format = params.get('format');
@@ -812,8 +945,40 @@
     form.inert = false;
     ['download-button', 'copy-card-image', 'publish-button', 'save-project-button', 'load-project-input'].forEach(id => { $(id).disabled = false; });
     fitPreview();
-    try { const saved = await project.draftAction('get'); if (saved) { project.parseProject(saved, renderer.normalize); pendingDraft = saved; $('draft-restore-banner').hidden = false; status('draft-status', 'Есть сохранённый черновик'); } else status('draft-status', 'Локальное автосохранение'); }
+    try {
+      const requestedDraft = params.get('draft');
+      const own = await project.draftAction('get', undefined, requestedDraft || draftId);
+      const drafts = own ? [] : await project.draftAction('list');
+      const latest = drafts?.filter?.(entry => entry?.payload).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
+      pendingDraftId = requestedDraft || (own ? draftId : latest?.id || 'current');
+      let saved = own || latest?.payload || await project.draftAction('get');
+      if (saved) {
+        saved = project.recoverJournal?.(pendingDraftId, saved) || saved;
+        const parsed = project.parseProject(saved, renderer.normalize);
+        pendingDraft = saved;
+        $('draft-restore-banner').querySelector('p').textContent = 'Продолжить «' + (parsed.settings.title || 'Без названия') + '». Другие товары доступны в списке проектов.';
+        $('draft-restore-banner').hidden = false;
+        status('draft-status', 'Есть сохранённый черновик');
+        if (requestedDraft) $('restore-draft-button').click();
+      } else status('draft-status', 'Локальное автосохранение');
+    }
     catch (_) { status('draft-status', 'Автосохранение недоступно — используйте «Сохранить проект».'); }
+    const publicationId = params.get('publication');
+    if (publicationId) {
+      try {
+        const session = await window.SATUCARD_AUTH?.getSession();
+        if (!session) throw new Error('Войдите, чтобы обновить опубликованную карточку.');
+        const response = await fetch('api/cards?id=' + encodeURIComponent(publicationId), { headers: { Authorization: 'Bearer ' + session.access_token }, cache: 'no-store' });
+        if (!response.ok) throw new Error('Не удалось открыть публикацию. Обновите кабинет.');
+        publication = (await response.json()).card;
+        $('seller-contact').value = publication.contactUrl;
+        $('publish-button').textContent = 'Обновить прежнюю ссылку';
+        status('project-status', 'Откройте исходный черновик или файл проекта, проверьте карточку и обновите прежнюю ссылку.');
+      } catch (error) {
+        $('publish-button').disabled = true;
+        status('project-status', error.message, true);
+      }
+    }
     form.dataset.editorReady = 'true';
     document.dispatchEvent(new Event('satucard:editor-ready'));
     document.fonts?.ready.then(() => requestRender(true));
@@ -821,8 +986,26 @@
   // Small integration surface shared by the workflow UI; model changes remain undoable.
   window.SATUCARD_EDITOR = {
     get revision() { return revision; },
+    brandProfile() {
+      const keys = ['brandName', 'showBrand', 'customColors', 'background', 'accent', 'textColor', 'font'];
+      return { settings: Object.fromEntries(keys.map(key => [key, model.settings[key]])), logo: assets.get(model.logoId)?.source || null };
+    },
+    async applyBrandProfile(value) {
+      const parsed = project.parseProject(JSON.stringify({ app: 'SatuCard', schemaVersion: 1, settings: value.settings, photo: null, logo: value.logo }), renderer.normalize);
+      const started = revision;
+      const id = parsed.logo ? await registerAsset(parsed.logo) : null;
+      if (revision !== started) {
+        if (id) { pendingAssets.delete(id); assets.delete(id); }
+        throw new Error('Карточка изменилась. Примените стиль магазина ещё раз.');
+      }
+      commit();
+      const keys = ['brandName', 'showBrand', 'customColors', 'background', 'accent', 'textColor', 'font'];
+      for (const key of keys) model.settings[key] = parsed.settings[key];
+      model.logoId = id;
+      if (id) pendingAssets.delete(id);
+      syncForm(); edited(true);
+    },
     snapshot(includeProject = false) {
-      readForm(); syncActiveView();
       const sampleKey = activeView().sampleKey || null;
       return { model: clone(model), productContextId: model.productContextId, sampleKey,
         productSettings: clone(withoutSampleSettings(model.settings, sampleKey)),

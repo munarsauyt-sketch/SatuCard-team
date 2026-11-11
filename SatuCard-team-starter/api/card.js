@@ -24,7 +24,7 @@ export async function GET(request) {
   try {
     const query = new URLSearchParams({
       id: `eq.${id}`,
-      select: 'id,title,price_kzt,old_price_kzt,style,format,brand_name,image_path,created_at',
+      select: '*',
       limit: '1'
     });
     const response = await fetch(`${base}/rest/v1/cards?${query}`, {
@@ -40,11 +40,14 @@ export async function GET(request) {
     return json({
       id: record.id,
       title: record.title,
-      price: record.price_kzt,
-      oldPrice: record.old_price_kzt,
+      price: record.show_price === false ? null : record.price_kzt,
+      oldPrice: record.show_price === false ? null : record.old_price_kzt,
       style: record.style,
       format: record.format,
-      brandName: record.brand_name,
+      brandName: record.show_brand === false ? '' : record.brand_name,
+      showPrice: record.show_price !== false,
+      showBrand: record.show_brand !== false,
+      contactUrl: record.contact_url || '',
       imageUrl: `${base}/storage/v1/object/public/cards/${encodeURIComponent(record.image_path)}`,
       createdAt: record.created_at
     });

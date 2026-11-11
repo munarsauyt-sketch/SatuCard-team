@@ -5,7 +5,8 @@
   <link rel="icon" href="assets/favicon.svg?v=studio-identity" type="image/svg+xml"><script src="theme.js?v=rebrand-20261012"></script>
   <link rel="stylesheet" href="brand.css?v=studio-identity"><link rel="stylesheet" href="marketing.css?v=rebrand-20261012">
   <link rel="stylesheet" href="preview-gallery.css?v=studio-identity">
-  <script src="auth-client.js?v=verified-auth-20261026" defer></script><script src="site.js?v=rebrand-20261012" defer></script><script src="assets/demo-images.js" defer></script><script src="assets/demo-ceramics.js" defer></script><script src="assets/demo-bag.js" defer></script><script src="assets/demo-jewelry.js" defer></script><script src="assets/demo-decor.js" defer></script><script src="assets/demo-kitchen.js" defer></script><script src="product-samples.js" defer></script><script src="studio-renderer.js?v=larger-canvas-1" defer></script><script src="marketing.js?v=studio-preview-1" defer></script>
+  <script src="auth-client.js?v=verified-auth-20261026" defer></script><script src="site.js?v=rebrand-20261012" defer></script><script src="product-samples.js" defer></script><script src="studio-renderer.js?v=larger-canvas-1" defer></script><script src="marketing.js?v=studio-preview-1" defer></script>
+  <script src="interface-language.js" defer></script>
 </head><body class="marketing-page templates-page">
 <a class="skip-link" href="#main">К содержимому</a>
 <header class="site-header"><div class="container header-inner"><a class="brand" href="index.html" aria-label="SatuCard — главная"><img class="brand-logo-icon" src="assets/favicon.svg?v=studio-identity" alt="">SatuCard<span class="brand-dot">.</span></a><button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="main-nav" aria-label="Открыть меню">☰</button><nav id="main-nav" aria-label="Основная навигация"><a href="index.html">Главная</a><a href="editor.html">Редактор</a><a href="examples.html" aria-current="page">Шаблоны</a><a href="pricing.html">Тарифы</a></nav><button class="theme-toggle" type="button" data-theme-toggle aria-label="Тёмная тема" aria-pressed="false"><span aria-hidden="true">◐</span><span class="theme-toggle-text">Тема</span></button><a class="header-account" data-account-link href="auth.html">Войти</a></div></header>
@@ -17,7 +18,7 @@
   <section class="container gallery-catalog" aria-label="Каталог шаблонов">
     <div class="gallery-toolbar">
       <div class="gallery-filters" role="group" aria-label="Фильтр шаблонов">
-        <button type="button" data-template-filter="all" aria-pressed="true">Все <span>8</span></button>
+        <button type="button" data-template-filter="all" aria-pressed="true">Все <span>14</span></button>
         <button type="button" data-template-filter="light" aria-pressed="false">Светлые</button>
         <button type="button" data-template-filter="dark" aria-pressed="false">Тёмные</button>
         <button type="button" data-template-filter="expressive" aria-pressed="false">Выразительные</button>
@@ -27,7 +28,7 @@
         <select id="demo-product" data-demo-product>
           <option value="mixed">Разные товары</option>
           <option value="ceramics">Посуда</option>
-          <option value="headphones">Наушники</option>
+          <option value="headphones" selected>Наушники</option>
           <option value="bag">Сумки</option>
           <option value="sneaker">Кроссовки</option>
           <option value="jewelry">Украшения</option>

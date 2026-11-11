@@ -9,8 +9,9 @@
   <link rel="stylesheet" href="brand.css?v=studio-identity">
   <link rel="stylesheet" href="account-pages.css?v=studio-identity">
   <link rel="stylesheet" href="dashboard-billing.css">
-  <script src="auth-client.js?v=verified-auth-20261026" defer></script><script src="site.js?v=rebrand-20261012" defer></script><script src="cloud-projects.js?v=workflow-1" defer></script><script src="dashboard.js?v=workflow-1" defer></script><script src="dashboard-projects.js?v=workflow-1" defer></script><link rel="stylesheet" href="studio-workflow.css?v=workflow-1">
+  <script src="auth-client.js?v=verified-auth-20261026" defer></script><script src="site.js?v=rebrand-20261012" defer></script><script src="studio-project.js" defer></script><script src="local-projects.js" defer></script><script src="cloud-projects.js?v=workflow-1" defer></script><script src="dashboard.js?v=workflow-1" defer></script><script src="dashboard-projects.js?v=workflow-1" defer></script><link rel="stylesheet" href="studio-workflow.css?v=workflow-1">
   <script src="dashboard-billing.js" type="module"></script>
+  <script src="interface-language.js" defer></script>
 </head>
 <body class="account-page dashboard-page">
 <a class="skip-link" href="#main">К содержимому</a>
@@ -45,7 +46,7 @@
     <div class="billing-support"><strong>Поддержка по оплате</strong><div id="billing-support"></div></div>
     <button type="button" class="button button-light" id="billing-refresh">Обновить тариф и заявки</button>
   </section>
-  <section class="dashboard-projects workflow-panel" aria-labelledby="projects-title"><h2 id="projects-title">Редактируемые проекты</h2><p>Приватные комплекты с фото, текстами и настройками. Нажмите «Редактировать», чтобы продолжить.</p><button id="projects-refresh" type="button" class="button button-light">Обновить проекты</button><p id="projects-status" role="status">Загружаем проекты…</p><ul id="dashboard-project-list" class="workflow-project-list"></ul></section>
+  <section class="dashboard-projects workflow-panel"><h2>На этом устройстве</h2><label for="local-project-search">Найти черновик</label><input id="local-project-search" type="search"><p id="local-project-status" role="status"></p><ul id="local-project-list" class="local-project-list"></ul></section><section class="dashboard-projects workflow-panel" aria-labelledby="projects-title"><h2 id="projects-title">Редактируемые проекты</h2><p>Приватные комплекты с фото, текстами и настройками. Нажмите «Редактировать», чтобы продолжить.</p><label for="projects-search">Найти товар</label><input id="projects-search" type="search" maxlength="80"><label><input id="projects-archived" type="checkbox">Архив</label><button id="projects-more" class="button button-light" type="button" hidden>Ещё проекты</button><button id="projects-refresh" type="button" class="button button-light">Обновить проекты</button><p id="projects-status" role="status">Загружаем проекты…</p><ul id="dashboard-project-list" class="workflow-project-list"></ul></section>
   <section class="dashboard-cards" aria-labelledby="cards-title"><div class="dashboard-section-title"><div><p class="account-kicker">КОЛЛЕКЦИЯ / SATUCARD</p><h2 id="cards-title">Опубликованные карточки<span>.</span></h2></div><span id="cards-count" class="cards-count"></span></div>
     <p id="dashboard-status" class="collection-status" role="status" aria-live="polite">Загружаем вашу коллекцию…</p>
     <div id="cards-loading" class="collection-loading" aria-hidden="true"><div class="card-skeleton"><div></div><i></i><span></span></div><div class="card-skeleton"><div></div><i></i><span></span></div><div class="card-skeleton"><div></div><i></i><span></span></div></div>

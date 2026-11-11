@@ -44,13 +44,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     $('code-email').textContent = email;
     $('send-email-code').textContent = sent ? 'Отправить письмо повторно' : 'Получить письмо';
     if (sent) resendAfter = Date.now() + 60000;
+    requestAnimationFrame(() => (sent ? $('email-code') : $('send-email-code'))?.focus());
     show(sent ? 'Если адрес подходит для этого действия, письмо отправлено. Проверьте также «Спам». Откройте ссылку или введите код из письма.' : 'Запросите письмо. Пароль от чужой регистрации не понадобится.', sent ? 'success' : 'loading');
   }
   async function enterAccount() {
     try {
       const profile = await auth.getProfile();
       location.replace(profile?.profile_completed_at
-        ? auth.accountPage('dashboard.html')
+        ? (auth.editorReturn?.() || auth.accountPage('dashboard.html'))
         : auth.accountPage('profile.html', { registration: '1' }));
     } catch (error) {
       if (['mail_proof_required', 'email_unconfirmed'].includes(error.code)) {

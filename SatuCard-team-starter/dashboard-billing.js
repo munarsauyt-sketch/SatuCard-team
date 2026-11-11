@@ -119,7 +119,7 @@ function orderRow(order, payment, isAdmin) {
   const actions = element('div');
   actions.className = 'billing-order-actions';
   row.append(element('p', 'Карта для перевода: ' + TRANSFER_CARD_DISPLAY),
-    element('p', 'Переведите ' + money(order.amountKzt) + '. В сообщении к переводу обязательно укажите email вашего аккаунта SatuCard. Тариф подключается после проверки поступления.'));
+    element('p', 'Переведите ' + money(order.amountKzt) + '. В сообщении к переводу обязательно укажите email вашего аккаунта SatuCard. Подключим тариф в течение 48 часов после перевода и проверки поступления. При задержке или для запроса возврата обратитесь в поддержку по этой заявке.'));
   if (payment.checkoutUrl) actions.append(link('Открыть страницу оплаты', payment.checkoutUrl, 'button button-orange'));
   const subject = 'Заявка SatuCard ' + order.id;
   actions.append(link('Уточнить оплату в поддержке', 'mailto:' + SUPPORT.emails[0] + '?subject=' + encodeURIComponent(subject)),

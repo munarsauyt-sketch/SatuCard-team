@@ -15,7 +15,7 @@
   document.querySelector('#card-retry').addEventListener('click', () => location.reload());
   copy.addEventListener('click', async () => {
     try {
-      await navigator.clipboard.writeText(location.href);
+      await navigator.clipboard.writeText(new URL('api/share?id=' + encodeURIComponent(id), location.href).href);
       shareStatus.textContent = 'Ссылка скопирована. Ею можно поделиться.';
     } catch (_) {
       shareStatus.textContent = 'Скопируйте ссылку из адресной строки браузера.';
@@ -52,6 +52,19 @@
         ? ''
         : `${formatter.format(Number(card.oldPrice))} ₸`;
       document.querySelector('#card-brand').textContent = card.brandName || 'Карточка создана в SatuCard';
+      document.querySelector('.shared-brand-row').hidden = card.showBrand === false;
+      document.querySelector('.shared-price-block').hidden = card.showPrice === false || card.price === null;
+      const contact = document.createElement('a');
+      if (card.contactUrl) {
+        try {
+          const url = new URL(card.contactUrl);
+          if (url.protocol === 'https:') {
+            contact.href = url.href; contact.className = 'button button-dark'; contact.rel = 'noopener noreferrer';
+            contact.textContent = 'Связаться с продавцом ↗';
+            document.querySelector('.shared-card-actions').prepend(contact);
+          }
+        } catch (_) {}
+      }
       status.textContent = '';
       loading.hidden = true;
       page.dataset.state = 'ready';

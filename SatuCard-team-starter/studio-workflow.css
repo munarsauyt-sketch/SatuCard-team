@@ -57,3 +57,10 @@ button:focus-visible { outline: 3px solid #7aa870; outline-offset: 3px; }
 .workflow-copy .copy-consent { display: flex; align-items: flex-start; gap: 8px; margin: 12px 0; font-size: 12px; line-height: 1.5; }
 .workflow-copy .copy-consent input { width: auto; flex: 0 0 auto; margin-top: 3px; }
 #copy-template-preview { display: block; width: 144px; height: auto; max-height: 256px; object-fit: contain; margin: 12px auto; border-radius: 8px; }
+
+.workflow-project-list li { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.workflow-project-list img { width:72px; height:90px; object-fit:contain; border-radius:8px; }
+.workflow-project-list button,.workflow-project-list a { min-height:44px; padding:8px; }
+.local-project-list { list-style:none; padding:0; }
+.local-project-list li { display:flex; gap:12px; align-items:center; margin:12px 0; flex-wrap:wrap; }
+.local-project-list img { width:64px; height:80px; object-fit:cover; }

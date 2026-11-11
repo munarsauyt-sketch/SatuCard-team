@@ -74,7 +74,31 @@ document.addEventListener('DOMContentLoaded', async () => {
       date.textContent = `Опубликовано ${new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(card.createdAt))}`;
       body.append(title, price, arrow, date);
       link.append(media, body);
-      grid.append(link);
+      const item = document.createElement('article');
+      const actions = document.createElement('div');
+      actions.className = 'publication-actions';
+      const edit = document.createElement('a');
+      edit.textContent = 'Обновить карточку';
+      const params = new URLSearchParams({ publication: card.id });
+      try { const draft = localStorage.getItem('satucard-publication-draft-' + card.id); if (draft) params.set('draft', draft); } catch (_) {}
+      edit.href = 'editor.html?' + params;
+      const remove = document.createElement('button');
+      remove.type = 'button'; remove.textContent = 'Снять с публикации';
+      remove.addEventListener('click', async () => {
+        if (!confirm('Снять «' + card.title + '» с публикации? Ссылка перестанет открываться.')) return;
+        remove.disabled = true;
+        try {
+          const active = await auth.getSession();
+          const query = new URLSearchParams({ id: card.id, imagePath: card.imagePath });
+          const response = await fetch('api/cards?' + query, { method: 'DELETE', headers: { Authorization: 'Bearer ' + active.access_token } });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.error);
+          item.remove(); status.textContent = 'Карточка снята с публикации.';
+          count.textContent = String(grid.children.length);
+        } catch (error) { status.textContent = error.message || 'Не удалось снять карточку с публикации.'; }
+        finally { remove.disabled = false; }
+      });
+      actions.append(edit, remove); item.append(link, actions); grid.append(item);
     });
   } catch (error) {
     status.textContent = error.message || 'Не удалось загрузить карточки.';

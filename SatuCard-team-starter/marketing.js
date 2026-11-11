@@ -6,11 +6,30 @@
   const samples = window.SATUCARD_SAMPLES;
   const images = new Map();
   const cards = [...document.querySelectorAll('[data-mark-card]')];
+  const galleryRoot = document.querySelector('.gallery-grid') || document.querySelector('[data-template-item]')?.parentElement;
+  if (galleryRoot) {
+    const existing = new Set([...document.querySelectorAll('[data-template-item]')].map(item => item.dataset.templateItem));
+    for (const [key, template] of Object.entries(renderer.templates)) {
+      if (existing.has(key)) continue;
+      const article = document.querySelector('[data-template-item]').cloneNode(true);
+      article.dataset.templateItem = key;
+      article.dataset.category = ['blueprint', 'graphite'].includes(key) ? 'dark' : key === 'pop' ? 'expressive' : 'light';
+      article.querySelector('h2').textContent = template.label;
+      const link = article.querySelector('[data-editor-template]');
+      link.dataset.editorTemplate = key;
+      const canvas = article.querySelector('canvas');
+      canvas.dataset.template = key; canvas.dataset.photo = 'headphones';
+      galleryRoot.append(article);
+      cards.push(canvas);
+    }
+    const all = document.querySelector('[data-template-filter="all"]');
+    if (all) all.textContent = 'Все ' + Object.keys(renderer.templates).length;
+  }
   const galleryCards = cards.filter(canvas => canvas.closest('[data-template-item]'));
   const originalSamples = new Map(galleryCards.map(canvas => [canvas, canvas.dataset.photo]));
   const productSelector = document.querySelector('[data-demo-product]');
   const prices = new Intl.NumberFormat('ru-RU');
-  let gallerySample = 'mixed';
+  let gallerySample = 'headphones';
   function loadImage(key) {
     if (images.has(key)) return images.get(key);
     const promise = new Promise((resolve, reject) => {
@@ -26,7 +45,7 @@
       const image = await loadImage(key);
       if (canvas.dataset.photo !== key) return;
       const sample = samples[key];
-      renderer.render(canvas, { ...sample, title: sample.headline, subtitle: sample.title, template: canvas.dataset.template, format: 'portrait', brandName: 'YOUR STORE', photo: { fit: 'cover', radius: 24, ...sample.photo } }, { photo: image }, { scale: canvas.id === 'hero-card' ? .65 : .48 });
+      renderer.render(canvas, { ...sample, title: sample.headline, subtitle: sample.title, description: '', template: canvas.dataset.template, format: 'portrait', brandName: 'YOUR STORE', photo: { fit: 'cover', radius: 24, ...sample.photo } }, { photo: image }, { scale: canvas.id === 'hero-card' ? .65 : .48 });
       canvas.classList.add('rendered');
     } catch (_) {
       // Keep the real photo visible if local canvas or image rendering is unavailable.
