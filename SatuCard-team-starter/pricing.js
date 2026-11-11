@@ -11,7 +11,11 @@ document.getElementById('transfer-support').href = 'mailto:' + SUPPORT.emails[0]
 function checkout(plan) {
   document.getElementById('checkout-plan').textContent = plan.name;
   document.getElementById('checkout-price').textContent = money(plan.priceKzt);
-  document.getElementById('checkout-account').href = 'dashboard.html?plan=' + encodeURIComponent(plan.id) + '#billing-title';
+  const account = new URL('dashboard.html#billing-title', location.href);
+  account.searchParams.set('plan', plan.id);
+  const theme = document.documentElement.dataset.theme;
+  if (theme) account.searchParams.set('theme', theme);
+  document.getElementById('checkout-account').href = account.href;
   copyStatus.textContent = '';
   dialog.showModal();
 }

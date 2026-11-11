@@ -21,12 +21,15 @@ function setup(copy = async () => {}) {
 test('each tariff opens its actual transfer amount and account instructions without demo payment actions', () => {
   const app = setup();
   try {
+    app.w.document.documentElement.dataset.theme = 'dark';
     for (const plan of BILLING_PLANS) {
       app.w.document.querySelector(`[data-plan="${plan.id}"] button`).click();
       assert.equal(app.$('transfer-checkout').open, true);
       assert.equal(app.$('checkout-plan').textContent, plan.name);
       assert.equal(app.$('checkout-price').textContent, new Intl.NumberFormat('ru-RU').format(plan.priceKzt) + ' ₸');
-      assert.equal(new URL(app.$('checkout-account').href).searchParams.get('plan'), plan.id);
+      const account = new URL(app.$('checkout-account').href);
+      assert.equal(account.searchParams.get('plan'), plan.id);
+      assert.equal(account.searchParams.get('theme'), 'dark');
     }
     assert.equal(app.$('transfer-card').value, '4400 4303 3768 3400');
     assert.equal(app.$('transfer-card').readOnly, true);

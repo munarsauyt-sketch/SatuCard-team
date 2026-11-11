@@ -246,15 +246,12 @@ html[data-theme="dark"] .auth-shell { box-shadow: none; }
 @media (max-width: 540px) {
   .auth-main { padding-block: 20px 44px; }
   .auth-shell { border-radius: 18px; }
-  .auth-intro { padding: 24px; }
-  .auth-intro h1 { font-size: clamp(35px, 9vw, 46px); }
-  .auth-intro > p { font-size: 14px; }
-  .auth-art { display: none; }
-  .auth-intro-bottom { margin-top: 25px; font-size: 10px; }
-  .auth-intro-bottom > span:last-child { display: none; }
+  .auth-intro { padding: 16px 23px; }
+  .auth-intro h1 { margin: 0; font-size: clamp(24px, 6.5vw, 34px); }
+  .auth-intro > p, .auth-intro-top, .auth-intro-bottom, .auth-art { display: none; }
   .auth-card { padding: 25px 23px 27px; }
-  .auth-card-top { margin-bottom: 24px; }
-  .auth-card-top .account-kicker { font-size: 10px; }
+  .auth-card-top { display: none; }
+  .auth-tabs { margin-bottom: 18px; }
   .auth-card h2 { font-size: 31px; }
   .auth-subtitle { font-size: 14px; }
   #auth-form input { padding-inline: 12px; }

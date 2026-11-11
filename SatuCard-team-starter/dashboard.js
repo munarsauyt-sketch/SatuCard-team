@@ -13,21 +13,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   logout.addEventListener('click', async () => {
     logout.disabled = true;
     await auth.signOut();
-    location.replace('auth.html');
+    location.replace(auth.accountPage('auth.html', {}, false));
   });
 
   const session = await auth.getSession();
-  if (!session) { location.replace('auth.html'); return; }
+  if (!session) { location.replace(auth.accountPage('auth.html')); return; }
   try {
     const profile = await auth.getProfile();
     if (!profile) throw new Error('Профиль не найден. Попробуйте войти снова.');
-    if (!profile.profile_completed_at) { location.replace('profile.html?registration=1'); return; }
+    if (!profile.profile_completed_at) { location.replace(auth.accountPage('profile.html', { registration: '1' })); return; }
     document.querySelector('#profile-title').textContent = profile.name;
     document.querySelector('#profile-email').textContent = profile.email;
     document.querySelector('#profile-created').textContent = `В SatuCard с ${new Intl.DateTimeFormat('ru-RU', { dateStyle: 'long' }).format(new Date(profile.created_at))}`;
     document.querySelector('.profile-avatar').textContent = profile.name[0].toUpperCase();
   } catch (error) {
-    if (['sign_in_required', 'mail_proof_required', 'email_unconfirmed'].includes(error.code)) { location.replace('auth.html?verify=1'); return; }
+    if (['sign_in_required', 'mail_proof_required', 'email_unconfirmed'].includes(error.code)) { location.replace(auth.accountPage('auth.html', { verify: '1' })); return; }
     status.textContent = error.message || 'Не удалось загрузить профиль.';
     document.querySelector('#profile-title').textContent = 'Профиль недоступен';
     loading.hidden = true;
@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       image.decoding = 'async';
       const format = document.createElement('span');
       format.className = 'my-card-format';
-      format.textContent = { portrait: 'ПОСТ / 4:5', square: 'КАТАЛОГ / 1:1', story: 'ИСТОРИЯ / 9:16' }[card.format] || 'КАРТОЧКА';
+      format.textContent = { portrait: 'ПОСТ / 4:5', portrait34: 'МАРКЕТПЛЕЙС / 3:4', square: 'КАТАЛОГ / 1:1', story: 'ИСТОРИЯ / 9:16' }[card.format] || 'КАРТОЧКА';
       media.append(image, format);
       const body = document.createElement('div');
       body.className = 'my-card-body';

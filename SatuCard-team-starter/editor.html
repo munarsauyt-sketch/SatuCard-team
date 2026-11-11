@@ -17,13 +17,13 @@
   <script src="studio-tools.js?v=export-review-1" defer></script>
   <script src="studio-copy.js?v=workflow-1" defer></script>
   <script src="cloud-projects.js?v=workflow-1" defer></script>
-  <script src="editor.js?v=mini-preview-3" defer></script>
+  <script src="editor.js?v=mini-preview-4" defer></script>
   <script src="studio-workflow.js?v=export-review-1" defer></script>
   <script src="studio-chat.js?v=reply-model-1" defer></script>
   <link rel="stylesheet" href="studio-chat.css?v=studio-refresh-1">
   <link rel="stylesheet" href="studio-workflow.css?v=export-review-1">
   <link rel="stylesheet" href="editor-tour.css?v=20261105">
-  <link rel="stylesheet" href="editor-preview.css?v=mini-preview-3">
+  <link rel="stylesheet" href="editor-preview.css?v=mini-preview-4">
   <link rel="stylesheet" href="editor-fonts.css?v=larger-canvas-1">
   <script src="editor-tour.js?v=wide-tools-1" defer></script>
 </head>
@@ -285,7 +285,11 @@
     </form>
   </aside>
 
-  <nav class="studio-mobile-view" aria-label="Перейти к части редактора"><a href="#studio-settings"><svg class="studio-icon" aria-hidden="true"><use href="#i-design"/></svg>Настройки</a><a href="#preview"><svg class="studio-icon" aria-hidden="true"><use href="#i-image"/></svg>Карточка ↗</a></nav>
+  <nav class="studio-mobile-view" aria-label="Перейти к части редактора">
+    <a href="#studio-settings"><svg class="studio-icon" aria-hidden="true"><use href="#i-design"/></svg>Настройки</a>
+    <button id="mini-preview-mobile" type="button" aria-controls="mini-preview" aria-expanded="false" hidden>Мини-превью</button>
+    <a href="#preview"><svg class="studio-icon" aria-hidden="true"><use href="#i-image"/></svg>Карточка ↗</a>
+  </nav>
 
   <dialog id="export-review" class="studio-export-review" aria-labelledby="export-review-title">
     <header>

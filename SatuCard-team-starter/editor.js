@@ -11,6 +11,7 @@
   const miniPreview = $('mini-preview'), miniCanvas = $('mini-preview-canvas'), miniToggle = $('mini-preview-toggle');
   const miniPicture = $('mini-preview-picture');
   const miniResize = $('mini-preview-resize'), miniMove = $('mini-preview-move');
+  const miniMobileToggle = $('mini-preview-mobile');
   const miniHeading = miniToggle.closest('.mini-preview-heading');
   const mobileNavigation = document.querySelector('.studio-mobile-view');
   const previewStage = $('preview-stage'), toolbar = document.querySelector('.studio-project-bar');
@@ -214,6 +215,7 @@
     const visible = bottom < toolbar.getBoundingClientRect().bottom && focusMode?.getAttribute('aria-pressed') !== 'true';
     const justShown = visible && miniPreview.hidden;
     miniPreview.hidden = !visible;
+    miniMobileToggle.hidden = !visible;
     if (visible && !miniPicture.hidden && (redraw || justShown)) drawMiniPreview();
     if (justShown) layoutMiniPreview();
   }
@@ -722,13 +724,21 @@
     const previewObserver = new ResizeObserver(scheduleMiniPreview);
     [canvas, previewStage, toolbar].forEach(element => previewObserver.observe(element));
   }
-  miniToggle.addEventListener('click', () => {
-    miniPicture.hidden = !miniPicture.hidden;
-    miniResize.hidden = miniPicture.hidden;
-    miniToggle.setAttribute('aria-expanded', String(!miniPicture.hidden));
-    miniToggle.setAttribute('aria-label', miniPicture.hidden ? 'Развернуть мини-превью' : 'Свернуть мини-превью');
+  const mobilePreview = window.matchMedia?.('(max-width: 800px)');
+  function setMiniExpanded(expanded) {
+    miniPicture.hidden = miniResize.hidden = !expanded;
+    miniToggle.setAttribute('aria-expanded', String(expanded));
+    miniMobileToggle.setAttribute('aria-expanded', String(expanded));
+    miniToggle.setAttribute('aria-label', expanded ? 'Свернуть мини-превью' : 'Развернуть мини-превью');
     updateMiniPreview(true);
     layoutMiniPreview();
+  }
+  setMiniExpanded(!mobilePreview?.matches);
+  mobilePreview?.addEventListener?.('change', event => setMiniExpanded(!event.matches));
+  miniMobileToggle.addEventListener('click', () => setMiniExpanded(miniPicture.hidden));
+  miniToggle.addEventListener('click', () => {
+    setMiniExpanded(miniPicture.hidden);
+    if (miniPicture.hidden && mobilePreview?.matches) miniMobileToggle.focus();
   });
   function setFocusMode(active) {
     focusMode.closest('.studio-layout').classList.toggle('is-canvas-focus', active);

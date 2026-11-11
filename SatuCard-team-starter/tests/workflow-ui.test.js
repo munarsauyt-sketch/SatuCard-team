@@ -13,6 +13,7 @@ async function until(predicate) { for (let i = 0; i < 80; i++) { if (predicate()
 async function setup(options = {}) {
   const dom = new JSDOM(readFileSync(new URL('../editor.html', import.meta.url), 'utf8'), { url: options.url || 'https://satucard.test/editor.html', runScripts: 'outside-only', pretendToBeVisual: true });
   const { window: w } = dom;
+  if (options.mobile) w.matchMedia = () => ({ matches: true });
   const context = new Proxy({ measureText: text => ({ width: String(text).length * 12 }), createLinearGradient: () => ({ addColorStop() {} }), createRadialGradient: () => ({ addColorStop() {} }),
     getImageData: () => { const data = new Uint8ClampedArray(10 * 10 * 4).fill(255); for (let y = 3; y < 7; y++) for (let x = 3; x < 7; x++) { const offset = (y * 10 + x) * 4; data[offset] = 20; data[offset + 1] = 40; data[offset + 2] = 70; } return { data, width: 10, height: 10 }; } }, { get: (obj, key) => key in obj ? obj[key] : () => {} });
   w.HTMLCanvasElement.prototype.getContext = () => context;
@@ -49,6 +50,26 @@ test('set creation, independent edits, undo/redo and portable restore work throu
     $('redo-button').click(); assert.equal($('product-views').children.length, 2);
     await w.SATUCARD_EDITOR.restoreProject(saved); assert.equal($('product-views').children.length, 3); assert.equal($('product-name').value, 'Екінші карточка');
     $('reset-button').click(); assert.equal($('product-views').children.length, 1);
+  } finally { app.dom.window.close(); }
+});
+
+test('mobile preview stays folded while editing and opens from the navigation bar', async () => {
+  const app = await setup({ mobile: true });
+  const { w, $ } = app;
+  try {
+    const toolbar = w.document.querySelector('.studio-project-bar');
+    toolbar.getBoundingClientRect = () => ({ bottom: 100 });
+    w.dispatchEvent(new w.Event('scroll'));
+    const button = $('mini-preview-mobile');
+    await until(() => !button.hidden);
+    assert.equal($('mini-preview-picture').hidden, true);
+    assert.equal(button.getAttribute('aria-expanded'), 'false');
+    button.click();
+    assert.equal($('mini-preview-picture').hidden, false);
+    assert.equal(button.getAttribute('aria-expanded'), 'true');
+    $('mini-preview-toggle').click();
+    assert.equal($('mini-preview-picture').hidden, true);
+    assert.equal(w.document.activeElement, button);
   } finally { app.dom.window.close(); }
 });
 

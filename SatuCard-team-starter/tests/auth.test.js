@@ -83,6 +83,39 @@ test('callback exchanges once, scrubs URL first, preserves user id, never persis
   assert.ok(!('provider_refresh_token' in saved));
 });
 
+test('selected tariff and theme survive login, Google callback and profile setup', async () => {
+  const entry = harness({ url: `${origin}/dashboard.html?plan=plus&theme=dark#billing-title` });
+  const login = entry.auth.accountPage('auth.html');
+  assert.equal(login, `${origin}/auth.html?theme=dark&plan=plus&billing=1`);
+
+  const start = harness({ url: login });
+  await start.auth.signInWithGoogle();
+  const callback = harness({
+    url: `${origin}/auth.html?code=single-use`,
+    pending: { [flowKey]: start.temporary.getItem(flowKey) },
+    responder: () => tokenResponse
+  });
+  await callback.auth.completeGoogleSignIn();
+  const profileUrl = callback.auth.accountPage('profile.html', { registration: '1' });
+  assert.equal(profileUrl, `${origin}/profile.html?registration=1&theme=dark&plan=plus&billing=1`);
+  const profile = harness({ url: profileUrl });
+  assert.equal(profile.auth.accountPage('dashboard.html'), `${origin}/dashboard.html?theme=dark&plan=plus#billing-title`);
+});
+
+test('an email link in the same tab restores the tariff after verifying the email', async () => {
+  const billingKey = 'satucard-email-billing-v1';
+  const start = harness({ url: `${origin}/auth.html?plan=max3&billing=1` });
+  await start.auth.sendEmailCode('seller@example.com');
+  const callback = harness({
+    url: `${origin}/auth.html?token_hash=example-verification-token&type=email`,
+    pending: { [billingKey]: start.temporary.getItem(billingKey) },
+    responder: () => tokenResponse
+  });
+  await callback.auth.completeEmailSignIn();
+  assert.equal(callback.auth.accountPage('dashboard.html'), `${origin}/dashboard.html?plan=max3#billing-title`);
+  assert.equal(callback.temporary.getItem(billingKey), null);
+});
+
 test('missing, expired or altered browser flow cannot exchange a callback code', async () => {
   const variants = [null, { ...storedFlow(), createdAt: Date.now() - 11 * 60 * 1000 },
     { ...storedFlow(), createdAt: Date.now() + 60000 },

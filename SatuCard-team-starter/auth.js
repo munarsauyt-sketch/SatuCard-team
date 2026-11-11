@@ -4,7 +4,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const auth = window.SATUCARD_AUTH, $ = id => document.getElementById(id);
   const form = $('auth-form'), notice = $('auth-notice'), google = $('auth-google');
   const codeForm = $('email-code-form');
-  let mode = new URLSearchParams(location.search).get('mode') === 'signup' ? 'signup' : 'login';
+  const query = new URLSearchParams(location.search);
+  const fromBilling = query.get('billing') === '1';
+  let mode = query.get('mode') === 'signup' ? 'signup' : 'login';
   let busy = false, codeEmail = '', codeSignup = false, resendAfter = 0;
   const googleLabel = () => mode === 'signup' ? 'Зарегистрироваться с Google' : 'Войти с Google';
   const show = (message, type = 'error') => { notice.textContent = message; notice.className = `auth-notice ${type}`; };
@@ -21,7 +23,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     $('auth-title').textContent = next === 'signup' ? 'Создайте аккаунт' : 'С возвращением';
     $('auth-subtitle').textContent = next === 'signup'
       ? 'Подтвердите email, затем заполните профиль. Или начните с Google.'
-      : 'Войдите в существующий профиль. Ещё нет профиля? Откройте «Регистрация».';
+      : fromBilling ? 'Войдите, чтобы открыть выбранный тариф в кабинете.'
+        : 'Войдите в существующий профиль. Ещё нет профиля? Откройте «Регистрация».';
     $('auth-submit').textContent = next === 'signup' ? 'Зарегистрироваться' : 'Войти в SatuCard';
     $('auth-password').autocomplete = next === 'signup' ? 'new-password' : 'current-password';
     google.querySelector('span').textContent = googleLabel();
@@ -46,7 +49,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function enterAccount() {
     try {
       const profile = await auth.getProfile();
-      location.replace(profile?.profile_completed_at ? 'dashboard.html' : 'profile.html?registration=1');
+      location.replace(profile?.profile_completed_at
+        ? auth.accountPage('dashboard.html')
+        : auth.accountPage('profile.html', { registration: '1' }));
     } catch (error) {
       if (['mail_proof_required', 'email_unconfirmed'].includes(error.code)) {
         const active = await auth.getSession();

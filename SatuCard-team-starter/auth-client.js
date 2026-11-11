@@ -8,12 +8,54 @@ window.SATUCARD_AUTH = (() => {
   const storageKey = 'satucard-session-v1';
   const googleFlowKey = 'satucard-google-pkce-v1';
   const googleFlowLifetime = 10 * 60 * 1000;
+  const emailFlowKey = 'satucard-email-billing-v1';
+  const accountQuery = new URLSearchParams(location.search);
+  const accountPlans = new Set(['basic', 'plus', 'max', 'max3']);
+  let accountContext = {
+    plan: accountQuery.get('plan'),
+    billing: accountQuery.get('billing') === '1' || location.hash === '#billing-title'
+  };
+  let callbackTheme;
   let session = null;
   let refreshPromise = null;
   let googleSignInPending = false;
   let googleCallbackPromise = null;
   let completedIntent = 'login';
   let currentProfile = null;
+
+  function accountTheme() {
+    return document.documentElement?.dataset.theme || callbackTheme || accountQuery.get('theme');
+  }
+
+  function accountPage(page, params = {}, keepBilling = true) {
+    const url = new URL(page, location.href);
+    for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
+    const theme = accountTheme();
+    if (theme === 'light' || theme === 'dark') url.searchParams.set('theme', theme);
+    if (keepBilling && (accountContext.billing || accountPlans.has(accountContext.plan))) {
+      if (accountPlans.has(accountContext.plan)) url.searchParams.set('plan', accountContext.plan);
+      if (page === 'dashboard.html') url.hash = 'billing-title';
+      else url.searchParams.set('billing', '1');
+    }
+    return url.href;
+  }
+
+  function restoreAccountContext(context) {
+    if (!context) return;
+    accountContext = { plan: context.plan, billing: context.billing === true };
+    if (context.theme !== 'light' && context.theme !== 'dark') return;
+    callbackTheme = context.theme;
+    if (document.documentElement) document.documentElement.dataset.theme = callbackTheme;
+  }
+
+  function rememberEmailBilling() {
+    if (!accountContext.billing && !accountPlans.has(accountContext.plan)) return;
+    try {
+      sessionStorage.setItem(emailFlowKey, JSON.stringify({
+        ...accountContext, theme: accountTheme(), createdAt: Date.now()
+      }));
+    } catch (_) { /* Email still works when storage is unavailable. */ }
+  }
 
   try {
     const saved = JSON.parse(localStorage.getItem(storageKey) || 'null');
@@ -100,6 +142,7 @@ window.SATUCARD_AUTH = (() => {
     });
     // A sign-up response never signs the user in without proof of the mailbox.
     if (data.access_token) throw new Error('Сервер выдал сессию без проверки почты. Вход остановлен. Используйте Google.');
+    rememberEmailBilling();
     return data;
   }
 
@@ -122,8 +165,10 @@ window.SATUCARD_AUTH = (() => {
   }
 
   async function sendEmailCode(email, signup = false) {
-    return request(signup ? '/auth/v1/resend' : '/auth/v1/otp', { method: 'POST',
+    const data = await request(signup ? '/auth/v1/resend' : '/auth/v1/otp', { method: 'POST',
       body: JSON.stringify(signup ? { email, type: 'signup' } : { email, create_user: false }) });
+    rememberEmailBilling();
+    return data;
   }
 
   async function verifyEmailCode({ email, token, signup = false }) {
@@ -138,7 +183,16 @@ window.SATUCARD_AUTH = (() => {
     if (!/^[A-Za-z0-9_-]{20,256}$/.test(token || '') || !['signup', 'email', 'magiclink', 'recovery'].includes(type)) {
       throw new Error('Некорректная ссылка подтверждения. Запросите новое письмо.');
     }
-    return saveAuthResponse(await request('/auth/v1/verify', { method: 'POST', body: JSON.stringify({ token_hash: token, type }) }));
+    const data = saveAuthResponse(await request('/auth/v1/verify', { method: 'POST', body: JSON.stringify({ token_hash: token, type }) }));
+    try {
+      const context = JSON.parse(sessionStorage.getItem(emailFlowKey) || 'null');
+      sessionStorage.removeItem(emailFlowKey);
+      const age = Date.now() - context?.createdAt;
+      if (age >= 0 && age < 60 * 60 * 1000 && !accountContext.billing && !accountPlans.has(accountContext.plan)) {
+        restoreAccountContext(context);
+      }
+    } catch (_) { /* Email still works when storage is unavailable. */ }
+    return data;
   }
 
   function isGoogleCallback() {
@@ -172,7 +226,11 @@ window.SATUCARD_AUTH = (() => {
       callback.search = '';
       callback.hash = '';
       try {
-        sessionStorage.setItem(googleFlowKey, JSON.stringify({ verifier, createdAt: Date.now(), callback: callback.href, intent: intent === 'signup' ? 'signup' : 'login' }));
+        sessionStorage.setItem(googleFlowKey, JSON.stringify({
+          verifier, createdAt: Date.now(), callback: callback.href,
+          intent: intent === 'signup' ? 'signup' : 'login',
+          context: { ...accountContext, theme: accountTheme() }
+        }));
       } catch (_) {
         throw new Error('Разрешите хранение данных сайта в браузере, чтобы продолжить вход через Google.');
       }
@@ -218,6 +276,7 @@ window.SATUCARD_AUTH = (() => {
         throw new Error('Попытка входа устарела или открыта в другой вкладке. Нажмите «Продолжить с Google» ещё раз.');
       }
       completedIntent = flow.intent === 'signup' ? 'signup' : 'login';
+      restoreAccountContext(flow.context);
       const data = await request('/auth/v1/token?grant_type=pkce', {
         method: 'POST', body: JSON.stringify({ auth_code: code, code_verifier: flow.verifier })
       });
@@ -303,7 +362,7 @@ window.SATUCARD_AUTH = (() => {
       const dropdown = document.createElement('div');
       dropdown.className = 'account-dropdown';
       const profile = document.createElement('a');
-      profile.href = 'dashboard.html';
+      profile.href = accountPage('dashboard.html', {}, false);
       profile.textContent = 'Личный кабинет';
       const editor = document.createElement('a');
       editor.href = 'editor.html';
@@ -314,7 +373,7 @@ window.SATUCARD_AUTH = (() => {
       logout.addEventListener('click', async () => {
         logout.disabled = true;
         await signOut();
-        location.assign('auth.html');
+        location.assign(accountPage('auth.html', {}, false));
       });
       dropdown.append(profile, editor, logout);
       details.append(summary, dropdown);
@@ -329,7 +388,7 @@ window.SATUCARD_AUTH = (() => {
       const details = link.closest('.account-control').querySelector('.account-menu');
       link.hidden = Boolean(user);
       link.textContent = 'Войти';
-      link.href = 'auth.html';
+      link.href = accountPage('auth.html', {}, false);
       details.hidden = !user;
       if (user) {
         const name = currentProfile?.id === user.id && currentProfile.profile_completed_at ? currentProfile.name : 'Профиль';
@@ -369,5 +428,5 @@ window.SATUCARD_AUTH = (() => {
 
   return { getSession, signUp, signIn, sendEmailCode, verifyEmailCode, isEmailCallback, completeEmailSignIn,
     signInWithGoogle, isGoogleCallback, completeGoogleSignIn, getAuthIntent: () => completedIntent,
-    signOut, getProfile, saveProfile, getMyCards };
+    signOut, getProfile, saveProfile, getMyCards, accountPage };
 })();
