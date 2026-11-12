@@ -63,7 +63,7 @@ export class MediaStore {
       if (asset?.kind !== 'video') continue;
       const video = await this.video(asset, item.id);
       if (item.hidden || time<item.start || time>=item.end) { video.pause(); continue; }
-      const target = Math.min(Math.max(0, video.duration-.04), item.offset+(time-item.start));
+      const target = Math.min(Math.max(0, video.duration-.04), item.freeze??(item.offset+(time-item.start)*(item.speed??1)));
       if (exact) {
         video.pause();
         if (Math.abs(video.currentTime-target)>.004) {
@@ -76,7 +76,8 @@ export class MediaStore {
         }
       } else {
         if (Math.abs(video.currentTime-target)>.18) video.currentTime=target;
-        if (playing && target<video.duration-.05) video.play().catch(()=>{});
+        video.playbackRate=item.speed??1;
+        if (playing && item.freeze===undefined && target<video.duration-.05) video.play().catch(()=>{});
         else video.pause();
       }
     }
@@ -156,7 +157,7 @@ function synthetic(context, type, duration) {
   return buffer;
 }
 export async function mixAudio(project, store) {
-  const layers=project.layers.filter(item=>!item.hidden&&item.volume>0&&(item.type==='audio'||item.type==='video'));
+  const layers=project.layers.filter(item=>!item.hidden&&item.freeze===undefined&&item.volume>0&&(item.type==='audio'||item.type==='video'));
   if (!layers.length) return null;
   const context=new OfflineAudioContext(2,Math.ceil(project.duration*48000),48000);
   const compressor=context.createDynamicsCompressor();
@@ -164,18 +165,34 @@ export async function mixAudio(project, store) {
   compressor.connect(context.destination);
   for(const item of layers){
     const asset=project.assets.find(asset=>asset.id===item.assetId);
-    const buffer=item.builtin ? synthetic(context,item.builtin,item.end-item.start+item.offset) : await store.decode(asset);
+    const speed=item.speed??1;
+    const buffer=item.builtin ? synthetic(context,item.builtin,(item.end-item.start)*speed+item.offset) : await store.decode(asset);
     const offset=item.offset;
-    const duration=Math.min(item.end-item.start,Math.max(0,buffer.duration-offset));
+    const duration=Math.min(item.end-item.start,Math.max(0,buffer.duration-offset)/speed);
     if(duration<=0)continue;
     const source=context.createBufferSource(),gain=context.createGain();
-    source.buffer=buffer;source.connect(gain);gain.connect(compressor);
+    const duck=context.createGain();
+    source.buffer=buffer;source.playbackRate.value=speed;source.connect(gain);gain.connect(duck);duck.connect(compressor);
     const fadeIn=Math.min(item.fadeIn,duration/2),fadeOut=Math.min(item.fadeOut,duration/2);
     gain.gain.setValueAtTime(fadeIn?0:item.volume,item.start);
     gain.gain.linearRampToValueAtTime(item.volume,item.start+fadeIn);
     gain.gain.setValueAtTime(item.volume,item.start+duration-fadeOut);
     gain.gain.linearRampToValueAtTime(0,item.start+duration);
-    source.start(item.start,offset,duration);
+    if(project.ducking&&!item.voice){
+      const intervals=[];
+      for(const voice of layers.filter(layer=>layer.voice).sort((a,b)=>a.start-b.start)){
+        const start=Math.max(item.start,voice.start),end=Math.min(item.start+duration,voice.end);
+        if(end<=start)continue;
+        const previous=intervals.at(-1);
+        if(previous&&start<=previous.end+.26)previous.end=Math.max(previous.end,end);
+        else intervals.push({start,end});
+      }
+      for(const {start,end} of intervals){
+        duck.gain.setValueAtTime(1,Math.max(item.start,start-.08));duck.gain.linearRampToValueAtTime(.22,start);
+        duck.gain.setValueAtTime(.22,end);duck.gain.linearRampToValueAtTime(1,Math.min(item.start+duration,end+.18));
+      }
+    }
+    source.start(item.start,offset,duration*speed);
   }
   return context.startRendering();
 }

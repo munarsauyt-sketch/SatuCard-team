@@ -8,7 +8,7 @@ const root=resolve(fileURLToPath(new URL('..',import.meta.url)));
 const artifacts=resolve(process.env.VIDEO_ARTIFACTS||root+'/../../../outputs/video-studio');
 mkdirSync(artifacts,{recursive:true});
 const origin='http://127.0.0.1:8792';
-const browser=await chromium.launch({channel:process.env.BROWSER_CHANNEL||'msedge',headless:true});
+const browser=await chromium.launch({channel:process.env.BROWSER_CHANNEL||'msedge',headless:true,args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']});
 const mime={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.jpg':'image/jpeg','.png':'image/png','.svg':'image/svg+xml','.woff2':'font/woff2','.ttf':'font/ttf'};
 const csp="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'none'";
 const errors=[];
@@ -17,6 +17,7 @@ async function context(width){
   context.on('page',page=>{page.on('pageerror',error=>errors.push(error.message));page.on('console',msg=>{if(msg.type()==='error')console.log('Browser console:',msg.text());});page.on('dialog',dialog=>dialog.accept());});
   await context.route('**/*',async route=>{
     const url=new URL(route.request().url());if(url.origin!==origin)return route.abort();
+    if(url.pathname.startsWith('/api/'))return route.fulfill({json:{available:false,projects:[]}});
     const path=resolve(root,'.'+url.pathname);
     if(!path.startsWith(root+sep)||!existsSync(path))return route.fulfill({status:404,body:''});
     return route.fulfill({path,contentType:mime[extname(path)],headers:{'Content-Security-Policy':csp}});
@@ -24,10 +25,50 @@ async function context(width){
   return context;
 }
 try{
+  const advanced=await context(1512),studio=await advanced.newPage();
+  await studio.goto(origin+'/editor.html');await studio.locator('#editor-form[data-editor-ready=true]').waitFor();
+  await studio.locator('#photo-input').setInputFiles(root+'/assets/images/ceramics.jpg');await studio.locator('#tab-content').click();
+  await studio.locator('#product-name').fill('Кружка из карточки');await studio.locator('#product-price').fill('4900');
+  await studio.locator('#make-video-button').click();await studio.locator('body[data-ready=true]').waitFor();
+  assert.equal(await studio.locator('[name=title]').inputValue(),'Кружка из карточки');assert.ok((await studio.locator('[name=price]').inputValue()).includes('4'));
+  await studio.getByRole('button',{name:'Проекты',exact:true}).click();
+  assert.equal(await studio.locator('.scene-card').count(),3);
+  const firstTitle=await studio.locator('.scene-card>button').first().textContent();
+  await studio.locator('.scene-card').first().getByRole('button',{name:'→',exact:true}).click();assert.ok((await studio.locator('.scene-card>button').nth(1).textContent()).includes(firstTitle.slice(5)));
+  await studio.locator('#undo').click();
+  await studio.locator('.scene-card').first().getByRole('button',{name:'Копия',exact:true}).click();assert.equal(await studio.locator('.scene-card').count(),4);await studio.locator('#undo').click();
+  await studio.getByRole('button',{name:'Адаптировать в 16:9',exact:true}).click();assert.equal(await studio.locator('#format').inputValue(),'wide');await studio.locator('#undo').click();
+  await studio.getByRole('button',{name:'Предложение',exact:true}).click();await studio.locator('#undo').click();
+  await studio.locator('#scene-transition').selectOption('fade');
+  await studio.screenshot({path:artifacts+'/studio-scenes.png',fullPage:true});
+  await studio.locator('#duration').fill('1');await studio.locator('#duration').dispatchEvent('change');
+  await studio.locator('[data-workflow-tab=batch]').click();
+  await studio.locator('#catalog-csv').fill('title;price;image;brand\nКружка А;4900 ₸;Товар из карточки;Store\nКружка Б;5900 ₸;Товар из карточки;Store');
+  await studio.getByRole('button',{name:'Проверить каталог',exact:true}).click();assert.equal(await studio.locator('.batch-card').count(),2);
+  const batchDownload=studio.waitForEvent('download');await studio.getByRole('button',{name:'Экспортировать 2 роликов · ZIP'}).click();const batch=await batchDownload;await batch.saveAs(artifacts+'/catalog-test.zip');assert.equal(await batch.failure(),null);
+  await studio.getByRole('button',{name:'Звук',exact:true}).click();await studio.getByRole('button',{name:'● Записать голос',exact:true}).click();await studio.waitForTimeout(1100);await studio.getByRole('button',{name:'■ Остановить запись',exact:true}).click();await studio.waitForFunction(()=>document.querySelectorAll('.media-card').length===6);
+  const png=await studio.evaluate(()=>{const c=document.createElement('canvas');c.width=100;c.height=100;const x=c.getContext('2d');x.fillStyle='#ffffff';x.fillRect(0,0,100,100);x.fillStyle='#174483';x.fillRect(25,20,50,60);return c.toDataURL().split(',')[1];});
+  await studio.getByRole('button',{name:'Медиа',exact:true}).click();await studio.locator('#media-input').setInputFiles({name:'cutout.png',mimeType:'image/png',buffer:Buffer.from(png,'base64')});await studio.waitForFunction(()=>document.querySelectorAll('.media-card').length===7);
+  await studio.locator('.media-card').last().getByRole('button',{name:'＋ В ролик',exact:true}).click();await studio.locator('.treatment summary').click();await studio.getByRole('button',{name:'Удалить однотонный фон',exact:true}).click();await studio.waitForFunction(()=>document.querySelectorAll('.media-card').length===8);
+  await studio.getByRole('button',{name:'Заблокировать слой',exact:true}).click();assert.equal(await studio.locator('[data-property=x]').count(),0);await studio.getByRole('button',{name:'Разблокировать слой',exact:true}).click();assert.equal(await studio.locator('[data-property=x]').count(),1);
+  await studio.getByRole('button',{name:'Проекты',exact:true}).click();await studio.locator('[data-workflow-tab=scenes]').click();await studio.getByRole('button',{name:'Скачать 3 формата · ZIP',exact:true}).click();await studio.getByRole('dialog').getByRole('button',{name:'Отменить',exact:true}).click();await studio.waitForFunction(()=>!document.querySelector('#workspace').inert);
+  assert.equal(await studio.evaluate(()=>document.documentElement.scrollWidth),1512);
+  const audioCheck=await studio.evaluate(async()=>{
+    const {mixAudio}=await import('./video-media.js');const {layer}=await import('./video-model.js');
+    const context=new OfflineAudioContext(2,6*48000,48000),tone=context.createBuffer(2,6*48000,48000),silence=context.createBuffer(2,6*48000,48000);
+    for(let channel=0;channel<2;channel++)tone.getChannelData(channel).fill(.1);
+    const base={duration:6,assets:[{id:'tone'},{id:'voice'}],ducking:true,layers:[layer('audio',{assetId:'tone',end:6,volume:1,fadeIn:0,fadeOut:1}),layer('audio',{assetId:'voice',start:1,end:4,voice:true,volume:1}),layer('audio',{assetId:'voice',start:2,end:5,voice:true,volume:1})]};
+    const buffer=await mixAudio(base,{decode:async asset=>asset.id==='tone'?tone:silence});
+    const rms=(b,start,end)=>{const values=b.getChannelData(0).slice(start*48000,end*48000);return Math.sqrt(values.reduce((sum,v)=>sum+v*v,0)/values.length);};
+    const speed=await mixAudio({duration:6,assets:[],layers:[layer('audio',{builtin:'pulse',end:6,volume:1,speed:2,fadeIn:0,fadeOut:0})]},{});
+    return {normal:rms(buffer,.5,.7),overlap:rms(buffer,4.4,4.6),tail:rms(buffer,5.9,5.98),fastTail:rms(speed,5,5.5)};
+  });
+  assert.ok(audioCheck.overlap<audioCheck.normal*.3,JSON.stringify(audioCheck));assert.ok(audioCheck.tail<audioCheck.normal*.15,JSON.stringify(audioCheck));assert.ok(audioCheck.fastTail>.005,JSON.stringify(audioCheck));
+  await advanced.close();console.log('Card handoff, scenes, adaptation, CSV batch ZIP, microphone recording and cancellation passed.');
   const desktop=await context(1512),page=await desktop.newPage();
   await page.goto(origin+'/video.html');await page.locator('body[data-ready=true]').waitFor({timeout:30000});
   await page.screenshot({path:artifacts+'/studio-desktop.png',fullPage:true});
-  assert.equal(await page.locator('.template-card').count(),10);
+  assert.equal(await page.locator('.template-card').count(),30);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth),1512);
   await page.getByRole('button',{name:'Бренд',exact:true}).click();
   await page.locator('[name=title]').fill('Жаңа өнім — новый товар');await page.locator('[name=brand]').fill('Satu Store');await page.locator('[name=features]').fill('Сильный звук\nЛёгкий корпус\nВаш выбор');await page.getByRole('button',{name:'Обновить ролик'}).click();

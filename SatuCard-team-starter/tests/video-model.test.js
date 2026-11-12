@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { TEMPLATES, templateProject, validateProject, frameAt, layer, parseSubtitles, fitToBeats } from '../video-model.js';
 
-test('all ten video templates have valid bounded layers, demo assets and complete coverage',()=>{
-  assert.equal(TEMPLATES.length,10);
+test('all thirty video templates have valid bounded layers, demo assets and complete coverage',()=>{
+  assert.equal(TEMPLATES.length,30);
   for(const template of TEMPLATES){
     const project=validateProject(templateProject(template.id));
     for(let time=0;time<project.duration;time+=.1)assert.ok(project.layers.some(item=>item.name==='Фон сцены'&&item.start<=time&&item.end>time));

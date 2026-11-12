@@ -3,11 +3,11 @@ import { FORMATS, frameAt, clamp } from './video-model.js';
 function path(ctx,x,y,w,h,r) {
   ctx.beginPath();ctx.roundRect(x,y,w,h,Math.min(r,w/2,h/2));
 }
-function cover(ctx, image, width, height, fit, zoom = 1, pan = 0) {
+function cover(ctx, image, width, height, fit, zoom = 1, pan = 0, cropX=.5,cropY=.5) {
   const iw=image.videoWidth||image.naturalWidth||image.width,ih=image.videoHeight||image.naturalHeight||image.height;
   if(!iw||!ih)return;
   const scale=(fit==='contain'?Math.min(width/iw,height/ih):Math.max(width/iw,height/ih))*zoom;
-  ctx.drawImage(image,(width-iw*scale)/2+pan,(height-ih*scale)/2,iw*scale,ih*scale);
+  ctx.drawImage(image,(width-iw*scale)*cropX+pan,(height-ih*scale)*cropY,iw*scale,ih*scale);
 }
 function textLines(ctx,text,width) {
   const output=[];
@@ -21,7 +21,7 @@ function textLines(ctx,text,width) {
   }
   return output;
 }
-export function drawProject(canvas,project,store,time,{safe=false,selected=null}={}) {
+export function drawProject(canvas,project,store,time,{safe=false,selected=null,transitions=true}={}) {
   const ctx=canvas.getContext('2d');
   const dimensions=FORMATS[project.format],width=canvas.width,height=canvas.height;
   const ratio=width/dimensions.width;
@@ -35,9 +35,11 @@ export function drawProject(canvas,project,store,time,{safe=false,selected=null}
     if(item.type==='image'||item.type==='video'){
       path(ctx,0,0,w,h,state.radius*width);ctx.clip();
       if(item.entrance==='wipe'){ctx.beginPath();ctx.rect(0,0,w*state.enter,h);ctx.clip();}
-      ctx.fillStyle='#ffffff12';ctx.fillRect(0,0,w,h);
+      if(state.fit!=='contain'){ctx.fillStyle='#ffffff12';ctx.fillRect(0,0,w,h);}
       const image=store.visual(project,item);
-      if(image)cover(ctx,image,w,h,state.fit,state.motion==='zoom'?1+state.progress*.10:state.motion==='pan'?1.08:1,state.motion==='pan'?(state.progress-.5)*w*.06:0);
+      if(state.shadow){ctx.shadowColor='#00000090';ctx.shadowBlur=width*.04*state.shadow;ctx.shadowOffsetY=width*.02*state.shadow;}
+      ctx.filter='brightness('+(state.exposure??1)+') saturate('+(state.saturation??1)+')';
+      if(image)cover(ctx,image,w,h,state.fit,state.motion==='zoom'?1+state.progress*.10:state.motion==='pan'?1.08:1,state.motion==='pan'?(state.progress-.5)*w*.06:0,state.cropX??.5,state.cropY??.5);
     }else if(item.type==='shape'){
       ctx.fillStyle=state.color;path(ctx,0,0,w,h,state.radius*width);ctx.fill();
     }else{
@@ -62,6 +64,19 @@ export function drawProject(canvas,project,store,time,{safe=false,selected=null}
     }
     ctx.restore();
   }
+  if(transitions&&project.transition&&project.transition!=='none'){
+    const starts=[...new Set(project.layers.filter(i=>i.scene&&i.name==='Фон сцены').map(i=>i.start))].sort((a,b)=>a-b);
+    const boundary=starts.find(start=>start>0&&time>=start&&time<start+.35);
+    if(boundary!==undefined){
+      const outgoing=document.createElement('canvas');outgoing.width=width;outgoing.height=height;
+      drawProject(outgoing,project,store,Math.max(0,boundary-.35),{transitions:false});
+      const progress=(time-boundary)/.35;
+      ctx.save();if(project.transition==='fade')ctx.globalAlpha=1-progress;
+      if(project.transition==='slide')ctx.translate(-width*progress,0);
+      if(project.transition==='wipe'){ctx.beginPath();ctx.rect(width*progress,0,width*(1-progress),height);ctx.clip();}
+      ctx.drawImage(outgoing,0,0);ctx.restore();
+    }
+  }
   if(safe){
     ctx.save();ctx.strokeStyle='#e4fd8a';ctx.fillStyle='#11182745';ctx.setLineDash([8,7]);ctx.lineWidth=1;
     const inset=project.format==='vertical'?.09:.06,bottom=project.format==='vertical'?.17:.10;
@@ -77,7 +92,7 @@ export function drawProject(canvas,project,store,time,{safe=false,selected=null}
 }
 export function hitLayer(project,time,x,y) {
   return [...project.layers].reverse().find(item=>{
-    if(item.hidden||item.type==='audio'||item.name==='Фон сцены'||time<item.start||time>=item.end)return false;
+    if(item.hidden||item.locked||item.type==='audio'||item.name==='Фон сцены'||time<item.start||time>=item.end)return false;
     const frame=frameAt(item,time);
     return x>=frame.x&&x<=frame.x+frame.w&&y>=frame.y&&y<=frame.y+frame.h;
   });

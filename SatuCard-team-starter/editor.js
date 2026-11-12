@@ -891,6 +891,10 @@
   $('fullscreen-button').addEventListener('click', () => { renderer.render($('fullscreen-canvas'), model.settings, imageAssets()); $('fullscreen-dialog').showModal(); });
   $('fullscreen-close').addEventListener('click', () => $('fullscreen-dialog').close()); $('publish-dialog-close').addEventListener('click', () => $('publish-dialog').close());
   $('download-button').addEventListener('click', () => exportImage());
+  $('make-video-button')?.addEventListener('click',async()=>{
+    try{readForm();saveDraftSoon();await draftQueue;if(draftDirty)throw new Error('Сначала сохраните карточку.');location.href='video.html?fromCard='+encodeURIComponent(draftId);}
+    catch(error){status('download-status',error.message,true);}
+  });
   $('copy-card-image').addEventListener('click', () => exportImage(true));
   $('publish-button').addEventListener('click', publishCard); $('export-format').addEventListener('change', () => requestRender());
   $('copy-link-button').addEventListener('click', event => copyLink(event.currentTarget)); $('publish-dialog-copy').addEventListener('click', event => copyLink(event.currentTarget));

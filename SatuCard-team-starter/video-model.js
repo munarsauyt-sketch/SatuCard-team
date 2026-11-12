@@ -1,3 +1,4 @@
+import { EXTRA_TEMPLATES, composeExtra } from './video-template-library.js';
 export const MAX_DURATION = 30;
 export const MAX_LAYERS = 64;
 export const FORMATS = {
@@ -21,6 +22,7 @@ export const TEMPLATES = [
   { id: 'unbox', name: 'Распаковка', note: 'Детали, движение и короткие подписи', color: '#d6dded', ink: '#263c5d', category: 'История' },
   { id: 'review', name: 'Живой отзыв', note: 'Цитата и крупный план', color: '#f1cdd6', ink: '#512d3a', category: 'История' },
   { id: 'minimal', name: 'Чистый кадр', note: 'Светлая композиция без суеты', color: '#e8e4d7', ink: '#34352c', category: 'Товар' },
+  ...EXTRA_TEMPLATES,
 ];
 export const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 export const clone = value => JSON.parse(JSON.stringify(value));
@@ -32,7 +34,7 @@ export function layer(type, values = {}) {
     color: '#f7f6f2', background: 'transparent', text: '', font: 'Golos Text', fontSize: .075,
     align: 'left', weight: 750, radius: .025, fit: 'cover',
     entrance: 'fade', exit: 'fade', motion: 'none', keyframes: [],
-    offset: 0, volume: 0, fadeIn: .15, fadeOut: .3, hidden: false, ...values,
+    offset: 0, volume: 0, fadeIn: .15, fadeOut: .3, hidden: false, locked:false, speed:1, shadow:0, exposure:1, saturation:1, cropX:.5, cropY:.5, ...values,
   };
 }
 export function emptyProject() {
@@ -46,7 +48,9 @@ export function emptyProject() {
 export function templateProject(id, product, assetId = 'demo-headphones') {
   const template = TEMPLATES.find(item => item.id === id);
   if (!template) throw new Error('Выберите шаблон.');
+  if(template.base)return composeExtra(templateProject(template.base,product,assetId),template);
   const project = emptyProject();
+  project.templateId=id;
   if (product) project.product = { ...project.product, ...product };
   project.name = template.name;
   project.background = template.ink;
@@ -154,6 +158,7 @@ export function validateProject(value) {
       ![24, 30, 60].includes(value.fps) || !number(value.bpm, 40, 240) || !safeColor(value.background) ||
       !Array.isArray(value.layers) || value.layers.length > MAX_LAYERS || !Array.isArray(value.assets) || value.assets.length > 40) throw new Error('Некорректный проект SatuCard Video.');
   const assets = new Set();
+  if(value.transition!==undefined&&!['none','fade','slide','wipe'].includes(value.transition))throw new Error('Неизвестный переход.');
   if (!value.product || !['title','price','brand','cta'].every(key=>typeof value.product[key]==='string'&&value.product[key].length<=120) ||
       !Array.isArray(value.product.features) || value.product.features.length!==3 || value.product.features.some(text=>typeof text!=='string'||text.length>120)) throw new Error('Некорректные данные товара.');
   for (const asset of value.assets) {
@@ -175,6 +180,9 @@ export function validateProject(value) {
         !['none','zoom','pan'].includes(item.motion) || (item.assetId && !assets.has(item.assetId)) ||
         (item.builtin && (!Object.hasOwn({ ...MUSIC, whoosh:1, impact:1, tap:1, chime:1 }, item.builtin)||item.offset>30))) throw new Error('Некорректный слой проекта.');
     ids.add(item.id);
+    for(const [key,min,max]of [['speed',.25,4],['shadow',0,1],['exposure',.2,2],['saturation',0,2],['cropX',0,1],['cropY',0,1]])if(item[key]!==undefined&&!number(item[key],min,max))throw new Error('Некорректная обработка медиа.');
+    if(item.freeze!==undefined&&!number(item.freeze,0,3600))throw new Error('Некорректный стоп-кадр.');
+    if(item.group!==undefined&&!validId(item.group))throw new Error('Некорректная группа.');
     if (['image','video'].includes(item.type) && !item.assetId || item.type==='audio' && !item.assetId && !item.builtin) throw new Error('Не указан исходник слоя.');
     if (item.assetId) {
       const kind=value.assets.find(asset=>asset.id===item.assetId).kind;
