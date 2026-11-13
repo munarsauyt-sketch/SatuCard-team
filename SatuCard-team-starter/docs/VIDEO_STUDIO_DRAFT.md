@@ -113,18 +113,30 @@ geometry; linear and radial shape gradients share the preview/export renderer.
 Shape color, fill, second color and gradient angle are editable in the inspector.
 No remote assets, fonts or new runtime dependencies were added.
 
-Help in the left rail opens a six-step, keyboard-accessible dialog. A dismissible
-quick-start card appears in Templates. The detailed Russian user manual is served
-at `/video-guide.html`, linked from the dialog and quick-start card. It covers
+Help in the left rail opens nine contextual, keyboard-accessible tips beside the
+actual controls. Each step opens its panel, scrolls its target into view and
+highlights it without making the workspace inert or dimming the editor. The
+first visit starts the tour once; Help and the dismissible quick-start card can
+restart it. On mobile the tip sits below the highlighted control. Closing via
+Escape or the close button removes the highlight and restores focus. The
+detailed Russian user manual is served at `/video-guide.html`, linked from the
+tips and quick-start card. It covers
 editing, cards, music/voice, subtitles, formats, CSV, project backup, MP4, limits
 and troubleshooting and has a print stylesheet.
 
 Template rendering now cancels superseded filter jobs and retains the search
-term when changing category. Keyboard shortcuts ignore all open dialogs, including
-batch export and help. Input hardening and audit scope are documented in
+term when changing category. Keyboard shortcuts ignore native modal dialogs and
+focused tour controls while remaining available in the rest of the workspace.
+Input hardening and audit scope are documented in
 `VIDEO_SECURITY_REVIEW.md`.
 
 Additional design verification: `npm run test:video-design`. This renders all new
 templates in every scene, exports/decodes one sample of each of the six layouts
 (one full 12-second project and five one-second clips), writes a 24-template
 contact sheet, and checks the guide and its section links at 390px and 1440px.
+
+Contextual tour verification: `npm run test:video-tour`. At 1440×900, 1024×768,
+390×844 and 700×500 it checks all nine highlighted controls, no target/tip overlap,
+viewport bounds, real input/playback/download interactions and export-dialog
+stacking. It also checks first-visit persistence, Help restart, Escape, manual
+panel navigation, resizing and unavailable localStorage. Test requests stay local.

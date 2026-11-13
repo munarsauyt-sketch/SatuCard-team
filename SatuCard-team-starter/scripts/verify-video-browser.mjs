@@ -15,6 +15,7 @@ const csp="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inlin
 const errors=[];
 async function context(width){
   const context=await browser.newContext({viewport:{width,height:1000},acceptDownloads:true});
+  await context.addInitScript(()=>{try{localStorage.setItem('satucard-video-tour-seen-v2','1');}catch{}});
   context.on('page',page=>{page.on('pageerror',error=>errors.push(error.message));page.on('console',msg=>{if(msg.type()==='error')console.log('Browser console:',msg.text());});page.on('dialog',dialog=>dialog.accept());});
   await context.route('**/*',async route=>{
     const url=new URL(route.request().url());if(url.origin!==origin)return route.abort();
@@ -72,11 +73,12 @@ try{
   assert.equal(await page.locator('.template-card').count(),54);
   await page.getByRole('button',{name:'Помощь',exact:true}).click();
   assert.ok(await page.getByRole('heading',{name:'Выберите настроение'}).isVisible());
-  // Editor shortcuts must not mutate the project behind any help/batch dialog.
+  // Focusing tour controls must not trigger the editor's playback shortcut.
   const layerCount=await page.locator('.track').count();await page.keyboard.press('Space');
   assert.equal(await page.locator('#play').getAttribute('aria-label'),'Воспроизвести');
-  for(let i=0;i<5;i++)await page.getByRole('button',{name:'Далее',exact:true}).click();
-  await page.getByRole('button',{name:'Начать создавать',exact:true}).click();assert.equal(await page.locator('.track').count(),layerCount);
+  for(let i=0;i<8;i++)await page.getByRole('button',{name:'Далее →',exact:true}).click();
+  await page.getByRole('button',{name:'Завершить ✓',exact:true}).click();assert.equal(await page.locator('.track').count(),layerCount);
+  await page.getByRole('button',{name:'Шаблоны',exact:true}).click();
   await page.locator('[data-filter="Яркие"]').click();await page.waitForFunction(()=>document.querySelectorAll('.template-card').length===24);
   await page.getByRole('textbox',{name:'Поиск шаблона'}).fill('Манго');await page.waitForFunction(()=>document.querySelectorAll('.template-card').length===6);
   await page.locator('[data-filter="Товар"]').click();await page.waitForFunction(()=>document.querySelectorAll('.template-card').length===0);
@@ -94,7 +96,7 @@ try{
   await page.locator('.track-name').filter({hasText:'Фон сцены'}).first().click();
   await page.locator('[data-property=gradient]').selectOption('radial');
   await page.screenshot({path:artifacts+'/studio-vivid.png',fullPage:true});
-  await page.getByRole('button',{name:'Помощь',exact:true}).click();await page.getByRole('button',{name:'Открыть «Шаблоны»'}).click();
+  await page.getByRole('button',{name:'Помощь',exact:true}).click();await page.getByRole('button',{name:'Закрыть инструктаж'}).click();
   assert.ok(await page.locator('#template-list').isVisible());
   await page.locator('[data-filter="Все"]').click();await page.waitForFunction(()=>document.querySelectorAll('.template-card').length===54);
   await page.locator('.template-card').filter({hasText:'Новый дроп'}).click();
@@ -152,7 +154,7 @@ try{
   await fresh.close();
   const mobile=await context(390),phone=await mobile.newPage();await phone.goto(origin+'/video.html');await phone.locator('body[data-ready=true]').waitFor();
   assert.equal(await phone.evaluate(()=>document.documentElement.scrollWidth),390);
-  await phone.getByRole('button',{name:'Помощь',exact:true}).click();assert.ok(await phone.locator('#video-help-dialog').isVisible());await phone.keyboard.press('Escape');
+  await phone.getByRole('button',{name:'Помощь',exact:true}).click();assert.ok(await phone.locator('#video-help-tour').isVisible());await phone.keyboard.press('Escape');
   const manual=await mobile.newPage();await manual.goto(origin+'/video-guide.html');
   assert.ok(await manual.getByRole('heading',{name:'01 / Первый ролик за несколько минут'}).isVisible());
   assert.equal(await manual.evaluate(()=>document.documentElement.scrollWidth),390);await manual.screenshot({path:artifacts+'/guide-mobile.png',fullPage:true});await manual.close();

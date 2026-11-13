@@ -390,7 +390,7 @@ let seeking=false;
 function tick(now){if(!playing)return;time=Math.min(project.duration,(now-playStart)/1000);if(!seeking){seeking=true;media.seek(project,time,false,true).catch(error=>{stop();handle(error);}).finally(()=>{seeking=false;});}draw();if(time>=project.duration){stop();return;}requestAnimationFrame(tick);}
 on('#play','click',play);
 document.addEventListener('keydown',safely(async event=>{
-  if(exporting||document.querySelector('dialog[open]')||event.target.closest('input,textarea,select,[contenteditable]'))return;
+  if(exporting||document.querySelector('dialog[open]')||event.target.closest('input,textarea,select,[contenteditable],[data-video-tour]'))return;
   if(event.code==='Space'){event.preventDefault();await play();}
   else if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='z'){event.preventDefault();await undo(event.shiftKey);}
   else if(['Delete','Backspace'].includes(event.key)&&current()){event.preventDefault();removeLayer();}
@@ -443,7 +443,8 @@ async function init(){
   const brand=await loadBrand().catch(()=>null);if(brand){$('#brand-color').value=brand.color;$('#brand-font').value=brand.font;}
   await media.prepare(project);await media.seek(project,time,true);productForm();renderControls();renderInspector();renderTimeline();renderMedia();await renderTemplates();
   await installVideoPlus({project:()=>project,media:()=>media,current,time:()=>time,revision:()=>revision,snapshot,changed,seek,stop,draw,toast,showPanel,confirmReplace,switchProject,addLayer,searchTemplates:query=>renderTemplates(undefined,query),replace:replaceProject,edit:fn=>{const next=clone(project);fn(next);return replaceProject(next,true);}});
-  installVideoHelp({showPanel,stop});
+  const help=installVideoHelp({showPanel,stop});
   scheduleSave();await persist();document.body.dataset.ready='true';
+  help.startIfNew();
 }
 init().catch(error=>{$('#save-status').textContent='Ошибка загрузки';handle(error);});

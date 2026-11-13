@@ -45,8 +45,9 @@ media bundle. Regression tests model another import committing during the gap.
 Old thumbnail jobs could append to a newly selected filter; changing categories
 also discarded search filtering. Template jobs now have generations, a separate
 demo-only media store and combined category/search matching. Editor keyboard
-shortcuts now ignore every open dialog, preventing playback or edits behind
-help and batch-export dialogs.
+shortcuts ignore native modal dialogs, preventing edits behind batch export.
+The updated contextual help is nonmodal: editor shortcuts remain available
+outside its controls, and a focused tip does not trigger playback by accident.
 
 Layer links/roles/booleans and the new gradient fields also have explicit
 validation. User text is rendered through textContent/canvas; static innerHTML
