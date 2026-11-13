@@ -1,5 +1,15 @@
 # Product photo credits
 
+## Video studio
+
+Mediabunny 1.65.2, Vanilagy, MPL-2.0. The unmodified browser bundle and license
+are in `vendor/mediabunny/`. Corresponding source and release:
+https://github.com/Vanilagy/mediabunny/tree/v1.65.2 and
+https://www.npmjs.com/package/mediabunny/v/1.65.2.
+Music loops and sound effects in the draft video studio are generated locally
+from original oscillator/noise synthesis in `video-media.js`; no stock recordings
+or third-party songs are included. Imported audio remains supplied by the user.
+
 ## HEIC import
 
 heic-to 1.6.7 by hoppergee, https://github.com/hoppergee/heic-to, LGPL-3.0-or-later.
