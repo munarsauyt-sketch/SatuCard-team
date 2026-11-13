@@ -1,10 +1,12 @@
 import { TEMPLATES, MUSIC, FORMATS, DEMOS, MAX_LAYERS, clamp, clone, uid, layer, emptyProject, templateProject, validateProject, frameAt, parseSubtitles, fitToBeats } from './video-model.js';
-import { MediaStore, inspectFile, MAX_TOTAL, mixAudio, detectBeats } from './video-media.js';
+import { MediaStore, inspectFile, mixAudio, detectBeats } from './video-media.js';
 import { drawProject, hitLayer } from './video-renderer.js';
 import { saveProject, loadProject, packProject, unpackProject, saveBrand, loadBrand } from './video-storage.js';
 import { exportVideo } from './video-export.js';
 import { installVideoPlus } from './video-plus.js';
 import { snapTime } from './video-workflow.js';
+import { checkImportQuota } from './video-file-safety.js';
+import { installVideoHelp } from './video-help.js';
 
 const $=selector=>document.querySelector(selector);
 const canvas=$('#preview'),dialog=$('#export-dialog');
@@ -89,20 +91,26 @@ async function chooseTemplate(id){
   if(own)for(const item of next.layers.filter(item=>item.role==='product')){item.assetId=own.assetId;item.type=own.type;}
   await switchProject(next);toast('Шаблон «'+next.name+'» готов. Замените товар во вкладке «Медиа».');
 }
-async function renderTemplates(filter='Все'){
+let activeTemplateFilter='Все',activeTemplateQuery='',templateGeneration=0;
+const templateMedia=new MediaStore();
+async function renderTemplates(filter=activeTemplateFilter,query=activeTemplateQuery){
+  activeTemplateFilter=filter;activeTemplateQuery=query;
+  const generation=++templateGeneration;
   const list=$('#template-list');list.replaceChildren();
   document.querySelector('[data-library="templates"] .panel-heading>span').textContent=TEMPLATES.length;
-  for(const template of TEMPLATES.filter(item=>filter==='Все'||item.category===filter)){
+  for(const template of TEMPLATES.filter(item=>(filter==='Все'||item.category===filter)&&[item.name,item.note,item.category].some(text=>text.toLocaleLowerCase().includes(query.toLocaleLowerCase().trim())))){
     const button=document.createElement('button');button.className='template-card';button.title=template.note;
     const thumb=document.createElement('canvas');thumb.width=216;thumb.height=288;
-    const temp=templateProject(template.id);await media.prepare(temp);
+    const temp=templateProject(template.id);await templateMedia.prepare(temp);
+    if(generation!==templateGeneration)return;
     // Thumbnails show the entire portrait at the same crop as the editor.
     const portrait=document.createElement('canvas');portrait.width=216;portrait.height=384;
-    drawProject(portrait,temp,media,.9);thumb.getContext('2d').drawImage(portrait,0,0,216,384,0,-25,216,384);
+    drawProject(portrait,temp,templateMedia,.9);thumb.getContext('2d').drawImage(portrait,0,0,216,384,0,-25,216,384);
     const title=document.createElement('strong');title.textContent=template.name;
     const note=document.createElement('small');note.textContent=temp.duration+' сек · '+template.category;
     button.append(thumb,title,note);button.addEventListener('click',safely(()=>chooseTemplate(template.id)));list.append(button);
   }
+  if(!list.children.length){const empty=document.createElement('p');empty.className='muted';empty.textContent='Шаблоны не найдены. Измените поиск или категорию.';list.append(empty);}
 }
 $('#template-filters').addEventListener('click',safely(async event=>{const button=event.target.closest('[data-filter]');if(!button)return;$('#template-filters').querySelectorAll('button').forEach(item=>item.classList.toggle('active',item===button));await renderTemplates(button.dataset.filter);}));
 on('#blank-project','click',async()=>{if(confirmReplace()){const next=emptyProject();next.product=clone(project.product);next.assets=clone(project.assets);await switchProject(next);showPanel('media');}});
@@ -137,14 +145,14 @@ function renderMedia(){
 }
 async function importFiles(files,logo=false){
   const projectId=project.id;
-  let total=[...media.files.values()].reduce((sum,file)=>sum+file.size,0);
   for(const file of files){
-    if(project.assets.length>=40)throw new Error('Можно добавить до 40 исходников.');
-    if(total+file.size>MAX_TOTAL)throw new Error('Все исходники проекта — до 100 МБ.');
+    checkImportQuota(project,media.files,file);
     const asset=await inspectFile(file);if(logo&&asset.kind!=='image')throw new Error('Для логотипа выберите изображение.');
     if(asset.kind==='image'){const check=new Image(),url=URL.createObjectURL(file);try{check.src=url;await check.decode();if(check.naturalWidth*check.naturalHeight>40e6)throw new Error('Изображение слишком большое: до 40 мегапикселей.');}finally{URL.revokeObjectURL(url);}}
     if(project.id!==projectId)throw new Error('Ролик изменился во время загрузки. Добавьте файлы в текущий проект заново.');
-    snapshot();media.files.set(asset.id,file);project.assets.push(asset);total+=file.size;
+    // Decoding yields to other imports; re-read both limits immediately at commit.
+    checkImportQuota(project,media.files,file);
+    snapshot();media.files.set(asset.id,file);project.assets.push(asset);
     changed({library:true});await persist();if(logo)insertAsset(asset,{logo:true});
   }
   showPanel('media');toast(logo?'Логотип добавлен.':'Медиа загружены. Добавьте их в ролик или замените товар.');
@@ -226,7 +234,10 @@ function renderInspector(){
       const textGrid=document.createElement('div');textGrid.className='property-grid';textGrid.append(control('Размер, % ширины','fontSize',{value:seconds(item.fontSize*100),min:.8,max:50,step:.1}),control('Цвет текста','color',{type:'color',value:item.color}),control('Выравнивание','align',{value:item.align,options:[['left','Слева'],['center','По центру'],['right','Справа']]}),control('Насыщенность','weight',{value:item.weight,options:[400,500,600,700,750,800,900].map(v=>[v,v])}));root.append(textGrid);
       const bg=document.createElement('button');bg.className='full subtle';bg.textContent=item.background==='transparent'?'＋ Подложка текста':'Убрать подложку';bg.addEventListener('click',()=>{snapshot();item.background=item.background==='transparent'?'#17171e':'transparent';changed();});root.append(bg);
     }
-    if(item.type==='shape')root.append(control('Цвет','color',{type:'color',value:item.color}));
+    if(item.type==='shape'){
+      root.append(control('Цвет','color',{type:'color',value:item.color}),control('Заливка','gradient',{value:item.gradient||'none',options:[['none','Однотонная'],['linear','Линейный градиент'],['radial','Радиальный свет']]}));
+      if(item.gradient&&item.gradient!=='none')root.append(control('Второй цвет','gradientColor',{type:'color',value:item.gradientColor||item.color}),control('Угол градиента, °','gradientAngle',{value:item.gradientAngle??45,min:-360,max:360,step:5}));
+    }
     if(['image','video'].includes(item.type))root.append(control('Вписывание','fit',{value:item.fit,options:[['cover','Заполнить'],['contain','Вписать целиком']]}));
     if(['image','video'].includes(item.type)){
       const effects=document.createElement('div');effects.className='property-grid';
@@ -256,7 +267,7 @@ function renderInspector(){
 }
 $('#inspector-content').addEventListener('change',safely(async event=>{
   const input=event.target,key=input.dataset.property,item=current();if(!item||!key)return;
-  const textKeys=['text','name','font','align','fit','entrance','motion','exit','color','ease'];
+  const textKeys=['text','name','font','align','fit','entrance','motion','exit','color','ease','gradient','gradientColor'];
   let value=textKeys.includes(key)?input.value:Number(input.value);
   if(typeof value==='number'&&!Number.isFinite(value))return;
   if(['x','y','w','h','opacity','volume','fontSize'].includes(key))value/=100;
@@ -379,7 +390,7 @@ let seeking=false;
 function tick(now){if(!playing)return;time=Math.min(project.duration,(now-playStart)/1000);if(!seeking){seeking=true;media.seek(project,time,false,true).catch(error=>{stop();handle(error);}).finally(()=>{seeking=false;});}draw();if(time>=project.duration){stop();return;}requestAnimationFrame(tick);}
 on('#play','click',play);
 document.addEventListener('keydown',safely(async event=>{
-  if(exporting||dialog.open||event.target.closest('input,textarea,select,[contenteditable]'))return;
+  if(exporting||document.querySelector('dialog[open]')||event.target.closest('input,textarea,select,[contenteditable]'))return;
   if(event.code==='Space'){event.preventDefault();await play();}
   else if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='z'){event.preventDefault();await undo(event.shiftKey);}
   else if(['Delete','Backspace'].includes(event.key)&&current()){event.preventDefault();removeLayer();}
@@ -431,7 +442,8 @@ async function init(){
   await Promise.all([document.fonts.load('750 30px "Golos Text"'),document.fonts.load('600 30px "Manrope"'),document.fonts.load('700 30px "Noto Serif"'),document.fonts.load('400 20px "IBM Plex Mono"')]);
   const brand=await loadBrand().catch(()=>null);if(brand){$('#brand-color').value=brand.color;$('#brand-font').value=brand.font;}
   await media.prepare(project);await media.seek(project,time,true);productForm();renderControls();renderInspector();renderTimeline();renderMedia();await renderTemplates();
-  await installVideoPlus({project:()=>project,media:()=>media,current,time:()=>time,revision:()=>revision,snapshot,changed,seek,stop,draw,toast,showPanel,confirmReplace,switchProject,addLayer,replace:replaceProject,edit:fn=>{const next=clone(project);fn(next);return replaceProject(next,true);}});
+  await installVideoPlus({project:()=>project,media:()=>media,current,time:()=>time,revision:()=>revision,snapshot,changed,seek,stop,draw,toast,showPanel,confirmReplace,switchProject,addLayer,searchTemplates:query=>renderTemplates(undefined,query),replace:replaceProject,edit:fn=>{const next=clone(project);fn(next);return replaceProject(next,true);}});
+  installVideoHelp({showPanel,stop});
   scheduleSave();await persist();document.body.dataset.ready='true';
 }
 init().catch(error=>{$('#save-status').textContent='Ошибка загрузки';handle(error);});

@@ -1,4 +1,5 @@
 import { EXTRA_TEMPLATES, composeExtra } from './video-template-library.js';
+import { VIVID_TEMPLATES, composeVivid } from './video-vivid-templates.js';
 export const MAX_DURATION = 30;
 export const MAX_LAYERS = 64;
 export const FORMATS = {
@@ -23,6 +24,7 @@ export const TEMPLATES = [
   { id: 'review', name: 'Живой отзыв', note: 'Цитата и крупный план', color: '#f1cdd6', ink: '#512d3a', category: 'История' },
   { id: 'minimal', name: 'Чистый кадр', note: 'Светлая композиция без суеты', color: '#e8e4d7', ink: '#34352c', category: 'Товар' },
   ...EXTRA_TEMPLATES,
+  ...VIVID_TEMPLATES,
 ];
 export const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 export const clone = value => JSON.parse(JSON.stringify(value));
@@ -48,6 +50,7 @@ export function emptyProject() {
 export function templateProject(id, product, assetId = 'demo-headphones') {
   const template = TEMPLATES.find(item => item.id === id);
   if (!template) throw new Error('Выберите шаблон.');
+  if(template.vivid)return composeVivid(templateProject(template.base,product,assetId),template,layer);
   if(template.base)return composeExtra(templateProject(template.base,product,assetId),template);
   const project = emptyProject();
   project.templateId=id;
@@ -180,6 +183,11 @@ export function validateProject(value) {
         !['none','zoom','pan'].includes(item.motion) || (item.assetId && !assets.has(item.assetId)) ||
         (item.builtin && (!Object.hasOwn({ ...MUSIC, whoosh:1, impact:1, tap:1, chime:1 }, item.builtin)||item.offset>30))) throw new Error('Некорректный слой проекта.');
     ids.add(item.id);
+    for(const key of ['scene','followScene','role'])if(item[key]!==undefined&&(typeof item[key]!=='string'||item[key].length>80))throw new Error('Некорректная связь слоя.');
+    for(const key of ['hidden','locked','voice'])if(item[key]!==undefined&&typeof item[key]!=='boolean')throw new Error('Некорректный флаг слоя.');
+    if(item.gradient!==undefined&&!['none','linear','radial'].includes(item.gradient))throw new Error('Некорректный градиент.');
+    if(item.gradientColor!==undefined&&!safeColor(item.gradientColor))throw new Error('Некорректный цвет градиента.');
+    if(item.gradientAngle!==undefined&&!number(item.gradientAngle,-360,360))throw new Error('Некорректный угол градиента.');
     for(const [key,min,max]of [['speed',.25,4],['shadow',0,1],['exposure',.2,2],['saturation',0,2],['cropX',0,1],['cropY',0,1]])if(item[key]!==undefined&&!number(item[key],min,max))throw new Error('Некорректная обработка медиа.');
     if(item.freeze!==undefined&&!number(item.freeze,0,3600))throw new Error('Некорректный стоп-кадр.');
     if(item.group!==undefined&&!validId(item.group))throw new Error('Некорректная группа.');

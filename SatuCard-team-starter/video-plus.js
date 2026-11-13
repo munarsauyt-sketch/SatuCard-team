@@ -4,6 +4,7 @@ import { exportVideo } from './video-export.js';
 import { inspectFile } from './video-media.js';
 import { drawProject } from './video-renderer.js';
 import { speechRequest, wavBlob } from './video-speech.js';
+import { checkImportQuota } from './video-file-safety.js';
 
 const $=selector=>document.querySelector(selector);
 function element(tag,text,className){const node=document.createElement(tag);if(text!==undefined)node.textContent=text;if(className)node.className=className;return node;}
@@ -17,10 +18,10 @@ export async function installVideoPlus(api){
   $('.library').prepend(panel);
   const nav=element('button');nav.dataset.panel='workflow';nav.setAttribute('aria-label','Проекты');nav.innerHTML='<span aria-hidden="true">✦</span>Проекты';$('.rail').prepend(nav);nav.addEventListener('click',()=>api.showPanel('workflow'));
   panel.querySelectorAll('[data-workflow-tab]').forEach(tab=>tab.addEventListener('click',()=>panel.querySelectorAll('[data-workflow-page]').forEach(page=>page.hidden=page.dataset.workflowPage!==tab.dataset.workflowTab)));
-  const categories=[...new Set(TEMPLATES.map(t=>t.category))];
+  const categories=['Яркие',...new Set(TEMPLATES.filter(t=>t.category!=='Яркие').map(t=>t.category))];
   const filters=$('#template-filters');filters.replaceChildren();for(const category of ['Все',...categories]){const b=element('button',category);b.dataset.filter=category;if(category==='Все')b.className='active';filters.append(b);}
   const search=element('input');search.placeholder='Найти шаблон…';search.setAttribute('aria-label','Поиск шаблона');search.className='template-search';filters.before(search);
-  search.addEventListener('input',()=>{const value=search.value.toLocaleLowerCase();document.querySelectorAll('.template-card').forEach(card=>card.hidden=!card.textContent.toLocaleLowerCase().includes(value));});
+  search.addEventListener('input',run(()=>api.searchTemplates(search.value)));
   for(const template of TEMPLATES){const option=element('option',template.name);option.value=template.id;$('#card-template').append(option);}
   function edit(fn){return api.edit(fn);}
   function renderScenes(){
@@ -108,7 +109,7 @@ export async function installVideoPlus(api){
     await addMedia(blob,'Товар без фона.png','image',0,()=>{const target=api.current();target.fit='contain';target.shadow=.7;});
   }));mediaPanel.prepend(treatment);
   async function addMedia(blob,name,kind,duration,after){
-    const p=api.project();if(p.assets.length>=40||p.layers.length>=64||[...api.media().files.values()].reduce((s,f)=>s+f.size,0)+blob.size>100*1024*1024)throw new Error('Недостаточно места в проекте.');
+    const p=api.project();checkImportQuota(p,api.media().files,blob);if(!after&&p.layers.length>=64)throw new Error('Недостаточно места в проекте.');
     const asset={id:uid(),name,kind,duration};api.snapshot();p.assets.push(asset);api.media().files.set(asset.id,blob);
     if(after){const item=api.current();item.assetId=asset.id;after();}
     else p.layers.push(layer(kind,{name,assetId:asset.id,start:0,end:Math.min(p.duration,duration||p.duration),volume:kind==='audio'?1:0,voice:kind==='audio'}));

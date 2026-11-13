@@ -3,7 +3,7 @@
 Entry: `/video.html`. Branch: `draft/video-studio`. This feature is a draft and
 must be reviewed before any merge to main. The homepage link exists only in this branch.
 
-The studio creates product videos up to 30 seconds with thirty editable templates,
+The studio creates product videos up to 30 seconds with 54 editable templates,
 independent image/video/text/shape/subtitle/audio layers, drag and trim on a
 timeline, split, duplicate, ordering, visibility, undo/redo, keyframes and easing.
 The product form updates content while retaining the montage. Media replacement
@@ -104,3 +104,27 @@ part of the normal suite.
 Manual release checks still required: broader devices/browsers, large user files,
 extended editing sessions, additional codec combinations and user feedback on
 the template designs. Production stays on the existing main branch.
+
+## Color templates and help (13 November 2026)
+
+The Bright category adds 24 templates: six distinct editable compositions in four
+palettes. Orbit, stickers, postcard, ribbons, gallery and spotlight have different
+geometry; linear and radial shape gradients share the preview/export renderer.
+Shape color, fill, second color and gradient angle are editable in the inspector.
+No remote assets, fonts or new runtime dependencies were added.
+
+Help in the left rail opens a six-step, keyboard-accessible dialog. A dismissible
+quick-start card appears in Templates. The detailed Russian user manual is served
+at `/video-guide.html`, linked from the dialog and quick-start card. It covers
+editing, cards, music/voice, subtitles, formats, CSV, project backup, MP4, limits
+and troubleshooting and has a print stylesheet.
+
+Template rendering now cancels superseded filter jobs and retains the search
+term when changing category. Keyboard shortcuts ignore all open dialogs, including
+batch export and help. Input hardening and audit scope are documented in
+`VIDEO_SECURITY_REVIEW.md`.
+
+Additional design verification: `npm run test:video-design`. This renders all new
+templates in every scene, exports/decodes one sample of each of the six layouts
+(one full 12-second project and five one-second clips), writes a 24-template
+contact sheet, and checks the guide and its section links at 390px and 1440px.

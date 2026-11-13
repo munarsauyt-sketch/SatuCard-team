@@ -5,7 +5,7 @@ import { existsSync } from 'node:fs';
 test('public build includes browser assets and omits server sources and configuration', async () => {
   await import('../scripts/build-site.mjs');
   const publicFile = path => existsSync(new URL('../site-output/' + path, import.meta.url));
-  for (const path of ['editor.html', 'auth.html', 'auth-client.js', 'studio-chat.js', 'assets/fonts/manrope-latin.woff2']) {
+  for (const path of ['editor.html', 'auth.html', 'auth-client.js', 'studio-chat.js', 'video-guide.html', 'video-help.js', 'video-help.css', 'video-vivid-templates.js', 'video-file-safety.js', 'assets/fonts/manrope-latin.woff2']) {
     assert.equal(publicFile(path), true, path);
   }
   for (const path of ['lib', 'database', 'tests', 'scripts', 'docs', 'api', 'vercel.json', '.env.example']) {

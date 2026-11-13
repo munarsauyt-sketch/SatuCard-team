@@ -1,0 +1,23 @@
+.video-help-tip{padding:16px;margin:0 0 24px;border:1px solid #73628b;border-radius:14px;background:linear-gradient(130deg,#38304e,#202b39)}
+.video-help-tip strong{font-size:14px}.video-help-tip p{font-size:11px;line-height:1.7;color:#d1cadf;margin:8px 0}
+.help-manual{display:block;margin:16px 0 4px;color:#dbceff;text-underline-offset:4px;font-size:12px;line-height:1.6}
+.video-help-dialog{width:520px;max-height:90dvh;overflow:auto}.video-help-dialog h2{font-size:26px;line-height:1.25}
+.help-number{font:12px 'IBM Plex Mono',monospace;color:#c8e68b;margin:20px 0 12px}
+.help-description{line-height:1.85;color:#d4d1df;margin:16px 0 22px;font-size:14px}.video-help-dialog .button-row button{min-height:44px}
+.video-guide{background:#111216;color:#f4f0fc;font:16px/1.8 Manrope,'Golos Text',sans-serif;margin:0}
+.video-guide *{box-sizing:border-box}.video-guide a{color:#d3c3ff;text-underline-offset:4px}.video-guide a:focus-visible{outline:3px solid #b5ed7b;outline-offset:5px}
+.guide-header{padding:32px max(24px,calc((100% - 1160px)/2));border-bottom:1px solid #36313f;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.guide-header a{text-decoration:none;font-size:14px}.guide-header strong{font-size:19px;letter-spacing:-.6px}
+.guide-hero{max-width:1208px;margin:auto;padding:70px 24px 44px}.guide-hero .guide-label{font-size:12px;letter-spacing:2px;color:#c8ed83}
+.video-guide h1{font-size:clamp(34px,5vw,66px);line-height:1.12;letter-spacing:-2px;margin:18px 0 24px;max-width:850px}.guide-hero>p{max-width:740px;color:#bdb6cb}
+.guide-tags{display:flex;flex-wrap:wrap;gap:10px;margin-top:28px}.guide-tags span{font-size:12px;border:1px solid #54416f;padding:6px 14px;border-radius:99px;background:#292038}
+.guide-layout{max-width:1208px;margin:0 auto;padding:0 24px 80px;display:grid;grid-template-columns:230px minmax(0,1fr);gap:56px}.guide-layout nav{align-self:start;position:sticky;top:24px;padding:20px;border:1px solid #37313f;border-radius:16px;background:#19171f}
+.guide-layout nav a{display:block;font-size:12px;padding:7px 0;text-decoration:none}.guide-layout nav strong{font-size:12px;color:#c8ed83}
+.guide-content{min-width:0}.guide-content section{padding:26px 0 34px;border-bottom:1px solid #37313f;scroll-margin-top:24px}.guide-content h2{font-size:27px;line-height:1.3;letter-spacing:-.7px;margin:0 0 24px}.guide-content h3{font-size:18px;margin:26px 0 10px;color:#e0d1fc}
+.guide-content p,.guide-content li{color:#ccc6d6}.guide-content li{padding-left:5px;margin:10px 0}.guide-content strong{color:#fff}.guide-content ol,.guide-content ul{padding-left:23px}
+.guide-callout{border-left:3px solid #bc9bf4;background:#231f30;padding:16px 20px;border-radius:0 12px 12px 0;margin:22px 0;color:#d7cce7}
+.guide-content code,.guide-content kbd{font:13px/1.7 'IBM Plex Mono',monospace;background:#292432;border-radius:5px;padding:2px 5px;overflow-wrap:anywhere}.guide-content pre{padding:18px;background:#201b2b;border:1px solid #41364e;border-radius:12px;overflow:auto;font-size:12px;line-height:1.8}
+.guide-content table{width:100%;border-collapse:collapse;font-size:13px}.guide-content th,.guide-content td{padding:12px 10px;border-bottom:1px solid #3a3345;text-align:left;vertical-align:top}.guide-content th{color:#c8ed83}
+.guide-content details{border:1px solid #41364e;border-radius:12px;padding:14px 18px;margin:12px 0}.guide-content summary{cursor:pointer;font-weight:700}.guide-content footer{margin:32px 0;color:#aaa1b8;font-size:12px}
+@media(max-width:760px){.guide-layout{grid-template-columns:1fr;gap:20px}.guide-layout nav{position:static;display:grid;grid-template-columns:1fr 1fr;gap:0 16px}.guide-layout nav strong{grid-column:1/-1}.guide-hero{padding-top:40px}.guide-content h2{font-size:24px}.guide-content table{font-size:12px}.video-help-dialog{padding:22px}.guide-content th,.guide-content td{padding:10px 5px}}
+@media print{.video-guide{background:#fff;color:#111;font:11pt/1.5 sans-serif}.guide-header,.guide-layout nav,.guide-tags{display:none}.guide-hero{padding:0}.guide-hero h1{font-size:28pt;letter-spacing:-1px}.guide-layout{display:block;padding:0}.guide-content section{break-inside:auto}.guide-content h2,.guide-content h3{break-after:avoid;color:#111}.guide-content p,.guide-content li,.guide-content strong,.guide-content td,.guide-content th,.guide-hero>p{color:#111}.guide-callout,.guide-content pre,.guide-content code,.guide-content kbd{background:#f3f3f3;color:#111}.video-guide a{color:#333}.guide-content details{break-inside:avoid}}

@@ -41,7 +41,14 @@ export function drawProject(canvas,project,store,time,{safe=false,selected=null,
       ctx.filter='brightness('+(state.exposure??1)+') saturate('+(state.saturation??1)+')';
       if(image)cover(ctx,image,w,h,state.fit,state.motion==='zoom'?1+state.progress*.10:state.motion==='pan'?1.08:1,state.motion==='pan'?(state.progress-.5)*w*.06:0,state.cropX??.5,state.cropY??.5);
     }else if(item.type==='shape'){
-      ctx.fillStyle=state.color;path(ctx,0,0,w,h,state.radius*width);ctx.fill();
+      let fill=state.color;
+      if(state.gradient==='linear'||state.gradient==='radial'){
+        const angle=(state.gradientAngle??45)*Math.PI/180;
+        const dx=Math.cos(angle)*w/2,dy=Math.sin(angle)*h/2;
+        fill=state.gradient==='radial'?ctx.createRadialGradient(w*.5,h*.4,0,w*.5,h*.4,Math.max(w,h)*.8):ctx.createLinearGradient(w/2-dx,h/2-dy,w/2+dx,h/2+dy);
+        fill.addColorStop(0,state.color);fill.addColorStop(1,state.gradientColor||state.color);
+      }
+      ctx.fillStyle=fill;path(ctx,0,0,w,h,state.radius*width);ctx.fill();
     }else{
       let text=state.text;
       if(item.type==='subtitles')text=item.cues.find(cue=>time>=cue.start&&time<cue.end)?.text||'';

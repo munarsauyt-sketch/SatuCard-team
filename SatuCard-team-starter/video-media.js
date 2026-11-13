@@ -1,7 +1,7 @@
 import { DEMOS, MUSIC, clamp } from './video-model.js';
+import { MAX_FILE, MAX_TOTAL, MAX_IMAGE_PIXELS, checkImageHeader } from './video-file-safety.js';
 
-export const MAX_FILE = 40 * 1024 * 1024;
-export const MAX_TOTAL = 100 * 1024 * 1024;
+export { MAX_FILE, MAX_TOTAL };
 export class MediaStore {
   constructor() {
     this.files = new Map();
@@ -23,8 +23,11 @@ export class MediaStore {
   async image(asset) {
     if (!this.images.has(asset.id)) {
       const image = new Image();
+      const file = this.files.get(asset.id);
+      if (file) await checkImageHeader(file);
       image.src = this.url(asset);
       await image.decode();
+      if (image.naturalWidth * image.naturalHeight > MAX_IMAGE_PIXELS) throw new Error('Изображение слишком большое: до 40 мегапикселей.');
       this.images.set(asset.id, image);
     }
     return this.images.get(asset.id);
@@ -106,6 +109,7 @@ export async function inspectFile(file) {
   const kind = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : null;
   if (!kind || (kind === 'image' && !['image/jpeg','image/png','image/webp'].includes(file.type))) throw new Error('Поддерживаются JPG, PNG, WebP, видео MP4/WebM и аудио MP3/WAV/M4A.');
   let duration=0;
+  if (kind === 'image') await checkImageHeader(file);
   if (kind !== 'image') {
     const element=document.createElement(kind==='video'?'video':'audio');
     const url=URL.createObjectURL(file);
@@ -120,7 +124,7 @@ export async function inspectFile(file) {
       if (!(duration>0&&Number.isFinite(duration)&&duration<=3600)) throw new Error('Длительность исходника должна быть меньше часа.');
     } finally { element.removeAttribute('src'); element.load(); URL.revokeObjectURL(url); }
   }
-  return { id:crypto.randomUUID(),kind,name:file.name.slice(0,200),duration };
+  return { id:crypto.randomUUID(),kind,name:(file.name || 'Медиа').slice(0,200),duration };
 }
 
 function synthetic(context, type, duration) {
