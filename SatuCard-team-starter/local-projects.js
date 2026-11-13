@@ -12,9 +12,11 @@
     list.replaceChildren();
     const query = search.value.trim().toLocaleLowerCase('ru');
     for (const entry of entries.filter(item => item.title.toLocaleLowerCase('ru').includes(query))) {
+      let payload = {};
+      try { payload = JSON.parse(entry.payload); } catch (_) { continue; }
+      if (!payload || typeof payload !== 'object') continue;
       const row = document.createElement('li');
       const link = document.createElement('a');
-      const payload = JSON.parse(entry.payload);
       const image = document.createElement('img');
       const active = payload.views?.find(view => view.id === payload.activeViewId);
       const source = payload.photos?.find(photo => photo.id === active?.photoIds?.[0])?.source || payload.photo;

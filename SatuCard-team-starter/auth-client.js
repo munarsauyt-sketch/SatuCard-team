@@ -344,19 +344,25 @@ window.SATUCARD_AUTH = (() => {
     return data.profile;
   }
 
-  async function getMyCards() {
+  async function getMyCardsPage(offset = 0) {
     const active = await getSession();
-    if (!active) return [];
+    if (!active) return { cards: [], nextOffset: null };
     let response;
+    const url = offset > 0 ? `/api/my-cards?offset=${encodeURIComponent(String(offset))}` : '/api/my-cards';
     try {
-      response = await fetch('/api/my-cards', {
+      response = await fetch(url, {
         headers: { Authorization: `Bearer ${active.access_token}` },
         cache: 'no-store'
       });
     } catch (_) { throw new Error('Нет соединения с сервером. Проверьте интернет.'); }
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || 'Не удалось загрузить карточки.');
-    return data.cards;
+    return { cards: Array.isArray(data.cards) ? data.cards : [], nextOffset: data.nextOffset ?? null };
+  }
+
+  async function getMyCards() {
+    const page = await getMyCardsPage(0);
+    return page.cards;
   }
 
   function mountAccountMenus() {
@@ -456,5 +462,5 @@ window.SATUCARD_AUTH = (() => {
   }
   return { editorReturn, getSession, signUp, signIn, sendEmailCode, verifyEmailCode, isEmailCallback, completeEmailSignIn,
     signInWithGoogle, isGoogleCallback, completeGoogleSignIn, getAuthIntent: () => completedIntent,
-    signOut, getProfile, saveProfile, getMyCards, accountPage };
+    signOut, getProfile, saveProfile, getMyCards, getMyCardsPage, accountPage };
 })();

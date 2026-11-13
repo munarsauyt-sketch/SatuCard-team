@@ -39,8 +39,76 @@ export async function loadProject() {
   for(const asset of saved.project.assets)if(!DEMOS[asset.id]&&!saved.files.has(asset.id))throw new Error('В черновике отсутствуют исходные медиа. Откройте сохранённый файл проекта.');
   return saved;
 }
-export const saveBrand=value=>record('brand',value);
-export const loadBrand=()=>record('brand');
+const SHARED_BRAND_KEY='satucard-shared-brand-kit';
+const VIDEO_FONT_TO_CARD={Manrope:'manrope','Golos Text':'golos','Noto Serif':'noto','IBM Plex Mono':'plex'};
+const CARD_FONT_TO_VIDEO={manrope:'Manrope',golos:'Golos Text',noto:'Noto Serif',plex:'IBM Plex Mono',dejavu:'Manrope'};
+function dataUrlToBlob(url){
+  const match=/^data:([\w/+.-]+);base64,([A-Za-z0-9+/=]+)$/.exec(String(url||''));
+  if(!match)return null;
+  const bytes=Uint8Array.from(atob(match[2]),c=>c.charCodeAt(0));
+  return new Blob([bytes],{type:match[1]});
+}
+export async function saveBrand(value){
+  await record('brand',value);
+  try{
+    const logoDataUrl=value?.logo?.file?await dataUrl(value.logo.file):null;
+    const prev=JSON.parse(localStorage.getItem(SHARED_BRAND_KEY)||'{}');
+    localStorage.setItem(SHARED_BRAND_KEY,JSON.stringify({
+      ...prev,
+      name:value?.name||'',
+      color:value?.color||prev.color||'#4e6846',
+      font:VIDEO_FONT_TO_CARD[value?.font]||prev.font||'manrope',
+      customColors:true,
+      logoDataUrl:logoDataUrl??prev.logoDataUrl??null,
+      updatedAt:new Date().toISOString()
+    }));
+  }catch(_){}
+}
+export async function loadBrand(){
+  const saved=await record('brand');
+  if(saved)return saved;
+  try{
+    const raw=localStorage.getItem(SHARED_BRAND_KEY);
+    if(!raw)return null;
+    const shared=JSON.parse(raw);
+    const logoBlob=shared.logoDataUrl?dataUrlToBlob(shared.logoDataUrl):null;
+    return {
+      name:shared.name||'',
+      color:shared.color||'#b8c5ff',
+      font:CARD_FONT_TO_VIDEO[shared.font]||'Golos Text',
+      logo:logoBlob?{asset:{id:'shared-brand-logo',name:'Логотип магазина',kind:'image',duration:0},file:logoBlob}:null
+    };
+  }catch(_){return null;}
+}
+export async function listVideoDrafts(){
+  const index=await record('drafts_index');
+  return Array.isArray(index)?index:[];
+}
+export async function saveVideoDraft(name,project,files){
+  validateProject(project);
+  checkMediaBundle(project,files);
+  const id='d_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6);
+  const cleanName=String(name||project.name||'Черновик').trim().slice(0,80)||'Черновик';
+  const entry={id,name:cleanName,updatedAt:Date.now()};
+  await record('draft:'+id,{id,name:cleanName,project,files:[...files],updatedAt:entry.updatedAt});
+  const current=await listVideoDrafts();
+  const next=[entry,...current.filter(item=>item.id!==id)].slice(0,10);
+  await record('drafts_index',next);
+  return entry;
+}
+export async function loadVideoDraft(id){
+  const saved=await record('draft:'+id);
+  if(!saved)throw new Error('Черновик не найден.');
+  const project=validateProject(saved.project);
+  const files=new Map(saved.files);
+  checkMediaBundle(project,files);
+  return {id:saved.id,name:saved.name,project,files};
+}
+export async function deleteVideoDraft(id){
+  const current=await listVideoDrafts();
+  await record('drafts_index',current.filter(item=>item.id!==id));
+  await record('draft:'+id,null);
+}
 const dataUrl=blob=>new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(reader.error);reader.readAsDataURL(blob);});
 export async function packProject(project,files) {
   validateProject(project);

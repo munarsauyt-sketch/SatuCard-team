@@ -438,6 +438,9 @@ async function replaceProject(next,keepSelection=false){
 }
 
 async function init(){
+  if(typeof window.VideoEncoder==='undefined'&&$('#export')){
+    $('#export').title='WebCodecs недоступен в этом браузере — для экспорта MP4 откройте Chrome или Edge';
+  }
   try{const saved=await loadProject();if(saved){project=saved.project;media.files=saved.files;}}catch(error){handle(error);}
   await Promise.all([document.fonts.load('750 30px "Golos Text"'),document.fonts.load('600 30px "Manrope"'),document.fonts.load('700 30px "Noto Serif"'),document.fonts.load('400 20px "IBM Plex Mono"')]);
   const brand=await loadBrand().catch(()=>null);if(brand){$('#brand-color').value=brand.color;$('#brand-font').value=brand.font;}

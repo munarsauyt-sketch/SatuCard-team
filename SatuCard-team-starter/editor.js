@@ -849,6 +849,40 @@
     syncForm(); edited(true); fitPreview();
     status('project-status', 'Формат выбран. Добавьте фото и данные товара.');
   });
+  document.querySelectorAll('[data-badge-preset]').forEach(button => {
+    button.addEventListener('click', () => {
+      const badgeInput = $('product-badge');
+      if (!badgeInput) return;
+      commit();
+      badgeInput.value = button.dataset.badgePreset || '';
+      badgeInput.dispatchEvent(new Event('input', { bubbles: true }));
+      badgeInput.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  });
+  const safeZoneToggle = $('safe-zone-toggle');
+  const safeZoneOverlay = $('safe-zone-overlay');
+  function updateSafeZone() {
+    if (!safeZoneToggle || !safeZoneOverlay) return;
+    const active = safeZoneToggle.getAttribute('aria-pressed') === 'true';
+    safeZoneOverlay.hidden = !active;
+    if (!active) return;
+    const toolsApi = window.SATUCARD_TOOLS;
+    const rect = toolsApi?.getSafeZoneRect?.(model.settings.format, $('marketplace')?.value)
+      || { top: 0.08, right: 0.08, bottom: 0.08, left: 0.08, label: 'Безопасная зона' };
+    safeZoneOverlay.style.top = (rect.top * 100) + '%';
+    safeZoneOverlay.style.right = (rect.right * 100) + '%';
+    safeZoneOverlay.style.bottom = (rect.bottom * 100) + '%';
+    safeZoneOverlay.style.left = (rect.left * 100) + '%';
+    const labelEl = safeZoneOverlay.querySelector('.safe-zone-label');
+    if (labelEl) labelEl.textContent = rect.label;
+  }
+  safeZoneToggle?.addEventListener('click', () => {
+    const next = safeZoneToggle.getAttribute('aria-pressed') !== 'true';
+    safeZoneToggle.setAttribute('aria-pressed', String(next));
+    updateSafeZone();
+  });
+  $('card-format')?.addEventListener('change', updateSafeZone);
+  $('marketplace')?.addEventListener('change', updateSafeZone);
   $('card-text-preview').addEventListener('click', () => {
     const result = $('card-text-content');
     result.replaceChildren();

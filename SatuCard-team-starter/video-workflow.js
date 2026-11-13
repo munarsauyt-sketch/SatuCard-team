@@ -74,7 +74,7 @@ export function adaptFormat(project,format){
       else if(item.name==='Плашка цены')box={x:.055,y:.825,w:.37,h:.09};
       else if(item.name==='Подпись')box={x:.06,y:.95,w:.88,h:.03,fontSize:.018};
       if(box&&item.role==='product'&&products.length>1){const index=products.indexOf(item);const gap=.02;const full=box.w;box.w=(full-gap*(products.length-1))/products.length;box.x+=index*(box.w+gap);}
-      if(box){const old={...item};Object.assign(item,box);item.keyframes=item.keyframes.map(frame=>({...frame,x:box.x+(frame.x-old.x)*box.w/old.w,y:box.y+(frame.y-old.y)*box.h/old.h,w:frame.w*box.w/old.w,h:frame.h*box.h/old.h}));}
+      if(box){const old={...item};Object.assign(item,box);const ow=old.w||1,oh=old.h||1;item.keyframes=item.keyframes.map(frame=>({...frame,x:box.x+(frame.x-old.x)*box.w/ow,y:box.y+(frame.y-old.y)*box.h/oh,w:frame.w*box.w/ow,h:frame.h*box.h/oh}));}
     }
   }
   for(const item of copy.layers.filter(i=>i.type==='subtitles'))Object.assign(item,{x:.08,y:.72,w:.84,h:.13,fontSize:format==='wide'?.035:.055});

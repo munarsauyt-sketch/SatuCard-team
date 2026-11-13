@@ -19,7 +19,7 @@ export async function GET(request) {
   detail.searchParams.set('id', card.id);
   const price = card.showPrice && card.price !== null
     ? new Intl.NumberFormat('ru-RU').format(Number(card.price)) + ' ₸' : '';
-  const description = [card.showBrand ? card.brandName : '', price].filter(Boolean).join(' · ');
+  const description = [card.showBrand ? card.brandName : '', price, 'Карточка товара в SatuCard'].filter(Boolean).join(' · ');
   let contact = '';
   try {
     const target = contactUrl(card.contactUrl);
@@ -31,6 +31,7 @@ export async function GET(request) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>${escape(card.title)} — SatuCard</title>
+  <meta name="description" content="${escape(description)}">
   <meta property="og:type" content="product">
   <meta property="og:title" content="${escape(card.title)}">
   <meta property="og:description" content="${escape(description)}">
@@ -46,7 +47,7 @@ export async function GET(request) {
     <h1>${escape(card.title)}</h1>
     <p>${escape(description)}</p>
     <p>${contact} <a class="button button-light" href="${escape(detail.href)}">Открыть карточку</a></p>
-    <img src="${escape(card.imageUrl)}" alt="${escape(card.title)}" width="600" style="max-width:100%;height:auto">
+    <img class="share-preview-image" src="${escape(card.imageUrl)}" alt="${escape(card.title)}" width="600">
   </main>
 </body>
 </html>`;
