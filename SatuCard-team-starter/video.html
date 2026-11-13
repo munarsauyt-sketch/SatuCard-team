@@ -1,21 +1,29 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ru" data-default-theme="dark">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>SatuCard Video — студия роликов</title>
-  <meta name="description" content="Черновая видеостудия SatuCard: короткие ролики для товаров, шаблоны, музыка и монтаж.">
-  <meta name="robots" content="noindex,nofollow">
+  <title>SatuCard · Видеостудия для маркетплейсов и Reels</title>
+  <meta name="description" content="Видеоредактор SatuCard в браузере: 54 шаблона для Kaspi, Wildberries, Ozon, Reels, Shorts и TikTok, таймлайн, озвучка и экспорт MP4/WebM.">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <script src="theme.js?v=guide-20261105"></script>
   <link rel="stylesheet" href="editor-fonts.css"><link rel="stylesheet" href="video.css"><link rel="stylesheet" href="video-plus.css"><link rel="stylesheet" href="video-help.css">
-  <script defer src="studio-renderer.js"></script><script defer src="studio-project.js"></script><script defer src="studio-tools.js"></script><script defer src="auth-client.js"></script>
+  <script defer src="studio-renderer.js"></script><script defer src="studio-project.js"></script><script defer src="studio-tools.js"></script><script defer src="auth-client.js?v=verified-auth-20261026"></script>
   <script type="module" src="video-editor.js"></script>
+  <script defer src="interface-language.js"></script>
 </head>
 <body>
 <div id="workspace">
   <header class="topbar">
     <a class="wordmark" href="index.html" aria-label="SatuCard, на главную"><span class="brand-icon">◈</span> SatuCard<span class="video-word">Video</span></a>
-    <span class="draft-badge">ЧЕРНОВИК</span>
+    <span class="draft-badge">STUDIO</span>
+    <nav class="top-nav" aria-label="Навигация">
+      <a href="editor.html">Карточки</a>
+      <a href="examples.html">Шаблоны</a>
+      <a href="pricing.html">Тарифы</a>
+      <a href="dashboard.html">Кабинет</a>
+    </nav>
     <div class="project-heading"><input id="project-name" aria-label="Название проекта" maxlength="100" value="Новый дроп"><span id="save-status" role="status">Загружаем студию…</span></div>
+    <button class="theme-toggle" type="button" data-theme-toggle aria-label="Переключить тему" aria-pressed="true"><span aria-hidden="true">◐</span></button>
     <div class="history-actions"><button id="undo" title="Отменить · Ctrl+Z" aria-label="Отменить">↶</button><button id="redo" title="Повторить · Ctrl+Shift+Z" aria-label="Повторить">↷</button></div>
     <button id="open-project">Открыть</button><button id="save-file">Сохранить файл</button><button id="export" class="primary">Экспорт <span>↗</span></button>
   </header>
@@ -29,7 +37,7 @@
       <a href="editor.html"><span>↗</span>Карточки</a>
     </nav>
     <aside class="library">
-      <section data-library="templates"><div class="panel-heading"><h1>Начните с идеи</h1><span>10</span></div><p class="muted">Готовый ритм. Ваш товар.</p>
+      <section data-library="templates"><div class="panel-heading"><h1>Начните с идеи</h1><span id="templateCount">54</span></div><p class="muted">Готовый ритм. Ваш товар.</p>
         <div class="chips" id="template-filters"><button data-filter="Все" class="active">Все</button><button data-filter="Товар">Товар</button><button data-filter="Акция">Акции</button><button data-filter="История">Истории</button></div>
         <div id="template-list" class="template-grid"></div><button id="blank-project" class="full subtle">＋ Собрать с нуля</button>
       </section>

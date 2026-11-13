@@ -304,3 +304,7 @@ html[data-theme="dark"] .auth-shell { box-shadow: none; }
 .publication-actions { display:flex; gap:12px; padding:12px; flex-wrap:wrap; align-items:center; }
 .publication-actions button,.publication-actions a { min-height:44px; padding:8px; }
 .shared-card-main [hidden] { display:none!important; }
+.share-preview-image { max-width:100%; height:auto; display:block; border-radius:16px; }
+.card-qr-box { margin-top:16px; padding:16px; border:1px solid var(--line); border-radius:14px; background:var(--paper); display:flex; flex-direction:column; align-items:flex-start; gap:10px; }
+.card-qr-box svg { display:block; width:168px; height:168px; background:#fff; padding:8px; border-radius:10px; border:1px solid var(--line); }
+#load-more-cards { margin-top:20px; }

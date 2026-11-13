@@ -2,14 +2,16 @@
 
 (() => {
   const key = 'satucard-theme';
+  const defaultTheme = document.documentElement.dataset.defaultTheme === 'dark' ? 'dark' : 'light';
   const themeFromLink = new URLSearchParams(location.search).get('theme');
   let theme = themeFromLink === 'dark' || themeFromLink === 'light'
     ? themeFromLink
-    : 'light';
+    : defaultTheme;
 
   if (themeFromLink !== 'dark' && themeFromLink !== 'light') {
     try {
-      theme = localStorage.getItem(key) === 'dark' ? 'dark' : 'light';
+      const saved = localStorage.getItem(key);
+      theme = saved === 'dark' || saved === 'light' ? saved : defaultTheme;
     } catch (_) {
       // При открытии через file:// хранилище может быть недоступно.
     }
@@ -33,7 +35,7 @@
           const fileName = target.pathname.split('/').pop();
 
           if (targetDirectory !== pageDirectory ||
-              !['', 'index.html', 'editor.html', 'examples.html', 'card.html', 'auth.html', 'dashboard.html', 'guide.html', 'pricing.html', 'profile.html'].includes(fileName)) {
+              !['', 'index.html', 'editor.html', 'examples.html', 'card.html', 'auth.html', 'dashboard.html', 'guide.html', 'pricing.html', 'profile.html', 'video.html', 'video-guide.html'].includes(fileName)) {
             return;
           }
 

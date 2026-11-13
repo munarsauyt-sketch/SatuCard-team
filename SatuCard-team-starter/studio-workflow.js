@@ -3,6 +3,42 @@
 (() => {
   const $ = id => document.getElementById(id);
   let initialized = false;
+  function parseCatalogCsv(text) {
+    const rawLines = String(text || '').replace(/^\uFEFF/, '').split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+    if (!rawLines.length) return [];
+    const first = rawLines[0];
+    const delimiter = (first.match(/;/g)?.length || 0) >= (first.match(/,/g)?.length || 0) ? ';' : ',';
+    const splitRow = line => line.split(delimiter).map(cell => cell.trim().replace(/^"|"$/g, '').trim());
+    const firstCols = splitRow(first).map(col => col.toLowerCase());
+    const aliases = {
+      title: ['title', 'name', 'product', 'название', 'товар', 'имя'],
+      subtitle: ['subtitle', 'desc', 'description', 'подзаголовок', 'описание'],
+      price: ['price', 'cost', 'цена', 'стоимость'],
+      badge: ['badge', 'tag', 'label', 'плашка', 'бейдж']
+    };
+    const colIndex = {};
+    let hasHeader = false;
+    for (const [field, names] of Object.entries(aliases)) {
+      const idx = firstCols.findIndex(col => names.includes(col));
+      if (idx !== -1) { colIndex[field] = idx; hasHeader = true; }
+    }
+    const rows = (hasHeader ? rawLines.slice(1) : rawLines).slice(0, 20);
+    return rows.map(line => {
+      const cols = splitRow(line);
+      const get = (field, fallbackIdx) => {
+        const idx = Object.hasOwn(colIndex, field) ? colIndex[field] : (hasHeader ? -1 : fallbackIdx);
+        return idx >= 0 && idx < cols.length ? cols[idx] : '';
+      };
+      const title = get('title', 0).slice(0, 60);
+      if (!title) return null;
+      const subtitle = get('subtitle', 1).slice(0, 80);
+      const rawPrice = get('price', 2).replace(/[^\d]/g, '');
+      const price = rawPrice ? Number(rawPrice) : null;
+      const badge = get('badge', 3).slice(0, 24);
+      return { title, subtitle, price: Number.isFinite(price) ? price : null, badge };
+    }).filter(Boolean);
+  }
+  window.SATUCARD_WORKFLOW = { parseCatalogCsv };
   function start() {
     if (initialized) return; initialized = true;
     const editor = window.SATUCARD_EDITOR, renderer = window.SATUCARD_RENDERER, tools = window.SATUCARD_TOOLS;
@@ -389,7 +425,7 @@
       closeExportReview();
       try { download?.(); } catch (error) { message('download-status', error.message, true); }
     });
-    window.SATUCARD_WORKFLOW = { showPreflight, reviewDownload };
+    window.SATUCARD_WORKFLOW = { showPreflight, reviewDownload, parseCatalogCsv };
     async function checkExport() {
       if (checking) return;
       checking = true;
@@ -450,6 +486,51 @@
     });
     const requested = new URLSearchParams(location.search).get('project');
     if (requested) { document.querySelector('.cloud-panel').open = true; openCloud(requested); }
+    $('fill-sample-csv')?.addEventListener('click', () => {
+      const input = $('card-catalog-csv');
+      if (!input) return;
+      input.value = 'title;subtitle;price;badge\nТермокружка 500 мл;Нержавеющая сталь;5490;Хит Kaspi\nНаушники TWS;Активное шумоподавление;18990;0-0-12\nРюкзак городской;Водоотталкивающая ткань;12900;Доставка 1 день';
+      message('csv-batch-status', 'Пример каталога вставлен (3 товара).');
+    });
+    $('export-csv-zip')?.addEventListener('click', async () => {
+      if (exportingSet) return;
+      const rows = parseCatalogCsv($('card-catalog-csv')?.value || '');
+      if (!rows.length) {
+        message('csv-batch-status', 'Добавьте хотя бы одну строку вида title;subtitle;price;badge.', true);
+        return;
+      }
+      exportingSet = true;
+      const btn = $('export-csv-zip');
+      if (btn) btn.disabled = true;
+      try {
+        const snapshot = editor.snapshot();
+        const format = editor.selectedExportFormat();
+        const scale = Number($('export-scale')?.value || 1);
+        const files = [];
+        for (const [index, row] of rows.entries()) {
+          message('csv-batch-status', `Рендерим карточку ${index + 1} из ${rows.length}…`);
+          const nextSettings = {
+            ...snapshot.model.settings,
+            title: row.title,
+            subtitle: row.subtitle,
+            badge: row.badge,
+            price: row.price,
+            showPrice: row.price !== null
+          };
+          const { blob } = await editor.renderExport(nextSettings, snapshot.images, format, scale);
+          const name = `${String(index + 1).padStart(2, '0')}-${safeName(row.title)}.${format.extension}`;
+          files.push({ name, bytes: new Uint8Array(await blob.arrayBuffer()) });
+          await new Promise(resolve => setTimeout(resolve, 0));
+        }
+        editor.downloadBlob(new Blob([tools.createZip(files)], { type: 'application/zip' }), 'satucard-csv-batch.zip');
+        message('csv-batch-status', `ZIP-архив готов: ${files.length} карточек.`);
+      } catch (error) {
+        message('csv-batch-status', error.message || 'Не удалось собрать ZIP-архив.', true);
+      } finally {
+        exportingSet = false;
+        if (btn) btn.disabled = false;
+      }
+    });
   }
   document.addEventListener('satucard:editor-ready', start, { once: true });
   if (document.getElementById('editor-form')?.dataset.editorReady === 'true') start();

@@ -96,9 +96,21 @@
   const presets = {
     general: { label: 'Общие рекомендации', ratio: null, suggested: 'от 900 пикселей по короткой стороне' },
     kaspi: { label: 'Kaspi', ratio: 1, suggested: 'квадрат 1:1, например 900×900' },
+    kaspi_main: { label: 'Kaspi · Главное фото', ratio: 1, suggested: 'квадрат 1:1 с белым фоном (#ffffff)', requireWhiteBg: true },
     wildberries: { label: 'Wildberries', ratio: 0.75, suggested: 'вертикальный 3:4, например 900×1200' },
     ozon: { label: 'Ozon', ratio: 0.75, suggested: 'вертикальный 3:4, например 900×1200' }
   };
+  function getSafeZoneRect(formatKey, marketplaceKey) {
+    const key = Object.hasOwn(presets, marketplaceKey) ? marketplaceKey : 'general';
+    const base = {
+      square: { top: 0.08, right: 0.08, bottom: 0.08, left: 0.08 },
+      portrait34: { top: 0.1, right: 0.07, bottom: 0.12, left: 0.07 },
+      portrait: { top: 0.1, right: 0.07, bottom: 0.12, left: 0.07 },
+      story: { top: 0.14, right: 0.06, bottom: 0.18, left: 0.06 }
+    }[formatKey] || { top: 0.08, right: 0.08, bottom: 0.08, left: 0.08 };
+    const inset = key === 'kaspi_main' ? { top: 0.1, right: 0.1, bottom: 0.1, left: 0.1 } : base;
+    return { ...inset, label: presets[key].label + ' · безопасная зона' };
+  }
   function preflight(settings = {}, metadata = {}, marketplace = 'general') {
     const key = Object.hasOwn(presets, marketplace) ? marketplace : 'general';
     const preset = presets[key];
@@ -140,8 +152,21 @@
       add('body-size', 'warning', `${label} будет мелким на телефоне (около ${fontSize.toFixed(1).replace('.', ',')} px). Попробуйте сократить текст или увеличить шрифт.`, field);
     }
     if ((settings.title || '').length > 45 || (settings.description || '').length > 120 || (settings.features || []).some(value => String(value).length > 32)) add('text', 'warning', 'Много текста: проверьте переносы, обрезку и читаемость в мобильном превью.');
+    if (preset.requireWhiteBg) {
+      const bg = String(settings.background || '').trim().toLowerCase();
+      const whiteBg = settings.customColors && ['#fff', '#ffffff'].includes(bg);
+      add('white-bg', whiteBg ? 'pass' : 'warning', whiteBg
+        ? 'Фон задан как чистый белый (#ffffff) для главного фото.'
+        : 'Для главного фото Kaspi рекомендуется чисто белый фон (#ffffff) без плашек, цен и текста поверх товара.', 'background-color');
+      if (settings.showPrice !== false && settings.price !== null && settings.price !== undefined && settings.price !== '') {
+        add('kaspi-main-price', 'warning', 'На главном фото Kaspi цену и рассрочку обычно запрещено размещать на самой картинке.', 'show-price');
+      }
+      if (settings.badge) {
+        add('kaspi-main-badge', 'warning', 'Уберите акцентную плашку для главного фото Kaspi или перенесите её на второй слайд.', 'product-badge');
+      }
+    }
     add('category-review', 'info', 'Это рекомендации по подготовке, не официальная проверка и не гарантия приёма. Перед загрузкой проверьте действующие правила площадки и категории, фон, кадрирование и достоверность описания.');
     return { marketplace: key, label: preset.label, disclaimer: 'Рекомендации, а не официальные требования маркетплейса.', checks, ok: !checks.some(check => check.severity === 'error') };
   }
-  root.SATUCARD_TOOLS = { removeBackground, createZip, crc32, preflight, presets };
+  root.SATUCARD_TOOLS = { removeBackground, createZip, crc32, preflight, presets, getSafeZoneRect };
 })();

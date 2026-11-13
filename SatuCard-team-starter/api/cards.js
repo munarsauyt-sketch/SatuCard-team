@@ -5,9 +5,12 @@ import { ownedCard, contactUrl } from '../lib/publication.js';
 import { readBoundedBody } from '../lib/request-body.js';
 
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
-const STYLES = new Set(['studio', 'accent', 'minimal', 'noir', 'neon', 'editorial', 'bloom', 'bold']);
-// Public cards are already-rendered images. Keep their category readable by the shared database.
-const styleAliases = { showcase: 'accent', blueprint: 'neon', matcha: 'studio', pop: 'bold', graphite: 'editorial', cloud: 'bloom' };
+const STYLES = new Set([
+  'studio', 'accent', 'minimal', 'noir', 'neon', 'editorial', 'bloom', 'bold',
+  'showcase', 'blueprint', 'matcha', 'pop', 'graphite', 'cloud'
+]);
+// Legacy 8-style fallback map in case an older database instance has not run security-and-styles-upgrade.sql yet.
+const styleAliases = { showcase: 'studio', blueprint: 'minimal', matcha: 'bloom', pop: 'bold', graphite: 'noir', cloud: 'editorial' };
 const FORMATS = new Set(['portrait', 'portrait34', 'square', 'story']);
 
 function json(data, status = 200) {
@@ -63,7 +66,7 @@ export async function POST(request) {
   const price = priceInCents(String(form.get('price') ?? '').trim(), !showPrice);
   const oldPrice = priceInCents(String(form.get('oldPrice') ?? '').trim(), true);
   const requestedStyle = String(form.get('style') ?? '');
-  const style = Object.hasOwn(styleAliases, requestedStyle) ? styleAliases[requestedStyle] : requestedStyle;
+  const style = requestedStyle;
   const format = String(form.get('format') ?? '');
   const image = form.get('image');
 
@@ -123,11 +126,18 @@ export async function POST(request) {
       Object.assign(record, { show_price: showPrice, show_brand: showBrand, contact_url: contact });
     }
     const query = previous ? '?' + new URLSearchParams({ id: 'eq.' + id, user_id: 'eq.' + user.id, image_path: 'eq.' + previous.image_path, select: 'id' }) : '';
-    const save = await fetch(`${config.base}/rest/v1/cards` + query, {
+    let save = await fetch(`${config.base}/rest/v1/cards` + query, {
       method: previous ? 'PATCH' : 'POST',
       headers: { ...headers, 'content-type': 'application/json', prefer: previous ? 'return=representation' : 'return=minimal' },
       body: JSON.stringify(record)
     });
+    if (save.status === 400 && Object.hasOwn(styleAliases, style)) {
+      save = await fetch(`${config.base}/rest/v1/cards` + query, {
+        method: previous ? 'PATCH' : 'POST',
+        headers: { ...headers, 'content-type': 'application/json', prefer: previous ? 'return=representation' : 'return=minimal' },
+        body: JSON.stringify({ ...record, style: styleAliases[style] })
+      });
+    }
     if (!save.ok) {
       console.error('SatuCard database insert failed:', save.status);
       await fetch(storageUrl, { method: 'DELETE', headers }).catch(() => {});

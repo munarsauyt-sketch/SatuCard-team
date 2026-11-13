@@ -164,10 +164,59 @@
     } catch (_) { return text; }
   }
 
-  async function brandAction(action, value) {
-    const db = await openDraftDatabase();
+  const SHARED_BRAND_KEY = 'satucard-shared-brand-kit';
+
+  function writeSharedBrand(value) {
+    if (!value || typeof value !== 'object') return;
     try {
-      return await new Promise((resolve, reject) => {
+      const settings = value.settings || {};
+      localStorage.setItem(SHARED_BRAND_KEY, JSON.stringify({
+        name: settings.brandName || '',
+        color: settings.accent || '#4e6846',
+        background: settings.background || '#e7ecdf',
+        textColor: settings.textColor || '#243322',
+        font: settings.font || 'manrope',
+        showBrand: settings.showBrand !== false,
+        customColors: Boolean(settings.customColors),
+        logoDataUrl: typeof value.logo === 'string' ? value.logo : null,
+        updatedAt: new Date().toISOString()
+      }));
+    } catch (_) {}
+  }
+
+  function readSharedBrand() {
+    try {
+      const raw = localStorage.getItem(SHARED_BRAND_KEY);
+      if (!raw) return null;
+      const shared = JSON.parse(raw);
+      if (!shared || typeof shared !== 'object') return null;
+      return {
+        settings: {
+          brandName: shared.name || '',
+          showBrand: shared.showBrand !== false,
+          customColors: Boolean(shared.customColors),
+          background: shared.background || '#e7ecdf',
+          accent: shared.color || '#4e6846',
+          textColor: shared.textColor || '#243322',
+          font: shared.font || 'manrope'
+        },
+        logo: typeof shared.logoDataUrl === 'string' ? shared.logoDataUrl : null
+      };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async function brandAction(action, value) {
+    if (action === 'put' && value) writeSharedBrand(value);
+    let db;
+    try {
+      db = await openDraftDatabase();
+    } catch (_) {
+      return action === 'get' ? readSharedBrand() : value;
+    }
+    try {
+      const result = await new Promise((resolve, reject) => {
         const transaction = db.transaction('brands', action === 'get' ? 'readonly' : 'readwrite');
         const store = transaction.objectStore('brands');
         const request = action === 'get' ? store.get('store') : store.put(value, 'store');
@@ -175,6 +224,8 @@
         transaction.onerror = () => reject(transaction.error);
         transaction.onabort = () => reject(transaction.error);
       });
+      if (action === 'get' && !result) return readSharedBrand();
+      return result;
     } finally { db.close(); }
   }
 

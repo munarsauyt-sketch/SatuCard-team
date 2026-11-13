@@ -77,8 +77,24 @@
     'Товар': 'Тауар', 'Разные товары': 'Әртүрлі тауарлар', 'Светлые': 'Ашық', 'Тёмные': 'Қараңғы',
     'Выразительные': 'Айқын', 'Шаблоны для ваших товаров': 'Тауарларыңызға арналған үлгілер',
     'Выберите стиль и откройте его в редакторе.': 'Стильді таңдап, редакторда ашыңыз.',
+    'Видео': 'Видео', 'Инструкция по видео': 'Видео нұсқаулығы', 'Карточки': 'Карточкалар', 'Кабинет': 'Кабинет',
+    'Тема': 'Тақырып', 'Показать ещё': 'Тағы көрсету', 'Создать видео ↗': 'Видео жасау ↗', 'Открыть видеостудию ↗': 'Видеостудияны ашу ↗',
+    'Начните с идеи': 'Идеядан бастаңыз', 'Медиа': 'Медиа', 'Звук': 'Дыбыс', 'Бренд': 'Бренд',
+    'Проекты': 'Жобалар', 'Сцены': 'Сахналар', 'Каталог': 'Каталог', 'Экспорт': 'Экспорт',
+    'Сохранить файл': 'Файлды сақтау', 'Открыть': 'Ашу', 'Свойства': 'Қасиеттер',
+    'Безопасные зоны': 'Қауіпсіз аймақтар', 'Воспроизвести': 'Ойнату', 'Разрезать': 'Кесу', 'Дублировать': 'Көшірмелеу',
+    'Субтитры': 'Субтитрлер', 'Голос и субтитры': 'Дауыс және субтитрлер', 'Записать голос': 'Дауыс жазу',
+    'Создать ИИ-озвучку': 'ЖИ дыбыстауын жасау', 'Сохранить копию черновика': 'Нобай көшірмесін сақтау',
+    'Черновики видео': 'Видео нобайлары', 'Черновики видео в браузере': 'Браузердегі видео нобайлары',
+    'Хит продаж': 'Сатылым хиті', 'Рассрочка 0·0·12': 'Бөліп төлеу 0·0·12', 'В наличии': 'Қоймада бар', 'Новинка': 'Жаңа өнім',
+    'Массовая сборка из CSV · до 10 товаров': 'CSV арқылы жаппай жинау · 10 тауарға дейін',
+    'Заполнить пример CSV': 'CSV мысалын толтыру', 'Скачать карточки CSV · ZIP': 'CSV карточкаларын жүктеу · ZIP',
+    'Написать в WhatsApp': 'WhatsApp-қа жазу', 'QR-код карточки': 'Карточка QR-коды', 'Скачать SVG QR': 'SVG QR жүктеп алу',
+    'Отменить': 'Болдырмау', 'Повторить': 'Қайталау', 'Найти шаблон…': 'Үлгі іздеу…', 'Поиск шаблона': 'Үлгіні іздеу',
   };
   const originals = new WeakMap();
+  const attrOriginals = new WeakMap();
+  const TRANSLATED_ATTRS = ['placeholder', 'title', 'aria-label'];
   let language = 'ru';
   try { language = localStorage.getItem('satucard-interface-language') === 'kk' ? 'kk' : 'ru'; } catch (_) {}
   function translate(node) {
@@ -90,6 +106,22 @@
     originals.set(node, source);
     const target = language === 'kk' ? translations[source] : source;
     if (target !== clean) node.nodeValue = value.replace(clean, target);
+  }
+  function translateAttributes(element) {
+    if (!element || element.nodeType !== Node.ELEMENT_NODE) return;
+    let map = attrOriginals.get(element);
+    for (const attr of TRANSLATED_ATTRS) {
+      const current = element.getAttribute(attr);
+      if (!current) continue;
+      const clean = current.trim();
+      const remembered = map?.get(attr);
+      const source = remembered && translations[remembered] === clean ? remembered : clean;
+      if (!Object.hasOwn(translations, source)) continue;
+      if (!map) { map = new Map(); attrOriginals.set(element, map); }
+      map.set(attr, source);
+      const target = language === 'kk' ? translations[source] : source;
+      if (target !== clean) element.setAttribute(attr, current.replace(clean, target));
+    }
   }
   const skip = 'script,style,textarea,input,[contenteditable],#card-text-content,#copy-preview,#ai-chat-messages,.my-card-body,.local-project-list,.workflow-project-list,[data-product-label],#profile-title,#profile-email';
   function update(root = document.body) {
@@ -104,23 +136,46 @@
       if (!node.parentElement || node.parentElement.closest(skip)) continue;
       translate(node);
     }
+    if (root.nodeType === Node.ELEMENT_NODE) {
+      if (!root.closest('#card-text-content,#copy-preview,#ai-chat-messages')) translateAttributes(root);
+      root.querySelectorAll('[placeholder],[title],[aria-label]').forEach(el => {
+        if (!el.closest('#card-text-content,#copy-preview,#ai-chat-messages')) translateAttributes(el);
+      });
+    }
     document.documentElement.lang = language;
   }
-  const nav = document.querySelector('header nav');
+  const nav = document.querySelector('header nav') || document.querySelector('.topbar');
+  let select = null;
   if (nav) {
     const label = document.createElement('label');
     label.className = 'interface-language';
     label.setAttribute('aria-label', 'Язык интерфейса / Интерфейс тілі');
-    const select = document.createElement('select');
+    select = document.createElement('select');
     select.innerHTML = '<option value="ru">Русский</option><option value="kk">Қазақша</option>';
     select.value = language;
-    label.append(select); nav.append(label);
+    label.append(select);
+    if (nav.classList.contains('topbar')) {
+      const target = nav.querySelector('.history-actions') || nav.querySelector('#export');
+      if (target) nav.insertBefore(label, target);
+      else nav.append(label);
+    } else {
+      nav.append(label);
+    }
     select.addEventListener('change', () => {
       language = select.value;
       try { localStorage.setItem('satucard-interface-language', language); } catch (_) {}
       update();
     });
   }
+  window.SATUCARD_LANGUAGE = {
+    getLanguage: () => language,
+    setLanguage: (next) => {
+      language = next === 'kk' ? 'kk' : 'ru';
+      if (select) select.value = language;
+      try { localStorage.setItem('satucard-interface-language', language); } catch (_) {}
+      update();
+    }
+  };
   const observer = new MutationObserver(records => {
     observer.disconnect();
     if (!globalThis.document?.body) return;
