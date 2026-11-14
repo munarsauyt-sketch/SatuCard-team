@@ -100,6 +100,9 @@ test('selected tariff and theme survive login, Google callback and profile setup
   assert.equal(profileUrl, `${origin}/profile.html?registration=1&theme=dark&plan=plus&billing=1`);
   const profile = harness({ url: profileUrl });
   assert.equal(profile.auth.accountPage('dashboard.html'), `${origin}/dashboard.html?theme=dark&plan=plus#billing-title`);
+
+  const nicheEntry = harness({ url: `${origin}/dashboard.html?plan=niche10#billing-title` });
+  assert.equal(nicheEntry.auth.accountPage('auth.html'), `${origin}/auth.html?plan=niche10&billing=1`);
 });
 
 test('an email link in the same tab restores the tariff after verifying the email', async () => {

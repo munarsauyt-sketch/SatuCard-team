@@ -10,7 +10,7 @@ window.SATUCARD_AUTH = (() => {
   const googleFlowLifetime = 10 * 60 * 1000;
   const emailFlowKey = 'satucard-email-billing-v1';
   const accountQuery = new URLSearchParams(location.search);
-  const accountPlans = new Set(['basic', 'plus', 'max', 'max3']);
+  const accountPlans = new Set(['basic', 'plus', 'max', 'max3', 'niche10']);
   let accountContext = {
     plan: accountQuery.get('plan'),
     billing: accountQuery.get('billing') === '1' || location.hash === '#billing-title'

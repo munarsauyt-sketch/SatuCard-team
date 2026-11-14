@@ -9,6 +9,8 @@
 .billing-form { margin-block: 16px; }
 .billing-form label { display: grid; gap: 5px; }
 .billing-form input:not([type=checkbox]), .billing-form select { max-width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--paper); }
+.billing-plan-benefits { flex: 1 0 100%; margin: 4px 0 0; padding-left: 18px; color: var(--muted, inherit); font-size: 14px; line-height: 1.5; }
+.billing-plan-benefits li { margin-block: 2px; }
 .billing-order { padding: 14px; margin-block: 8px; border: 1px solid var(--line); border-radius: 12px; overflow-wrap: anywhere; }
 .billing-order p { margin: 5px 0 10px; }
 .billing-support { margin-block: 18px; overflow-wrap: anywhere; }

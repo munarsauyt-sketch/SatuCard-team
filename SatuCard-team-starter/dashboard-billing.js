@@ -12,6 +12,24 @@ let busy = false;
 let pendingCreate = null;
 let generation = 0;
 let accountId;
+let availablePlans = [];
+
+function renderSelectedPlanBenefits(plans, planId) {
+  const list = $('billing-plan-benefits');
+  if (!list) return;
+  const plan = plans.find(item => item.id === planId);
+  if (!plan) {
+    list.hidden = true;
+    list.replaceChildren();
+    return;
+  }
+  const items = [];
+  if (plan.includes) items.push('Включает «' + plan.includes + '»');
+  for (const benefit of (plan.benefits || [])) items.push(benefit);
+  for (const model of (plan.models || [])) items.push('Модель: ' + model);
+  list.replaceChildren(...items.map(text => element('li', text)));
+  list.hidden = items.length === 0;
+}
 
 function element(tag, text) {
   const node = document.createElement(tag);
@@ -145,17 +163,22 @@ async function refresh() {
     }
     $('billing-next').hidden = !data.scheduled.length;
     $('billing-next').textContent = data.scheduled.map(plan => plan.planName + ' начнётся ' + date(plan.startsAt)).join(' · ');
-    $('billing-models').hidden = !data.models.length;
-    $('billing-model-list').replaceChildren(...data.models.map(model => element('li', model.label)));
+    const activePlan = data.active ? data.plans.find(item => item.id === data.active.planId) : null;
+    const activeBenefits = (activePlan?.benefits || []).map(text => element('li', text));
+    const modelItems = [...activeBenefits, ...data.models.map(model => element('li', model.label))];
+    $('billing-models').hidden = !modelItems.length;
+    $('billing-model-list').replaceChildren(...modelItems);
     $('billing-create').hidden = !data.ordering;
+    availablePlans = Array.isArray(data.plans) ? data.plans : [];
     const select = $('billing-plan');
     const selected = select.value || new URLSearchParams(location.search).get('plan');
-    select.replaceChildren(...data.plans.map(plan => {
+    select.replaceChildren(...availablePlans.map(plan => {
       const option = element('option', plan.name + ' · ' + money(plan.priceKzt) + (plan.permanent ? ' · навсегда' : ' за ' + plan.days + ' дней'));
       option.value = plan.id;
       return option;
     }));
-    if (data.plans.some(plan => plan.id === selected)) select.value = selected;
+    if (availablePlans.some(plan => plan.id === selected)) select.value = selected;
+    renderSelectedPlanBenefits(availablePlans, select.value);
     $('billing-orders').replaceChildren(...(data.orders.length
       ? data.orders.map(order => orderRow(order, data.payment, false)) : [element('p', 'Пока нет покупок.')]));
     $('billing-admin').hidden = !(data.isAdmin && data.ready);
@@ -174,13 +197,22 @@ document.addEventListener('satucard:authchange', event => {
   accountId = next;
   pendingCreate = null;
   status.textContent = 'Проверяем доступ…';
-  for (const id of ['billing-admin', 'billing-create', 'billing-usage', 'billing-next', 'billing-models']) $(id).hidden = true;
-  for (const id of ['billing-orders', 'billing-admin-orders', 'billing-model-list']) $(id).replaceChildren();
+  for (const id of ['billing-admin', 'billing-create', 'billing-usage', 'billing-next', 'billing-models', 'billing-plan-benefits']) {
+    const el = $(id);
+    if (el) el.hidden = true;
+  }
+  for (const id of ['billing-orders', 'billing-admin-orders', 'billing-model-list', 'billing-plan-benefits']) {
+    const el = $(id);
+    if (el) el.replaceChildren();
+  }
   refresh();
 });
 
 $('billing-support').append(link(SUPPORT.phone, SUPPORT.phoneHref),
   ...SUPPORT.emails.map(email => link(email, 'mailto:' + email)));
+$('billing-plan').addEventListener('change', event => {
+  renderSelectedPlanBenefits(availablePlans, event.target.value);
+});
 $('billing-refresh').addEventListener('click', refresh);
 $('billing-create').addEventListener('submit', event => {
   event.preventDefault();

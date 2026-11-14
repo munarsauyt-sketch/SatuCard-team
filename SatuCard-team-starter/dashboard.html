@@ -8,10 +8,10 @@
   <script src="theme.js?v=rebrand-20261012"></script>
   <link rel="stylesheet" href="brand.css?v=studio-identity">
   <link rel="stylesheet" href="account-pages.css?v=studio-identity">
-  <link rel="stylesheet" href="dashboard-billing.css">
-  <script src="auth-client.js?v=verified-auth-20261026" defer></script><script src="site.js?v=rebrand-20261012" defer></script><script src="studio-project.js" defer></script><script src="local-projects.js" defer></script><script src="cloud-projects.js?v=workflow-1" defer></script><script src="dashboard.js?v=workflow-1" defer></script><script src="dashboard-projects.js?v=workflow-1" defer></script><link rel="stylesheet" href="studio-workflow.css?v=workflow-1">
-  <script src="dashboard-billing.js" type="module"></script>
-  <script src="interface-language.js" defer></script>
+  <link rel="stylesheet" href="dashboard-billing.css?v=pricing-v2">
+  <script src="auth-client.js?v=pricing-v2" defer></script><script src="site.js?v=rebrand-20261012" defer></script><script src="studio-project.js" defer></script><script src="local-projects.js" defer></script><script src="cloud-projects.js?v=workflow-1" defer></script><script src="dashboard.js?v=workflow-1" defer></script><script src="dashboard-projects.js?v=workflow-1" defer></script><link rel="stylesheet" href="studio-workflow.css?v=workflow-1">
+  <script src="dashboard-billing.js?v=pricing-v2" type="module"></script>
+  <script src="interface-language.js?v=pricing-v2" defer></script>
 </head>
 <body class="account-page dashboard-page">
 <a class="skip-link" href="#main">К содержимому</a>
@@ -40,6 +40,7 @@
     <form id="billing-create" class="billing-form" hidden>
       <label>Тариф <select id="billing-plan" required></select></label>
       <button class="button button-orange" type="submit">Создать заявку</button>
+      <ul id="billing-plan-benefits" class="billing-plan-benefits" hidden></ul>
     </form>
     <section aria-labelledby="billing-orders-title"><h3 id="billing-orders-title">Покупки и заявки</h3><div id="billing-orders"></div></section>
     <section id="billing-admin" aria-labelledby="billing-admin-title" hidden><h3 id="billing-admin-title">Заявки на проверку</h3><div id="billing-admin-orders"></div></section>
