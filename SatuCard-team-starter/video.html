@@ -1,21 +1,21 @@
 <!doctype html>
-<html lang="ru" data-default-theme="dark">
+<html lang="ru">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>SatuCard · Видеостудия для маркетплейсов и Reels</title>
   <meta name="description" content="Видеоредактор SatuCard в браузере: 54 шаблона для Kaspi, Wildberries, Ozon, Reels, Shorts и TikTok, таймлайн, озвучка и экспорт MP4/WebM.">
-  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="assets/favicon.svg?v=catalog-design" type="image/svg+xml">
   <script src="theme.js?v=guide-20261105"></script>
   <link rel="stylesheet" href="editor-fonts.css"><link rel="stylesheet" href="video.css"><link rel="stylesheet" href="video-plus.css"><link rel="stylesheet" href="video-help.css">
+  <link rel="stylesheet" href="catalog-workbench.css?v=catalog-preview-1">
   <script defer src="studio-renderer.js"></script><script defer src="studio-project.js"></script><script defer src="studio-tools.js"></script><script defer src="auth-client.js?v=verified-auth-20261026"></script>
   <script type="module" src="video-editor.js"></script>
-  <script defer src="interface-language.js"></script>
+  <script defer src="interface-language.js?v=catalog-design"></script>
 </head>
-<body>
+<body class="video-workbench">
 <div id="workspace">
   <header class="topbar">
-    <a class="wordmark" href="index.html" aria-label="SatuCard, на главную"><span class="brand-icon">◈</span> SatuCard<span class="video-word">Video</span></a>
-    <span class="draft-badge">STUDIO</span>
+    <a class="wordmark" href="index.html" aria-label="SatuCard, на главную"><img class="brand-icon" src="assets/favicon.svg?v=catalog-design" width="30" height="30" alt="">SatuCard</a>
     <nav class="top-nav" aria-label="Навигация">
       <a href="editor.html">Карточки</a>
       <a href="examples.html">Шаблоны</a>
@@ -37,7 +37,7 @@
       <a href="editor.html"><span>↗</span>Карточки</a>
     </nav>
     <aside class="library">
-      <section data-library="templates"><div class="panel-heading"><h1>Начните с идеи</h1><span id="templateCount">54</span></div><p class="muted">Готовый ритм. Ваш товар.</p>
+      <section data-library="templates"><div class="panel-heading"><h1>Шаблоны видео</h1><span id="templateCount">54</span></div><p class="muted">Выберите шаблон, затем добавьте фото или видео товара.</p>
         <div class="chips" id="template-filters"><button data-filter="Все" class="active">Все</button><button data-filter="Товар">Товар</button><button data-filter="Акция">Акции</button><button data-filter="История">Истории</button></div>
         <div id="template-list" class="template-grid"></div><button id="blank-project" class="full subtle">＋ Собрать с нуля</button>
       </section>
@@ -48,12 +48,12 @@
       <button id="save-file-mobile" class="full subtle">↓ Скачать файл проекта</button>
     </aside>
     <section class="center" aria-label="Предпросмотр ролика">
-      <div class="stage-toolbar"><select id="format" aria-label="Формат ролика"><option value="vertical">9:16 · Истории</option><option value="marketplace34">3:4 · Видеообложка МП</option><option value="square">1:1 · Каталог</option><option value="wide">16:9 · Видео</option></select><label class="safe-label"><input id="safe-zones" type="checkbox"> Безопасные зоны</label><span class="preview-label">ПРЕВЬЮ</span></div>
-      <div class="stage"><canvas id="preview" width="540" height="960" tabindex="0" aria-label="Холст ролика: выберите и переместите объект"></canvas><div class="stage-caption">ВАША СЛЕДУЮЩАЯ ИСТОРИЯ</div></div>
+      <div class="stage-toolbar"><span class="preview-label">Холст</span><select id="format" aria-label="Формат ролика"><option value="vertical">9:16 · Истории</option><option value="marketplace34">3:4 · Видеообложка МП</option><option value="square">1:1 · Каталог</option><option value="wide">16:9 · Видео</option></select><label class="safe-label"><input id="safe-zones" type="checkbox"> Безопасные зоны</label></div>
+      <div class="stage"><canvas id="preview" width="540" height="960" tabindex="0" aria-label="Холст ролика: выберите и переместите объект"></canvas></div>
       <div class="transport"><button id="previous" aria-label="Назад на один кадр">‹</button><button id="play" class="play-button" aria-label="Воспроизвести">▶</button><button id="next" aria-label="Вперёд на один кадр">›</button><output id="time-display">00:00.00 / 00:12</output><label class="duration-label">Длина <input id="duration" type="number" min="0.5" max="30" step="0.5" value="12"> с</label><select id="fps" aria-label="Частота кадров"><option value="24">24 fps</option><option value="30" selected>30 fps</option><option value="60">60 fps</option></select></div>
     </section>
     <aside class="inspector"><div class="panel-heading"><h2>Свойства</h2><span>◌</span></div><div id="inspector-content"><div class="empty-inspector">Выберите объект на холсте или слой на монтажной шкале.</div></div></aside>
-    <section class="timeline" aria-label="Монтажная шкала"><div class="timeline-toolbar"><span class="timeline-label">МОНТАЖ</span><span id="layer-count"></span><div class="timeline-actions"><button id="split" title="Разрезать выбранный слой в позиции курсора">Разрезать</button><button id="duplicate">Дублировать</button><button id="layer-down" title="Слой ниже">↓</button><button id="layer-up" title="Слой выше">↑</button><button id="delete-layer" title="Удалить слой">⌫</button></div><label class="zoom-label">Масштаб <input id="timeline-zoom" type="range" min="25" max="100" value="55"></label></div><div id="timeline-scroll"><div id="timeline-inner"><div id="ruler"></div><div id="tracks"></div><div id="playhead"><span></span></div></div></div></section>
+    <section class="timeline" aria-label="Монтажная шкала"><div class="timeline-toolbar"><span class="timeline-label">Монтаж</span><span id="layer-count"></span><div class="timeline-actions"><button id="split" title="Разрезать выбранный слой в позиции курсора">Разрезать</button><button id="duplicate">Дублировать</button><button id="layer-down" title="Слой ниже" aria-label="Слой ниже">↓</button><button id="layer-up" title="Слой выше" aria-label="Слой выше">↑</button><button id="delete-layer" title="Удалить слой" aria-label="Удалить слой">⌫</button></div><label class="zoom-label">Масштаб <input id="timeline-zoom" type="range" min="25" max="100" value="55"></label></div><div id="timeline-scroll"><div id="timeline-inner"><div id="ruler"></div><div id="tracks"></div><div id="playhead"><span></span></div></div></div></section>
   </main>
 </div>
 <input id="media-input" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,audio/*" multiple hidden>

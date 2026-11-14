@@ -62,11 +62,11 @@
 }
 
 .pricing-card[data-plan="max"] {
-  --brand-line: #7473f0;
+  --brand-line: var(--brand-accent-ink);
   --brand-muted: #efeeff;
   --brand-accent-ink: var(--brand-signal);
   border-color: #7271f1;
-  background: linear-gradient(150deg, #4948e8, #3231a4);
+  background: #1e36a2;
   color: var(--brand-on-accent);
 }
 

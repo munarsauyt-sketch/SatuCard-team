@@ -1,0 +1,833 @@
+/* Shared studio surfaces. The card renderers keep their own template palettes. */
+.studio-page,
+html:has(.video-workbench) {
+  --work-paper: #f4f1e9;
+  --work-surface: #fcfaf5;
+  --work-soft: #ebe6da;
+  --work-stage: #e7e1d5;
+  --work-grid: #77776725;
+  --work-ink: #19251f;
+  --work-muted: #545b53;
+  --work-line: #d4cfc3;
+  --work-accent: #2345dc;
+  --work-accent-hover: #1835ba;
+  --work-active: #e4eaff;
+  --work-on-action: #fff;
+  --work-danger: #a53224;
+  --work-shadow: 0 12px 32px #1d241c23;
+  --work-radius: 12px;
+}
+
+html[data-theme="dark"] .studio-page,
+html[data-theme="dark"]:has(.video-workbench) {
+  --work-paper: #171b19;
+  --work-surface: #202622;
+  --work-soft: #2c342e;
+  --work-stage: #171d1a;
+  --work-grid: #bcc6b722;
+  --work-ink: #f6f3ec;
+  --work-muted: #b9c1b8;
+  --work-line: #414a43;
+  --work-accent: #aabaff;
+  --work-accent-hover: #c8d3ff;
+  --work-active: #303b60;
+  --work-on-action: #17285f;
+  --work-danger: #ffb4a6;
+  --work-shadow: 0 12px 32px #0005;
+}
+
+.studio-page {
+  --paper: var(--work-paper);
+  --surface: var(--work-surface);
+  --ink: var(--work-ink);
+  --muted: var(--work-muted);
+  --line: var(--work-line);
+  --soft: var(--work-soft);
+  --editor-panel: var(--work-surface);
+  --editor-line: var(--work-line);
+  --editor-action: var(--work-accent);
+  --editor-action-hover: var(--work-accent-hover);
+  --editor-on-action: var(--work-on-action);
+  --editor-signal: var(--work-accent);
+  --editor-canvas: var(--work-stage);
+  --editor-canvas-bar: var(--work-surface);
+  --editor-canvas-line: var(--work-line);
+  --editor-canvas-ink: var(--work-ink);
+  --editor-canvas-muted: var(--work-muted);
+}
+
+.studio-page,
+html[data-theme="dark"] .studio-page {
+  --studio-accent: var(--work-accent);
+  --studio-accent-soft: var(--work-active);
+  --studio-stage: var(--work-stage);
+  --studio-stage-line: var(--work-line);
+  --editor-canvas-bar: var(--work-surface);
+  --editor-canvas-line: var(--work-line);
+}
+
+.studio-page .studio-main {
+  padding-inline: clamp(16px, 3vw, 48px);
+  padding-bottom: 48px;
+}
+
+.studio-page .studio-project-bar {
+  padding-block: 12px;
+  align-items: center;
+}
+
+.studio-page .studio-project-title {
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.studio-page .studio-project-title h1 {
+  font-size: clamp(24px, 2.45vw, 38px);
+  letter-spacing: -.055em;
+  text-wrap: balance;
+}
+
+.studio-page #draft-status {
+  border: 0;
+  padding: 0;
+  color: var(--work-muted);
+  font-size: 12px;
+}
+
+.studio-page .studio-start {
+  gap: 8px 12px;
+  margin: 0 0 24px;
+  padding: 12px;
+  border: 1px solid var(--work-line);
+  border-radius: var(--work-radius);
+  background: var(--work-surface);
+}
+
+.studio-start #quick-purpose {
+  margin-inline-end: auto;
+}
+
+.studio-page .studio-workspace,
+.studio-page .studio-sidebar {
+  border-radius: var(--work-radius);
+  border-color: var(--work-line);
+}
+
+.studio-page .studio-workspace {
+  overflow: visible;
+}
+
+.studio-page .workspace-heading {
+  border-radius: 11px 11px 0 0;
+}
+
+.studio-page .workspace-bottom-bar {
+  border-radius: 0 0 11px 11px;
+}
+
+.studio-page .workspace-live-dot {
+  box-shadow: none;
+}
+
+.studio-page .studio-stage,
+.video-workbench .stage {
+  background-color: var(--work-stage);
+  background-image:
+    linear-gradient(var(--work-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--work-grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: center;
+}
+
+.studio-page .studio-stage .studio-canvas-frame,
+.video-workbench #preview {
+  box-shadow: var(--work-shadow);
+}
+
+.studio-page .canvas-tools-menu summary,
+.studio-page .studio-form .studio-accordion summary {
+  min-height: 44px;
+  color: var(--work-ink);
+}
+
+.studio-page .canvas-tools-menu .studio-canvas-tools {
+  top: calc(100% + 4px);
+  background: var(--work-surface);
+  box-shadow: var(--work-shadow);
+}
+
+.studio-page .studio-canvas-tools :is(.studio-quiet-button, .studio-icon-button):hover,
+.studio-page .workspace-zoom .studio-icon-button:hover {
+  color: var(--work-ink);
+  background: var(--work-soft);
+}
+
+.studio-page .studio-canvas-tools button[aria-pressed="true"] {
+  background: var(--work-active);
+  border-color: var(--work-accent);
+  color: var(--work-ink);
+}
+
+.studio-page .workspace-zoom .studio-icon-button {
+  color: var(--work-muted);
+}
+
+.studio-page .ai-floating-launch {
+  color: var(--work-on-action);
+}
+
+.studio-page .studio-form {
+  padding: 20px;
+}
+
+.studio-page .studio-form > [data-editor-panel] > .tool-group,
+.studio-page .studio-form #panel-design > .studio-control-section {
+  border-radius: 8px;
+  background: var(--work-surface);
+}
+
+.studio-page .studio-form .panel-intro {
+  margin-bottom: 0;
+}
+
+.studio-page .studio-form .panel-intro h2 {
+  font-size: 24px;
+}
+
+.studio-page .studio-tabs {
+  gap: 4px;
+  padding: 4px;
+}
+
+.studio-page .studio-tabs button {
+  min-height: 44px;
+  background: transparent;
+}
+
+.studio-page .studio-tabs button:hover {
+  background: var(--work-soft);
+}
+
+.studio-page .studio-tabs button[aria-selected="true"] {
+  color: var(--work-accent);
+  background: var(--work-active);
+}
+
+.studio-page .studio-form .studio-upload {
+  border-color: var(--work-accent);
+  background: var(--work-active);
+}
+
+.studio-page .studio-form .studio-upload:hover,
+.studio-page .studio-form .studio-upload.drag-over {
+  background: color-mix(in srgb, var(--work-active) 84%, var(--work-accent));
+}
+
+.studio-page .studio-form .studio-upload label {
+  padding: 20px 16px;
+}
+
+.studio-page .studio-mobile-view,
+.studio-page .studio-mobile-view #mini-preview-mobile {
+  border-color: var(--work-line);
+  color: var(--work-ink);
+  background: var(--work-surface);
+}
+
+.studio-page .studio-mobile-view a:last-child {
+  color: var(--work-on-action);
+  background: var(--work-accent);
+}
+
+.studio-page .studio-mobile-view a:focus-visible {
+  outline: 2px solid var(--work-accent);
+  outline-offset: 2px;
+}
+
+.studio-page .studio-switch input:checked~i::before {
+  background: var(--work-on-action);
+}
+
+@media (min-width: 1101px) {
+  .studio-page .studio-layout:not(.is-canvas-focus) {
+    grid-template-columns: minmax(0, 1fr) minmax(408px, .67fr);
+    gap: 24px;
+  }
+}
+
+@media (max-width: 800px) {
+  .studio-page .studio-project-title {
+    justify-content: flex-start;
+  }
+
+  .studio-page .studio-project-tools {
+    justify-content: flex-start;
+  }
+
+  .studio-page .studio-project-tools :is(.studio-quiet-button, #download-button, select),
+  .studio-page .studio-project-tools .history-tools .studio-icon-button {
+    min-height: 44px;
+  }
+
+  .studio-page .studio-project-tools .history-tools .studio-icon-button {
+    width: 44px;
+  }
+
+  .studio-page .studio-project-tools .history-tools {
+    position: static;
+  }
+
+  .studio-page .studio-project-tools #start-tour {
+    min-width: 44px;
+  }
+
+  .studio-page .studio-start {
+    margin-bottom: 16px;
+  }
+
+  .studio-page .studio-start select {
+    min-width: min(100%, 144px);
+  }
+
+  .studio-page .studio-mobile-view {
+    transform: none;
+    margin: 16px auto;
+  }
+
+  .studio-page .studio-stage {
+    height: clamp(310px, 48dvh, 510px);
+  }
+}
+
+@media (max-width: 540px) {
+  .studio-page .studio-start {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .studio-page .studio-start > :is(#upload-own-photo, #quick-purpose) {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .studio-page .studio-start > button {
+    padding-inline: 8px;
+  }
+
+  .studio-page .studio-form {
+    padding: 12px;
+  }
+}
+
+/* In the video editor the canvas and timeline have dedicated work surfaces. */
+html:has(.video-workbench),
+html[data-theme="light"]:has(.video-workbench) {
+  --bg: var(--work-paper);
+  --surface: var(--work-surface);
+  --panel-alt: var(--work-soft);
+  --input-bg: var(--work-surface);
+  --line: var(--work-line);
+  --muted: var(--work-muted);
+  --ink: var(--work-ink);
+  --accent: var(--work-accent);
+  --lime: var(--work-accent);
+  color: var(--work-ink);
+  background: var(--work-paper);
+}
+
+.video-workbench {
+  color: var(--work-ink);
+  background: var(--work-paper);
+}
+
+.video-workbench .topbar {
+  gap: 12px;
+  padding-inline: 24px;
+  background: var(--work-surface);
+}
+
+.video-workbench .wordmark {
+  font-size: 23px;
+  letter-spacing: -.045em;
+}
+
+.video-workbench .brand-icon {
+  display: block;
+  flex: none;
+}
+
+.video-workbench .top-nav,
+.video-workbench .project-heading {
+  margin-left: 0;
+}
+
+.video-workbench .project-heading {
+  min-width: 88px;
+  padding-inline-start: 12px;
+  border-inline-start: 1px solid var(--work-line);
+}
+
+.video-workbench #project-name {
+  width: min(100%, 180px);
+  background: transparent;
+  font-size: 14px;
+}
+
+.video-workbench #save-status {
+  color: var(--work-muted);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.video-workbench button,
+.video-workbench .button,
+.video-workbench :is(input, select, textarea) {
+  color: var(--work-ink);
+  background: var(--input-bg);
+  border-color: var(--work-line);
+}
+
+.video-workbench :is(button, .button):hover {
+  background: var(--work-soft);
+  border-color: var(--work-muted);
+}
+
+.video-workbench .primary,
+html[data-theme="light"] .video-workbench .primary {
+  background: var(--work-accent);
+  border-color: var(--work-accent);
+  color: var(--work-on-action);
+}
+
+.video-workbench .primary:hover,
+html[data-theme="light"] .video-workbench .primary:hover {
+  background: var(--work-accent-hover);
+  border-color: var(--work-accent-hover);
+}
+
+.video-workbench label,
+.video-workbench .panel-heading > span,
+.video-workbench .timeline-toolbar #layer-count,
+.video-workbench .ruler-tick,
+.video-workbench .scene-card small,
+.video-workbench #voice-status {
+  color: var(--work-muted);
+}
+
+.video-workbench :is(.topbar > button, .topbar .history-actions > button) {
+  min-height: 44px;
+}
+
+.video-workbench .theme-toggle {
+  width: 44px;
+  font-size: 20px;
+  padding: 0;
+}
+
+.video-workbench .rail,
+html[data-theme="light"] .video-workbench .rail {
+  gap: 8px;
+  padding: 12px 6px;
+  background: var(--work-soft);
+}
+
+.video-workbench .rail button,
+.video-workbench .rail a {
+  width: min(100%, 64px);
+  min-height: 52px;
+  padding: 6px 2px;
+  justify-content: center;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--work-muted);
+  font-size: 10px;
+}
+
+.video-workbench .rail button:hover,
+.video-workbench .rail a:hover {
+  background: var(--work-surface);
+  color: var(--work-ink);
+}
+
+.video-workbench .rail button.active {
+  background: var(--work-active);
+  color: var(--work-accent);
+  font-weight: 800;
+}
+
+.video-workbench .rail button span,
+.video-workbench .rail a span {
+  font-size: 20px;
+  line-height: 22px;
+}
+
+.video-workbench .library,
+.video-workbench .inspector {
+  min-width: 0;
+  background: var(--work-surface);
+  scrollbar-width: thin;
+}
+
+.video-workbench .panel-heading h1 {
+  font-size: 21px;
+  font-weight: 800;
+  line-height: 1.16;
+}
+
+.video-workbench .panel-heading h2 {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.video-workbench .panel-heading > span {
+  font-variant-numeric: tabular-nums;
+}
+
+.video-workbench .muted,
+.video-workbench .template-card small {
+  font-size: 12px;
+}
+
+.video-workbench .chips {
+  gap: 6px;
+}
+
+.video-workbench .chips button {
+  font-size: 11px;
+  padding-inline: 8px;
+}
+
+.video-workbench .chips .active,
+.video-workbench .workflow-tabs .active,
+.video-workbench .keyframe-chip.active {
+  background: var(--work-active);
+  color: var(--work-accent);
+  border-color: var(--work-accent);
+}
+
+.video-workbench .template-card,
+.video-workbench .template-card:hover {
+  background: transparent;
+}
+
+.video-workbench .template-card canvas {
+  border-color: var(--work-line);
+}
+
+.video-workbench .template-grid > .muted {
+  grid-column: 1 / -1;
+}
+
+.video-workbench .upload-card {
+  background: var(--work-active);
+  border-color: var(--work-accent);
+  color: var(--work-accent);
+}
+
+.video-workbench .upload-card strong {
+  color: var(--work-ink);
+  font-size: 14px;
+}
+
+.video-workbench .upload-card span {
+  font-size: 11px;
+}
+
+.video-workbench .stage-toolbar,
+.video-workbench .transport {
+  min-height: 56px;
+  background: var(--work-surface);
+  border-color: var(--work-line);
+}
+
+.video-workbench .stage-toolbar .preview-label {
+  display: block;
+  order: -1;
+  margin: 0 auto 0 0;
+  color: var(--work-ink);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+}
+
+.video-workbench .stage-toolbar select,
+.video-workbench .safe-label {
+  font-size: 12px;
+}
+
+.video-workbench .transport :is(button, input, select) {
+  min-height: 36px;
+}
+
+.video-workbench .transport button {
+  min-width: 36px;
+  background: transparent;
+}
+
+.video-workbench .transport .play-button {
+  border-radius: 8px;
+  background: var(--work-accent);
+  color: var(--work-on-action);
+}
+
+.video-workbench .transport output {
+  color: var(--work-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.video-workbench .timeline,
+.video-workbench #ruler {
+  background: var(--work-soft);
+}
+
+.video-workbench .timeline-toolbar {
+  min-height: 50px;
+}
+
+.video-workbench .timeline-label {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.video-workbench .timeline-actions button {
+  background: var(--work-surface);
+  border: 1px solid var(--work-line);
+  padding-inline: 8px;
+}
+
+.video-workbench .timeline-actions button:hover {
+  border-color: var(--work-accent);
+}
+
+.video-workbench .ruler-tick,
+.video-workbench .track {
+  border-color: var(--work-line);
+}
+
+.video-workbench .track.selected {
+  background: var(--work-active);
+}
+
+.video-workbench .track-name {
+  border-color: var(--work-line);
+  font-size: 10px;
+}
+
+.video-workbench .empty-inspector {
+  padding: 20px 12px;
+  border: 1px dashed var(--work-line);
+  border-radius: 8px;
+  margin: 16px 0;
+  color: var(--work-muted);
+  background: var(--work-paper);
+}
+
+.video-workbench :is(.video-help-tip, .video-help-tour) {
+  color: var(--work-ink);
+  background: var(--work-surface);
+  border-color: var(--work-line);
+  border-radius: var(--work-radius);
+}
+
+.video-workbench .video-help-tip {
+  margin-bottom: 16px;
+  background: var(--work-active);
+}
+
+.video-workbench :is(.video-help-tip p, .help-description, .video-tour-hint) {
+  color: var(--work-muted);
+}
+
+.video-workbench :is(.help-manual, .help-number) {
+  color: var(--work-accent);
+}
+
+.video-workbench .help-manual:hover {
+  color: var(--work-accent-hover);
+}
+
+.video-workbench .video-help-tour progress {
+  accent-color: var(--work-accent);
+}
+
+.video-workbench .video-tour-highlight {
+  border-color: var(--work-accent);
+  box-shadow: 0 0 0 3px var(--work-active);
+}
+
+.video-workbench :is(.scene-card, .treatment, .batch-card) {
+  border-color: var(--work-line);
+  background: var(--work-paper);
+}
+
+.video-workbench .scene-card > button {
+  background: transparent;
+}
+
+.video-workbench :is(#opening-options, #adapt-options) button:last-child {
+  background: var(--work-active);
+}
+
+.video-workbench :is(dialog, #toast) {
+  background: var(--work-surface);
+  color: var(--work-ink);
+  border: 1px solid var(--work-line);
+  box-shadow: var(--work-shadow);
+}
+
+.video-workbench dialog {
+  max-height: calc(100dvh - 24px);
+  overflow: auto;
+}
+
+.video-workbench dialog progress {
+  accent-color: var(--work-accent);
+}
+
+.video-workbench #export-status {
+  overflow-wrap: anywhere;
+}
+
+.studio-page :is(.studio-primary-button, .studio-secondary-button, .studio-quiet-button):active:not(:disabled),
+.video-workbench :is(.primary, .rail button, .timeline-actions button):active:not(:disabled) {
+  transform: scale(.98);
+}
+
+.studio-page :is(a, button, input, select, textarea, summary):focus-visible,
+.video-workbench :is(a, button, input, select, textarea, summary, canvas):focus-visible {
+  outline: 2px solid var(--work-accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .video-workbench .topbar {
+    gap: 8px;
+    padding-inline: 12px;
+  }
+
+  .video-workbench .studio {
+    grid-template-rows: auto minmax(390px, 54dvh) 268px auto;
+    grid-template-areas: "rail library" "rail center" "rail timeline" "rail inspector";
+  }
+
+  .video-workbench .library {
+    max-height: 44dvh;
+    padding: 16px;
+  }
+
+  .video-workbench .template-grid {
+    grid-template-columns: none;
+    grid-auto-columns: clamp(104px, 18vw, 148px);
+    grid-auto-flow: column;
+    overflow-x: auto;
+    padding: 4px 4px 12px;
+    scrollbar-width: thin;
+  }
+
+  .video-workbench .template-grid > .muted {
+    width: min(70vw, 300px);
+  }
+
+  .video-workbench .chips button,
+  .video-workbench .transport :is(button, input, select) {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 620px) {
+  .video-workbench .studio {
+    grid-template-rows: auto auto minmax(390px, 54dvh) 268px auto;
+    grid-template-areas: "rail" "library" "center" "timeline" "inspector";
+  }
+
+  .video-workbench .rail {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+    padding: 8px;
+    overflow-x: visible;
+  }
+
+  .video-workbench .rail button,
+  .video-workbench .rail a {
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+  }
+
+  .video-workbench .library {
+    max-height: min(62dvh, 490px);
+  }
+
+  .video-workbench .video-help-tip {
+    padding: 12px;
+  }
+
+  .video-workbench .video-help-tip button {
+    min-height: 44px;
+  }
+
+  .video-workbench .video-help-tip .help-manual {
+    margin-block: 8px 0;
+    padding-block: 8px;
+  }
+
+  .video-workbench .stage {
+    min-height: 0;
+  }
+
+  .video-workbench .topbar .project-heading {
+    border-inline-start: 0;
+    padding-inline-start: 0;
+  }
+
+  .video-workbench .timeline-toolbar {
+    height: auto;
+    min-height: 0;
+    flex-wrap: wrap;
+    padding: 6px 10px;
+  }
+
+  .video-workbench .timeline-actions {
+    flex-wrap: wrap;
+  }
+
+  .video-workbench .timeline-actions button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .video-workbench .stage-toolbar select {
+    min-height: 44px;
+    max-width: min(46vw, 187px);
+  }
+
+  .video-workbench .transport {
+    gap: 6px;
+    padding: 6px 8px;
+  }
+
+  .video-workbench .transport button {
+    min-width: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .studio-page :is(button, a, input, select, textarea),
+  .video-workbench :is(button, a, input, select, textarea, canvas) {
+    transition: none;
+  }
+
+  .studio-page .studio-form [role="tabpanel"]:not([hidden]) {
+    animation: none;
+  }
+
+  .studio-page :is(.studio-primary-button, .studio-secondary-button, .studio-quiet-button):active:not(:disabled),
+  .video-workbench :is(.primary, .rail button, .timeline-actions button):active:not(:disabled),
+  .video-workbench .template-card:hover canvas {
+    transform: none;
+  }
+}

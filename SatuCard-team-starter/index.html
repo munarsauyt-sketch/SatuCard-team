@@ -4,25 +4,25 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SatuCard — карточки товаров из ваших фото</title>
-  <meta name="description" content="Создайте карточку товара из своего фото. Выберите шаблон, добавьте цену, скачайте PNG или поделитесь ссылкой.">
-  <link rel="icon" href="assets/favicon.svg?v=studio-identity" type="image/svg+xml">
+  <meta name="description" content="Создайте карточку товара из своего фото. Добавьте цену и преимущества, скачайте PNG или перенесите товар в короткий ролик.">
+  <link rel="icon" href="assets/favicon.svg?v=catalog-design" type="image/svg+xml">
   <script src="theme.js?v=guide-20261105"></script>
-  <link rel="stylesheet" href="brand.css?v=studio-identity">
-  <link rel="stylesheet" href="preview-home.css?v=studio-identity">
+  <link rel="stylesheet" href="brand.css?v=catalog-design">
+  <link rel="stylesheet" href="preview-home.css?v=catalog-design">
   <link rel="stylesheet" href="intro.css?v=studio-identity">
   <script src="auth-client.js?v=verified-auth-20261026" defer></script>
   <script src="site.js?v=rebrand-20261012" defer></script>
   <script src="product-samples.js" defer></script>
   <script src="studio-renderer.js?v=larger-canvas-1" defer></script>
-  <script src="marketing.js?v=studio-preview-1" defer></script>
+  <script src="marketing.js?v=catalog-design" defer></script>
   <script src="intro.js?v=20261030" defer></script>
-  <script src="interface-language.js" defer></script>
+  <script src="interface-language.js?v=catalog-design" defer></script>
 </head>
 <body class="preview-home">
 <a class="skip-link" href="#main">К содержимому</a>
 <header class="site-header"><div class="container header-inner">
-  <a class="brand" href="index.html" aria-label="SatuCard — главная"><img class="brand-logo-icon" src="assets/favicon.svg?v=studio-identity" alt="">SatuCard<span class="brand-dot">.</span></a>
-  <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="main-nav" aria-label="Открыть меню">☰</button>
+  <a class="brand" href="index.html" aria-label="SatuCard — главная"><img class="brand-logo-icon" src="assets/favicon.svg?v=catalog-design" alt="">SatuCard<span class="brand-dot">.</span></a>
+  <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="main-nav" aria-label="Открыть меню"><span class="menu-bars" aria-hidden="true"></span></button>
   <nav id="main-nav" aria-label="Основная навигация"><a href="index.html" aria-current="page">Главная</a><a href="editor.html">Редактор</a><a href="video.html">Видео</a><a href="examples.html">Шаблоны</a><a href="pricing.html">Тарифы</a></nav>
   <button class="theme-toggle" type="button" data-theme-toggle aria-label="Тёмная тема" aria-pressed="false"><span aria-hidden="true">◐</span><span class="theme-toggle-text">Тема</span></button>
   <a class="header-account" data-account-link href="auth.html">Войти</a>
@@ -30,28 +30,33 @@
 <main id="main">
   <section class="container mark-hero">
     <div class="hero-copy">
-      <h1>Карточки товаров <em>из ваших фото<span>.</span></em></h1>
-      <p>Загрузите фото, добавьте цену и скачайте карточку бесплатно. Без регистрации.</p>
+      <h1>От фото товара до готовой карточки</h1>
+      <p>Добавьте цену и преимущества, подберите стиль и скачайте карточку. Редактор доступен без регистрации.</p>
       <div class="mark-hero-actions">
         <a class="button button-orange" href="editor.html">Создать карточку <span aria-hidden="true">↗</span></a>
         <a class="text-link" href="examples.html">Смотреть шаблоны <span aria-hidden="true">→</span></a>
       </div>
     </div>
     <figure class="preview-studio" aria-label="Интерактивный пример карточки товара">
-      <figcaption class="preview-bar"><span><i aria-hidden="true"></i> Пример в редакторе</span><span>4:5</span></figcaption>
+      <figcaption class="preview-bar"><span>Пример карточки</span><span>Портрет · 4:5</span></figcaption>
       <div class="preview-stage" data-comparison style="--compare: 0%">
-        <svg class="stage-lines" viewBox="0 0 640 430" preserveAspectRatio="none" aria-hidden="true">
-          <path d="M-20 278h130l55-55h281l46-46h166M-20 294h138l55-55h281l46-46h158" opacity=".5"/>
-          <path d="M70 64v22m-11-11h22m474 260v22m-11-11h22M154 111h68m-68 0v40m291 141h45m0-40v40"/>
-          <circle cx="110" cy="278" r="4"/><circle cx="492" cy="177" r="4"/>
-        </svg>
-        <div class="preview-source" aria-hidden="true"><img src="assets/images/headphones.jpg" alt="" width="1200" height="900"><span>Исходник</span></div>
-        <div class="hero-primary render-wrap">
-          <canvas id="hero-card" data-mark-card data-template="noir" data-photo="headphones" aria-label="Беспроводные наушники в шаблоне Нуар"></canvas>
-          <img class="canvas-fallback" src="assets/images/headphones.jpg" alt="Исходное фото наушников">
-          <div class="preview-original" aria-hidden="true"><img src="assets/images/headphones.jpg" alt=""></div>
+        <div class="preview-objects">
+          <figure class="preview-source">
+            <img src="assets/images/ceramics.jpg" alt="Фотография керамической чашки" width="480" height="480" fetchpriority="high">
+            <figcaption>Исходное фото</figcaption>
+          </figure>
+          <span class="preview-arrow" aria-hidden="true">→</span>
+          <figure class="preview-result">
+            <div class="hero-primary render-wrap">
+              <canvas id="hero-card" data-mark-card data-template="studio" data-photo="ceramics" aria-label="Карточка керамической чашки в шаблоне Студия"></canvas>
+              <img class="canvas-fallback" src="assets/images/ceramics.jpg" alt="Исходное фото чашки">
+              <div class="preview-original" aria-hidden="true"><img src="assets/images/ceramics.jpg" alt=""></div>
+            </div>
+            <figcaption>
+              <a class="stage-open" data-hero-open data-editor-template="studio" href="editor.html?style=studio&amp;photo=ceramics"><span>Открыть пример</span><span aria-hidden="true">↗</span></a>
+            </figcaption>
+          </figure>
         </div>
-        <a class="stage-open" data-hero-open data-editor-template="noir" href="editor.html?style=noir&amp;photo=headphones" aria-label="Открыть пример в редакторе">↗</a>
         <div class="preview-slider">
           <span aria-hidden="true">Карточка</span>
           <input type="range" min="0" max="100" value="0" data-compare-range aria-label="Показать долю исходного фото" aria-valuetext="Карточка">
@@ -59,18 +64,18 @@
         </div>
       </div>
       <div class="hero-style-picker" role="group" aria-label="Стиль примера">
-        <button type="button" data-hero-style="noir" aria-pressed="true">Нуар</button>
-        <button type="button" data-hero-style="studio" aria-pressed="false">Студия</button>
+        <button type="button" data-hero-style="studio" aria-pressed="true">Студия</button>
+        <button type="button" data-hero-style="noir" aria-pressed="false">Нуар</button>
         <button type="button" data-hero-style="bold" aria-pressed="false">Постер</button>
         <button type="button" data-hero-style="neon" aria-pressed="false">Неон</button>
       </div>
-      <p id="hero-style-status" class="sr-only" role="status">Шаблон Нуар</p>
+      <p id="hero-style-status" class="sr-only" role="status">Шаблон Студия</p>
     </figure>
   </section>
 
   <section class="container preview-examples" aria-labelledby="example-title">
     <div class="preview-section-heading">
-      <h2 id="example-title">Выберите стиль</h2>
+      <h2 id="example-title">Как выглядит ваш товар в разных стилях</h2>
       <a class="text-link" href="examples.html">Все шаблоны <span aria-hidden="true">↗</span></a>
     </div>
     <div class="preview-grid">
@@ -87,6 +92,17 @@
         <span class="preview-example-label"><strong>Студия</strong><span aria-hidden="true">↗</span></span>
       </a>
     </div>
+  </section>
+
+  <section class="container video-feature" aria-labelledby="video-feature-title">
+    <div class="video-feature-copy">
+      <h2 id="video-feature-title">Из карточки в короткий ролик</h2>
+      <p>Перенесите фото, цену и название в видеостудию. Добавьте движение, текст и музыку, затем скачайте MP4.</p>
+      <a class="button" href="video.html">Открыть видеостудию <span aria-hidden="true">↗</span></a>
+    </div>
+    <figure class="video-feature-preview">
+      <img src="assets/images/video-workbench.webp" width="1200" height="741" loading="lazy" decoding="async" alt="Видеостудия SatuCard с холстом и монтажной шкалой">
+    </figure>
   </section>
 
   <section class="container preview-help" id="how-it-works" aria-labelledby="how-title">
@@ -109,7 +125,7 @@
   </section>
 </main>
 <footer class="site-footer container">
-  <a class="brand" href="index.html" aria-label="SatuCard — главная"><img class="brand-logo-icon" src="assets/favicon.svg?v=studio-identity" alt="">SatuCard<span class="brand-dot">.</span></a>
+  <a class="brand" href="index.html" aria-label="SatuCard — главная"><img class="brand-logo-icon" src="assets/favicon.svg?v=catalog-design" alt="">SatuCard<span class="brand-dot">.</span></a>
   <div class="preview-footer-links"><a href="guide.html">Инструкция</a><a href="video-guide.html">Инструкция по видео</a><a href="pricing.html">Тарифы</a><a href="examples.html#about">О проекте</a></div>
 </footer>
 </body>

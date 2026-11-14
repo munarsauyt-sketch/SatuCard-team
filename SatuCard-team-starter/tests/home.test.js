@@ -48,7 +48,7 @@ test('home styles update the preview, editor link and accessible state', async (
       assert.equal(renders.findLast(render => render.canvas === canvas).settings.template, key);
       const link = new URL(studio.querySelector('[data-hero-open]').href);
       assert.equal(link.searchParams.get('style'), key);
-      assert.equal(link.searchParams.get('photo'), 'headphones');
+      assert.equal(link.searchParams.get('photo'), canvas.dataset.photo);
     }
     const comparison = w.document.querySelector('[data-compare-range]');
     comparison.value = '75'; comparison.dispatchEvent(new w.Event('input'));

@@ -69,6 +69,8 @@
     const status = document.getElementById('catalog-status'); if (!status) return;
     const visible = document.querySelectorAll('[data-template-item]:not([hidden])').length;
     status.textContent = `Шаблонов: ${visible} из ${galleryCards.length}. ${gallerySample === 'mixed' ? 'Разные товары' : 'Один товар: ' + samples[gallerySample].label}.`;
+    const empty = document.getElementById('catalog-empty');
+    if (empty) empty.hidden = visible !== 0;
   }
   function updateGallery() {
     gallerySample = samples[productSelector?.value] ? productSelector.value : 'mixed';

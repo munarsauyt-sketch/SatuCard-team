@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Дизайн-студия — SatuCard</title>
   <meta name="description" content="Создайте выразительную карточку товара: оформление, тексты, фирменные цвета, настройка фотографии и экспорт для вашего магазина.">
-  <link rel="icon" href="assets/favicon.svg?v=studio-refresh-1" type="image/svg+xml">
+  <link rel="icon" href="assets/favicon.svg?v=catalog-design" type="image/svg+xml">
   <script src="theme.js?v=guide-20261105"></script>
-  <link rel="stylesheet" href="brand.css?v=studio-refresh-1">
+  <link rel="stylesheet" href="brand.css?v=catalog-design">
   <link rel="stylesheet" href="studio.css?v=rebrand-20261012">
   <script src="auth-client.js?v=verified-auth-20261026" defer></script>
   <script src="site.js?v=rebrand-20261012" defer></script>
@@ -25,9 +25,10 @@
   <link rel="stylesheet" href="editor-tour.css?v=20261105">
   <link rel="stylesheet" href="editor-preview.css?v=mini-preview-5">
   <link rel="stylesheet" href="editor-fonts.css?v=larger-canvas-1">
+  <link rel="stylesheet" href="catalog-workbench.css?v=catalog-preview-1">
   <script src="store-profile.js" defer></script>
   <script src="local-projects.js" defer></script><script src="editor-tour.js?v=wide-tools-1" defer></script>
-  <script src="interface-language.js" defer></script>
+  <script src="interface-language.js?v=catalog-design" defer></script>
 </head>
 <body class="studio-page">
   <a class="skip-link" href="#main">К редактору</a>
@@ -52,7 +53,7 @@
   </svg>
 
   <header class="site-header studio-header"><div class="container header-inner">
-    <a class="brand" href="index.html" aria-label="SatuCard — главная"><img class="brand-logo-icon" src="assets/favicon.svg?v=studio-refresh-1" alt="">SatuCard<span class="brand-dot">.</span></a><span class="studio-label">Студия</span>
+    <a class="brand" href="index.html" aria-label="SatuCard — главная"><img class="brand-logo-icon" src="assets/favicon.svg?v=catalog-design" alt="">SatuCard<span class="brand-dot">.</span></a><span class="studio-label">Студия</span>
     <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="main-nav" aria-label="Открыть меню">☰</button>
     <nav id="main-nav" aria-label="Основная навигация"><a href="index.html">Главная</a><a href="editor.html" aria-current="page">Редактор</a><a href="video.html">Видео</a><a href="examples.html">Шаблоны</a><a href="pricing.html">Тарифы</a></nav>
     <div class="studio-header-actions"><button class="theme-toggle" type="button" data-theme-toggle aria-label="Тёмная тема" aria-pressed="false"><span aria-hidden="true">◐</span><span class="theme-toggle-text">Тема</span></button><a class="header-account" data-account-link href="auth.html">Войти</a></div>
@@ -82,7 +83,7 @@
     </div>
     <p id="project-status" class="project-status" role="status" aria-live="polite"></p>
     <div class="studio-start">
-      <button id="upload-own-photo" class="studio-primary-button" type="button">Загрузить своё фото</button>
+      <button id="upload-own-photo" class="studio-primary-button" type="button"><svg class="studio-icon" aria-hidden="true"><use href="#i-upload"/></svg><span>Загрузить своё фото</span></button>
       <label for="quick-purpose">Создать для</label>
       <select id="quick-purpose"><option value="">Выберите задачу</option><option value="catalog">Каталога · 1:1</option><option value="marketplace">Маркетплейса · 3:4</option><option value="post">Поста · 4:5</option><option value="story">Истории · 9:16</option><option value="advantages">Преимуществ товара</option></select>
       <button id="open-local-projects" class="studio-quiet-button" type="button">Мои черновики</button>

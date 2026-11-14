@@ -24,3 +24,31 @@
 .guide-content details{border:1px solid #41364e;border-radius:12px;padding:14px 18px;margin:12px 0}.guide-content summary{cursor:pointer;font-weight:700}.guide-content footer{margin:32px 0;color:#aaa1b8;font-size:12px}
 @media(max-width:760px){.guide-layout{grid-template-columns:1fr;gap:20px}.guide-layout nav{position:static;display:grid;grid-template-columns:1fr 1fr;gap:0 16px}.guide-layout nav strong{grid-column:1/-1}.guide-hero{padding-top:40px}.guide-content h2{font-size:24px}.guide-content table{font-size:12px}.guide-content th,.guide-content td{padding:10px 5px}}
 @media print{.video-guide{background:#fff;color:#111;font:11pt/1.5 sans-serif}.guide-header,.guide-layout nav,.guide-tags{display:none}.guide-hero{padding:0}.guide-hero h1{font-size:28pt;letter-spacing:-1px}.guide-layout{display:block;padding:0}.guide-content section{break-inside:auto}.guide-content h2,.guide-content h3{break-after:avoid;color:#111}.guide-content p,.guide-content li,.guide-content strong,.guide-content td,.guide-content th,.guide-hero>p{color:#111}.guide-callout,.guide-content pre,.guide-content code,.guide-content kbd{background:#f3f3f3;color:#111}.video-guide a{color:#333}.guide-content details{break-inside:avoid}}
+
+/* The video manual follows the same paper and cobalt palette as the card guide. */
+.video-guide {
+  background: var(--paper);
+  color: var(--ink);
+  font: 16px / 1.75 Manrope, Arial, sans-serif;
+}
+.video-guide a { color: var(--brand-accent-ink); }
+.video-guide a:focus-visible { outline-color: var(--brand-accent-ink); }
+.video-guide .guide-header { align-items: center; padding-block: 16px; border-color: var(--line); }
+.video-guide .guide-header .brand { font-size: 22px; color: var(--ink); }
+.video-guide .guide-top-links a { display: inline-flex; align-items: center; min-height: 44px; }
+.video-guide .guide-top-links a:hover { text-decoration: underline; }
+.video-guide .guide-hero .guide-label { color: var(--brand-accent-ink); letter-spacing: 0; }
+.video-guide h1 { max-width: 17ch; margin-top: 12px; font-size: clamp(36px, 5vw, 70px); letter-spacing: -.05em; }
+.video-guide :is(.guide-hero > p,.guide-content p,.guide-content li,.guide-content footer) { color: var(--muted); }
+.video-guide .guide-tags span { border-color: var(--line); border-radius: 8px; background: var(--soft); }
+.video-guide .guide-layout nav { border-color: var(--line); border-radius: 12px; background: var(--surface); }
+.video-guide .guide-layout nav a { padding: 10px 0; min-height: 44px; }
+.video-guide :is(.guide-layout nav strong,.guide-content th,.guide-content h3) { color: var(--brand-accent-ink); }
+.video-guide .guide-content strong { color: var(--ink); }
+.video-guide .guide-content :is(section,th,td,details) { border-color: var(--line); }
+.video-guide .guide-content summary { min-height: 44px; align-content: center; }
+.video-guide .guide-content :is(pre,code,kbd,.guide-callout) { background: var(--soft); color: var(--ink); border-color: var(--line); }
+.video-guide .guide-content .guide-callout { border-left-color: var(--brand-accent-ink); }
+@media print {
+  .video-guide { --paper:#fff; --ink:#111; --muted:#333; --soft:#f3f3f3; --line:#bbb; --brand-accent-ink:#111; }
+}
