@@ -8,15 +8,18 @@
   <link rel="icon" href="assets/favicon.svg?v=catalog-design" type="image/svg+xml">
   <script src="theme.js?v=guide-20261105"></script>
   <link rel="stylesheet" href="brand.css?v=catalog-design">
-  <link rel="stylesheet" href="preview-home.css?v=catalog-design">
+  <link rel="stylesheet" href="preview-home.css?v=quick-studio">
   <link rel="stylesheet" href="intro.css?v=studio-identity">
   <script src="auth-client.js?v=verified-auth-20261026" defer></script>
   <script src="site.js?v=rebrand-20261012" defer></script>
   <script src="product-samples.js" defer></script>
   <script src="studio-renderer.js?v=larger-canvas-1" defer></script>
-  <script src="marketing.js?v=catalog-design" defer></script>
+  <script src="marketing.js?v=quick-studio" defer></script>
+  <script src="photo-import.js" defer></script>
+  <script src="studio-project.js?v=studio-refresh-1" defer></script>
+  <script src="home-studio.js?v=quick-studio" defer></script>
   <script src="intro.js?v=20261030" defer></script>
-  <script src="interface-language.js?v=catalog-design" defer></script>
+  <script src="interface-language.js?v=quick-studio" defer></script>
 </head>
 <body class="preview-home">
 <a class="skip-link" href="#main">К содержимому</a>
@@ -28,72 +31,98 @@
   <a class="header-account" data-account-link href="auth.html">Войти</a>
 </div></header>
 <main id="main">
-  <section class="container mark-hero">
-    <div class="hero-copy">
-      <h1>От фото товара до готовой карточки</h1>
-      <p>Добавьте цену и преимущества, подберите стиль и скачайте карточку. Редактор доступен без регистрации.</p>
-      <div class="mark-hero-actions">
-        <a class="button button-orange" href="editor.html">Создать карточку <span aria-hidden="true">↗</span></a>
-        <a class="text-link" href="examples.html">Смотреть шаблоны <span aria-hidden="true">→</span></a>
+  <section class="mark-hero" aria-labelledby="home-title">
+    <div class="container hero-copy">
+      <h1 id="home-title">Карточка товара<br>из вашего фото</h1>
+      <p>Загрузите фото, добавьте название и цену. Готовая карточка появится прямо здесь.</p>
+    </div>
+
+    <div class="container hero-workspace">
+      <div class="workspace-decoration" aria-hidden="true">
+        <img class="workspace-photo workspace-photo-left" src="assets/images/skincare.jpg" alt="" width="200" height="250">
+        <img class="workspace-photo workspace-photo-right" src="assets/images/sneaker.jpg" alt="" width="200" height="250">
+      </div>
+
+      <form id="home-studio" class="preview-studio" aria-label="Быстрый редактор карточки" hidden>
+        <div class="quick-controls">
+          <div class="quick-heading">
+            <h2>Ваш товар</h2>
+            <button class="quick-link" id="quick-example" type="button">Попробовать на примере</button>
+          </div>
+
+          <div class="quick-drop" id="quick-drop">
+            <img id="quick-photo" src="assets/images/ceramics.jpg" width="64" height="64" alt="">
+            <div>
+              <button class="button button-orange quick-upload" id="quick-upload" type="button">
+                <span aria-hidden="true">↑</span><span id="quick-upload-label">Загрузить фото</span>
+              </button>
+              <span class="quick-file-types">JPG, PNG, WebP, HEIC · до 10 МБ</span>
+            </div>
+            <input id="quick-file" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" hidden>
+          </div>
+
+          <div class="quick-fields">
+            <label>Название товара<input id="quick-title" type="text" maxlength="60" placeholder="Название вашего товара" value="Керамическая чашка"></label>
+            <label>Цена, ₸<input id="quick-price" type="text" inputmode="decimal" maxlength="18" placeholder="Без цены" value="4900" aria-describedby="quick-status"></label>
+          </div>
+
+          <fieldset class="hero-style-picker">
+            <legend>Стиль карточки</legend>
+            <div class="quick-styles">
+              <button type="button" data-hero-style="studio" aria-pressed="true"><i aria-hidden="true"></i><span>Студия</span></button>
+              <button type="button" data-hero-style="noir" aria-pressed="false"><i aria-hidden="true"></i><span>Нуар</span></button>
+              <button type="button" data-hero-style="bold" aria-pressed="false"><i aria-hidden="true"></i><span>Постер</span></button>
+              <button type="button" data-hero-style="neon" aria-pressed="false"><i aria-hidden="true"></i><span>Неон</span></button>
+            </div>
+          </fieldset>
+          <p class="quick-status" id="quick-status" role="status"></p>
+        </div>
+
+        <div class="quick-result" id="quick-result">
+          <div class="quick-result-top"><span>Предпросмотр</span><span>4:5</span></div>
+          <div class="quick-canvas render-wrap">
+            <canvas id="hero-card" role="img" aria-label="Предпросмотр товарной карточки"></canvas>
+            <img class="canvas-fallback" src="assets/images/ceramics.jpg" alt="Фотография керамической чашки">
+          </div>
+          <button class="quick-open button" id="quick-open" type="submit" disabled><span>Открыть в редакторе</span><span aria-hidden="true">↗</span></button>
+        </div>
+      </form>
+      <div class="quick-fallback" id="quick-fallback">
+        <a class="button button-orange" href="editor.html">Открыть редактор <span aria-hidden="true">↗</span></a>
       </div>
     </div>
-    <figure class="preview-studio" aria-label="Интерактивный пример карточки товара">
-      <figcaption class="preview-bar"><span>Пример карточки</span><span>Портрет · 4:5</span></figcaption>
-      <div class="preview-stage" data-comparison style="--compare: 0%">
-        <div class="preview-objects">
-          <figure class="preview-source">
-            <img src="assets/images/ceramics.jpg" alt="Фотография керамической чашки" width="480" height="480" fetchpriority="high">
-            <figcaption>Исходное фото</figcaption>
-          </figure>
-          <span class="preview-arrow" aria-hidden="true">→</span>
-          <figure class="preview-result">
-            <div class="hero-primary render-wrap">
-              <canvas id="hero-card" data-mark-card data-template="studio" data-photo="ceramics" aria-label="Карточка керамической чашки в шаблоне Студия"></canvas>
-              <img class="canvas-fallback" src="assets/images/ceramics.jpg" alt="Исходное фото чашки">
-              <div class="preview-original" aria-hidden="true"><img src="assets/images/ceramics.jpg" alt=""></div>
-            </div>
-            <figcaption>
-              <a class="stage-open" data-hero-open data-editor-template="studio" href="editor.html?style=studio&amp;photo=ceramics"><span>Открыть пример</span><span aria-hidden="true">↗</span></a>
-            </figcaption>
-          </figure>
-        </div>
-        <div class="preview-slider">
-          <span aria-hidden="true">Карточка</span>
-          <input type="range" min="0" max="100" value="0" data-compare-range aria-label="Показать долю исходного фото" aria-valuetext="Карточка">
-          <span aria-hidden="true">Фото</span>
-        </div>
-      </div>
-      <div class="hero-style-picker" role="group" aria-label="Стиль примера">
-        <button type="button" data-hero-style="studio" aria-pressed="true">Студия</button>
-        <button type="button" data-hero-style="noir" aria-pressed="false">Нуар</button>
-        <button type="button" data-hero-style="bold" aria-pressed="false">Постер</button>
-        <button type="button" data-hero-style="neon" aria-pressed="false">Неон</button>
-      </div>
-      <p id="hero-style-status" class="sr-only" role="status">Шаблон Студия</p>
-    </figure>
   </section>
-
   <section class="container preview-examples" aria-labelledby="example-title">
     <div class="preview-section-heading">
-      <h2 id="example-title">Как выглядит ваш товар в разных стилях</h2>
+      <div>
+        <h2 id="example-title">Примерьте стиль на товар</h2>
+        <p>Выберите карточку, чтобы открыть её в редакторе со всеми настройками.</p>
+      </div>
       <a class="text-link" href="examples.html">Все шаблоны <span aria-hidden="true">↗</span></a>
     </div>
     <div class="preview-grid">
+      <a class="preview-example preview-example-featured" data-editor-template="bloom" href="editor.html?style=bloom&amp;photo=skincare">
+        <div class="preview-example-art tone-lilac"><div class="render-wrap"><canvas data-mark-card data-template="bloom" data-photo="skincare" aria-label="Пример карточки косметики"></canvas><img class="canvas-fallback" src="assets/images/skincare.jpg" loading="lazy" alt="Сыворотка"></div></div>
+        <div class="preview-example-label"><span><strong>Косметика</strong><small>Цветение</small></span><span aria-hidden="true">↗</span></div>
+      </a>
       <a class="preview-example" data-editor-template="accent" href="editor.html?style=accent&amp;photo=sneaker">
         <div class="preview-example-art tone-peach"><div class="render-wrap"><canvas data-mark-card data-template="accent" data-photo="sneaker" aria-label="Пример карточки кроссовок"></canvas><img class="canvas-fallback" src="assets/images/sneaker.jpg" loading="lazy" alt="Кроссовки"></div></div>
-        <span class="preview-example-label"><strong>Терракота</strong><span aria-hidden="true">↗</span></span>
-      </a>
-      <a class="preview-example" data-editor-template="bloom" href="editor.html?style=bloom&amp;photo=skincare">
-        <div class="preview-example-art tone-lilac"><div class="render-wrap"><canvas data-mark-card data-template="bloom" data-photo="skincare" aria-label="Пример карточки косметики"></canvas><img class="canvas-fallback" src="assets/images/skincare.jpg" loading="lazy" alt="Сыворотка"></div></div>
-        <span class="preview-example-label"><strong>Цветение</strong><span aria-hidden="true">↗</span></span>
+        <div class="preview-example-label"><span><strong>Обувь</strong><small>Терракота</small></span><span aria-hidden="true">↗</span></div>
       </a>
       <a class="preview-example" data-editor-template="studio" href="editor.html?style=studio&amp;photo=ceramics">
         <div class="preview-example-art tone-sage"><div class="render-wrap"><canvas data-mark-card data-template="studio" data-photo="ceramics" aria-label="Пример карточки чашки"></canvas><img class="canvas-fallback" src="assets/images/ceramics.jpg" loading="lazy" alt="Керамическая чашка"></div></div>
-        <span class="preview-example-label"><strong>Студия</strong><span aria-hidden="true">↗</span></span>
+        <div class="preview-example-label"><span><strong>Для дома</strong><small>Студия</small></span><span aria-hidden="true">↗</span></div>
+      </a>
+      <a class="preview-example" data-editor-template="noir" href="editor.html?style=noir&amp;photo=jewelry">
+        <div class="preview-example-art tone-ochre"><div class="render-wrap"><canvas data-mark-card data-template="noir" data-photo="jewelry" aria-label="Пример карточки украшения"></canvas><img class="canvas-fallback" src="assets/images/jewelry.jpg" loading="lazy" alt="Кулон"></div></div>
+        <div class="preview-example-label"><span><strong>Украшения</strong><small>Нуар</small></span><span aria-hidden="true">↗</span></div>
+      </a>
+      <a class="preview-example" data-editor-template="neon" href="editor.html?style=neon&amp;photo=headphones">
+        <div class="preview-example-art tone-blue"><div class="render-wrap"><canvas data-mark-card data-template="neon" data-photo="headphones" aria-label="Пример карточки наушников"></canvas><img class="canvas-fallback" src="assets/images/headphones.jpg" loading="lazy" alt="Наушники"></div></div>
+        <div class="preview-example-label"><span><strong>Электроника</strong><small>Неон</small></span><span aria-hidden="true">↗</span></div>
       </a>
     </div>
   </section>
-
   <section class="container video-feature" aria-labelledby="video-feature-title">
     <div class="video-feature-copy">
       <h2 id="video-feature-title">Из карточки в короткий ролик</h2>

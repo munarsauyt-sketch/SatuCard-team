@@ -954,7 +954,7 @@
     }
     catch (error) { status('project-status', error.message, true); }
   });
-  $('restore-draft-button').addEventListener('click', async () => {
+  async function restorePendingDraft() {
     try {
       if (!pendingDraft) return;
       await restoreProject(pendingDraft);
@@ -962,7 +962,8 @@
       $('draft-restore-banner').hidden = true;
       status('project-status', 'Черновик восстановлен вместе с фотографиями.');
     } catch (error) { status('project-status', error.message, true); }
-  });
+  }
+  $('restore-draft-button').addEventListener('click', restorePendingDraft);
   $('discard-draft-button').addEventListener('click', () => {
     pendingDraft = null;
     $('draft-restore-banner').hidden = true;
@@ -990,16 +991,13 @@
     if (renderer.templates[params.get('style')]) model.settings.template = params.get('style'); if (renderer.formats[params.get('format')]) model.settings.format = params.get('format');
     await loadSample(Object.hasOwn(samples, params.get('photo')) ? params.get('photo') : 'headphones', true);
     if (!initialized) { syncActiveView(); initialModel = clone(model); history = project.createHistory(model); initialized = true; updateHistory(); requestRender(true); }
-    form.inert = false;
-    ['download-button', 'copy-card-image', 'publish-button', 'save-project-button', 'load-project-input'].forEach(id => { $(id).disabled = false; });
-    fitPreview();
     try {
       const requestedDraft = params.get('draft');
       const own = await project.draftAction('get', undefined, requestedDraft || draftId);
-      const drafts = own ? [] : await project.draftAction('list');
+      const drafts = own || requestedDraft ? [] : await project.draftAction('list');
       const latest = drafts?.filter?.(entry => entry?.payload).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
       pendingDraftId = requestedDraft || (own ? draftId : latest?.id || 'current');
-      let saved = own || latest?.payload || await project.draftAction('get');
+      let saved = requestedDraft ? own : own || latest?.payload || await project.draftAction('get');
       if (saved) {
         saved = project.recoverJournal?.(pendingDraftId, saved) || saved;
         const parsed = project.parseProject(saved, renderer.normalize);
@@ -1007,10 +1005,15 @@
         $('draft-restore-banner').querySelector('p').textContent = 'Продолжить «' + (parsed.settings.title || 'Без названия') + '». Другие товары доступны в списке проектов.';
         $('draft-restore-banner').hidden = false;
         status('draft-status', 'Есть сохранённый черновик');
-        if (requestedDraft) $('restore-draft-button').click();
+        if (requestedDraft) await restorePendingDraft();
+      } else if (requestedDraft) {
+        status('draft-status', 'Черновик не найден на этом устройстве.', true);
       } else status('draft-status', 'Локальное автосохранение');
     }
     catch (_) { status('draft-status', 'Автосохранение недоступно — используйте «Сохранить проект».'); }
+    form.inert = false;
+    ['download-button', 'copy-card-image', 'publish-button', 'save-project-button', 'load-project-input'].forEach(id => { $(id).disabled = false; });
+    fitPreview();
     const publicationId = params.get('publication');
     if (publicationId) {
       try {

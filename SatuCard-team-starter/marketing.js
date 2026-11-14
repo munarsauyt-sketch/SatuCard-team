@@ -45,7 +45,7 @@
       const image = await loadImage(key);
       if (canvas.dataset.photo !== key) return;
       const sample = samples[key];
-      renderer.render(canvas, { ...sample, title: sample.headline, subtitle: sample.title, description: '', template: canvas.dataset.template, format: 'portrait', brandName: 'YOUR STORE', photo: { fit: 'cover', radius: 24, ...sample.photo } }, { photo: image }, { scale: canvas.id === 'hero-card' ? .65 : .48 });
+      renderer.render(canvas, { ...sample, title: sample.headline, subtitle: sample.title, description: '', template: canvas.dataset.template, format: 'portrait', brandName: 'YOUR STORE', photo: { fit: 'cover', radius: 24, ...sample.photo } }, { photo: image }, { scale: .48 });
       canvas.classList.add('rendered');
     } catch (_) {
       // Keep the real photo visible if local canvas or image rendering is unavailable.
@@ -81,35 +81,6 @@
     });
     updateCatalogStatus();
   }
-  const heroLink = document.querySelector('[data-hero-open]');
-  const heroStyles = document.querySelectorAll('[data-hero-style]');
-  heroStyles.forEach(button => {
-    button.addEventListener('click', () => {
-      const canvas = document.getElementById('hero-card'); if (!canvas) return;
-      const style = button.dataset.heroStyle;
-      canvas.dataset.template = style;
-      heroStyles.forEach(item => item.setAttribute('aria-pressed', String(item === button)));
-      document.getElementById('hero-style-status').textContent = 'Шаблон ' + renderer.templates[style].label;
-      canvas.setAttribute('aria-label', samples[canvas.dataset.photo].title + ' в шаблоне ' + renderer.templates[style].label);
-      renderCard(canvas);
-      if (heroLink) {
-        heroLink.closest('[data-comparison]').dataset.style = style;
-        const url = new URL(heroLink.href, location.href);
-        url.searchParams.set('style', style);
-        heroLink.href = url.href;
-      }
-      const wrap = canvas.closest('.hero-primary'); wrap.classList.remove('is-swapping');
-      requestAnimationFrame(() => wrap.classList.add('is-swapping'));
-    });
-  });
-  document.querySelectorAll('[data-compare-range]').forEach(input => {
-    const updateComparison = () => {
-      input.closest('[data-comparison]').style.setProperty('--compare', `${input.value}%`);
-      input.setAttribute('aria-valuetext', `Исходное фото: ${input.value}%`);
-    };
-    input.addEventListener('input', updateComparison);
-    updateComparison();
-  });
   document.querySelectorAll('[data-template-filter]').forEach(button => {
     button.addEventListener('click', () => {
       const filter = button.dataset.templateFilter;
