@@ -151,7 +151,7 @@ async function refresh() {
     const select = $('billing-plan');
     const selected = select.value || new URLSearchParams(location.search).get('plan');
     select.replaceChildren(...data.plans.map(plan => {
-      const option = element('option', plan.name + ' · ' + money(plan.priceKzt) + ' за ' + plan.days + ' дней');
+      const option = element('option', plan.name + ' · ' + money(plan.priceKzt) + (plan.permanent ? ' · навсегда' : ' за ' + plan.days + ' дней'));
       option.value = plan.id;
       return option;
     }));

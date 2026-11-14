@@ -10,7 +10,7 @@ create table if not exists public.billing_orders (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.billing_accounts(user_id),
   request_id uuid not null,
-  plan_id text not null check (plan_id in ('basic', 'plus', 'max', 'max3')),
+  plan_id text not null check (plan_id in ('basic', 'plus', 'max', 'max3', 'niche10')),
   amount_kzt integer not null check (amount_kzt > 0),
   token_limit bigint not null check (token_limit > 0),
   tier integer not null check (tier between 1 and 3),
@@ -101,10 +101,11 @@ begin
     raise exception 'Invalid billing request' using errcode = '22023';
   end if;
   case p_plan_id
-    when 'basic' then amount := 1000; allowance := 5000000; plan_tier := 1;
-    when 'plus' then amount := 2500; allowance := 8000000; plan_tier := 2;
-    when 'max' then amount := 5000; allowance := 10000000; plan_tier := 3;
-    when 'max3' then amount := 10000; allowance := 30000000; plan_tier := 3;
+    when 'basic' then amount := 1500; allowance := 5000000; plan_tier := 1;
+    when 'plus' then amount := 2990; allowance := 8000000; plan_tier := 2;
+    when 'max' then amount := 4990; allowance := 10000000; plan_tier := 3;
+    when 'max3' then amount := 9990; allowance := 30000000; plan_tier := 3;
+    when 'niche10' then amount := 490; allowance := 1; plan_tier := 1;
     else raise exception 'Unknown plan' using errcode = '22023';
   end case;
   insert into public.billing_accounts(user_id) values(p_user_id) on conflict do nothing;

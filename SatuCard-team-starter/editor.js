@@ -207,6 +207,16 @@
     for (const [id, key] of Object.entries(photoRanges)) $(id + '-value').value = $(id).value + (units[key] || '%');
     $('text-scale-value').value = $('text-scale').value + '%';
     for (const id of Object.keys(colorFields)) $(id).disabled = !$('custom-colors').checked;
+    const autoBadge = $('auto-discount-badge');
+    if (autoBadge) {
+      const p = model.settings.price, oldP = model.settings.oldPrice;
+      const pct = p > 0 && oldP > p ? Math.round((1 - p / oldP) * 100) : 0;
+      autoBadge.hidden = pct <= 0;
+      if (pct > 0) {
+        autoBadge.textContent = `−${pct}%`;
+        autoBadge.dataset.badgePreset = `−${pct}%`;
+      }
+    }
   }
   function updateContentHints() {
     const purpose = model.settings.purpose || 'cover', category = model.settings.category || 'generic';

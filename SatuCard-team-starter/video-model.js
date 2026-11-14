@@ -4,6 +4,7 @@ export const MAX_DURATION = 30;
 export const MAX_LAYERS = 64;
 export const FORMATS = {
   vertical: { label: '9:16 · Истории', width: 1080, height: 1920 },
+  marketplace34: { label: '3:4 · Видеообложка МП', width: 900, height: 1200 },
   square: { label: '1:1 · Каталог', width: 1080, height: 1080 },
   wide: { label: '16:9 · Горизонтальный', width: 1920, height: 1080 },
 };

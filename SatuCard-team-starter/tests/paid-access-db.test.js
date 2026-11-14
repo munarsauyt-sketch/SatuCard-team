@@ -8,7 +8,7 @@ const user = index => '11111111-1111-4111-8111-' + String(index).padStart(12, '0
 const admin = user(99);
 let sequence = 100;
 const requestId = () => '22222222-2222-4222-8222-' + String(++sequence).padStart(12, '0');
-const amounts = { basic: 1000, plus: 2500, max: 5000, max3: 10000 };
+const amounts = { basic: 1500, plus: 2990, max: 4990, max3: 9990, niche10: 490 };
 async function database() {
   const db = new PGlite();
   await db.exec('create role anon; create role authenticated; create role service_role; create schema auth; create table auth.users(id uuid primary key,email text);');

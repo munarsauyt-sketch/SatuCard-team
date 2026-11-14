@@ -87,9 +87,9 @@ test('verified payment activates one period and an authorized model uses the res
   const orderResponse = await billing(request('billing', 'buyer', create));
   assert.equal(orderResponse.status, 201);
   const { order } = await orderResponse.json();
-  assert.equal(order.amountKzt, 1000);
+  assert.equal(order.amountKzt, 1500);
   assert.equal(order.status, 'pending');
-  const confirmation = { action: 'confirm', orderId: order.id, paymentReference: 'test-transfer-123', receivedAmountKzt: 1000, receiptChecked: true };
+  const confirmation = { action: 'confirm', orderId: order.id, paymentReference: 'test-transfer-123', receivedAmountKzt: 1500, receiptChecked: true };
   assert.equal((await billing(request('billing', 'buyer', confirmation))).status, 403);
   assert.equal((await billingStatus(request('billing?admin=1', 'other'))).status, 403);
   assert.equal((await billing(request('billing', 'other', { action: 'cancel', orderId: order.id }))).status, 404);

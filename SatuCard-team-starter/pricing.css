@@ -265,6 +265,61 @@
 .pricing-card details { margin-bottom:20px; }
 .pricing-card summary { cursor:pointer; min-height:44px; }
 
+.pricing-packs {
+  margin-top: clamp(16px, 2.2vw, 24px);
+}
+.pricing-pack-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px 28px;
+  padding: clamp(18px, 2.4vw, 28px);
+  border: 1px solid var(--brand-line);
+  border-radius: 13px;
+  background: var(--brand-surface);
+}
+.pricing-pack-card > div:first-child {
+  flex: 1 1 380px;
+}
+.pricing-pack-badge {
+  display: inline-block;
+  margin-bottom: 8px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--brand-soft);
+  color: var(--brand-accent-ink);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+.pricing-pack-card h2 {
+  font-size: clamp(20px, 2.2vw, 26px);
+  letter-spacing: -.04em;
+}
+.pricing-pack-card p {
+  margin-top: 8px;
+  color: var(--brand-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.pricing-pack-action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  min-width: 220px;
+}
+.pricing-pack-action .pricing-price {
+  margin-top: 0;
+}
+@media (max-width: 680px) {
+  .pricing-pack-action {
+    width: 100%;
+    align-items: stretch;
+  }
+}
+
 @media (max-width: 1030px) {
   .pricing-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

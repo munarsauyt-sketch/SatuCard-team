@@ -1,5 +1,5 @@
 import { AccountError } from './account.js';
-import { ACCESS_DAYS, BILLING_PLANS } from '../billing-plans.js';
+import { ACCESS_DAYS, BILLING_PLANS, ONE_TIME_PACKS } from '../billing-plans.js';
 import { SUPPORT } from '../support.js';
 
 export const billingId = value => typeof value === 'string' && /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(value);
@@ -32,7 +32,9 @@ export async function billingRpc(config, name, args) {
   } finally { clearTimeout(timeout); }
 }
 
-export function billingPlan(id) { return BILLING_PLANS.find(plan => plan.id === id); }
+export function billingPlan(id) {
+  return BILLING_PLANS.find(plan => plan.id === id) || ONE_TIME_PACKS.find(pack => pack.id === id);
+}
 
 export function publicOrder(row) {
   const plan = billingPlan(row.plan_id);
@@ -67,8 +69,12 @@ export function paymentDetails() {
   return { checkoutUrl: paymentRequestsEnabled() ? checkoutUrl : null, support: SUPPORT };
 }
 
-export const publicPlans = () => BILLING_PLANS.map(({ id, name, priceKzt, models, includes, benefits }) =>
-  ({ id, name, priceKzt, models, includes, benefits, days: ACCESS_DAYS }));
+export const publicPlans = () => [
+  ...BILLING_PLANS.map(({ id, name, priceKzt, models, includes, benefits }) =>
+    ({ id, name, priceKzt, models, includes, benefits, days: ACCESS_DAYS })),
+  ...ONE_TIME_PACKS.map(({ id, name, priceKzt, description }) =>
+    ({ id, name, priceKzt, models: [], benefits: [description], days: 0, permanent: true }))
+];
 
 export const quotaFailures = {
   access_expired: [403, 'Срок платного доступа закончился. Выберите новый период.'],
