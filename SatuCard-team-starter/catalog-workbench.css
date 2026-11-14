@@ -176,6 +176,10 @@ html[data-theme="dark"] .studio-page {
   color: var(--work-on-action);
 }
 
+.studio-page .ai-floating-launch:hover {
+  background: var(--work-accent-hover);
+}
+
 .studio-page .studio-form {
   padding: 20px;
 }
@@ -289,6 +293,17 @@ html[data-theme="dark"] .studio-page {
     min-width: min(100%, 144px);
   }
 
+  .studio-page .studio-start > label {
+    display: block;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
   .studio-page .studio-mobile-view {
     transform: none;
     margin: 16px auto;
@@ -341,7 +356,8 @@ html[data-theme="light"]:has(.video-workbench) {
   background: var(--work-paper);
 }
 
-.video-workbench .topbar {
+.video-workbench .topbar,
+html[data-theme="light"] .video-workbench .topbar {
   gap: 12px;
   padding-inline: 24px;
   background: var(--work-surface);
@@ -703,7 +719,8 @@ html[data-theme="light"] .video-workbench .rail {
 }
 
 @media (max-width: 900px) {
-  .video-workbench .topbar {
+  .video-workbench .topbar,
+  html[data-theme="light"] .video-workbench .topbar {
     gap: 8px;
     padding-inline: 12px;
   }
@@ -716,6 +733,10 @@ html[data-theme="light"] .video-workbench .rail {
   .video-workbench .library {
     max-height: 44dvh;
     padding: 16px;
+  }
+
+  .video-workbench .library:has([data-library="templates"]:not([hidden])) {
+    max-height: none;
   }
 
   .video-workbench .template-grid {
@@ -763,16 +784,32 @@ html[data-theme="light"] .video-workbench .rail {
   }
 
   .video-workbench .video-help-tip {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px 8px;
     padding: 12px;
+  }
+
+  .video-workbench .video-help-tip :is(strong, p, .primary) {
+    grid-column: 1 / -1;
+  }
+
+  .video-workbench .video-help-tip p {
+    margin: 0;
   }
 
   .video-workbench .video-help-tip button {
     min-height: 44px;
+    margin: 0;
+    padding-inline: 6px;
+    font-size: 11px;
   }
 
   .video-workbench .video-help-tip .help-manual {
-    margin-block: 8px 0;
-    padding-block: 8px;
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    margin: 0;
   }
 
   .video-workbench .stage {
