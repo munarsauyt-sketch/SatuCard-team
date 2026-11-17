@@ -174,8 +174,72 @@
             <div class="studio-field"><label for="product-category">Категория товара</label><select id="product-category"><option value="generic">Любой товар</option><option value="electronics">Электроника</option><option value="clothing">Одежда и обувь</option><option value="beauty">Красота и уход</option><option value="home">Дом и быт</option></select><p id="purpose-help" class="studio-help"></p></div>
 
             </div>
-            <div class="studio-control-section"><div class="studio-field"><label for="card-format">Формат карточки</label><select id="card-format"><option value="portrait">Лента · 4:5</option><option value="portrait34">Маркетплейс · 3:4</option><option value="square">Квадрат · 1:1</option><option value="story">История · 9:16</option></select></div><div class="studio-field" data-workflow-control><label for="duplicate-format">Копия карточки</label><select id="duplicate-format"><option value="">Копия в другом формате</option><option value="portrait">Лента · 4:5</option><option value="portrait34">Маркетплейс · 3:4</option><option value="square">Квадрат · 1:1</option><option value="story">История · 9:16</option></select></div><div class="studio-two-columns"><div class="studio-field"><label for="font-family">Шрифт</label><select id="font-family"></select></div><div class="studio-field"><label for="text-align">Выравнивание</label><select id="text-align"><option value="left">По левому краю</option><option value="center">По центру</option></select></div></div><div class="studio-range"><label for="text-scale">Размер текста <output id="text-scale-value" for="text-scale">100%</output></label><input id="text-scale" type="range" min="80" max="120" value="100"></div></div>
-            <div class="studio-control-section"><div class="control-section-heading"><h3>Палитра</h3><button id="photo-palette" class="studio-quiet-button studio-photo-palette" type="button" disabled>Палитра из фото</button></div><div class="studio-palettes" aria-label="Готовые палитры"><button type="button" data-palette="forest" title="Шалфей" aria-label="Палитра Шалфей"><i style="--palette-a:#e4e8db;--palette-b:#3c5143;--palette-c:#232b24"></i><span>Шалфей</span></button><button type="button" data-palette="orange" title="Терракота" aria-label="Палитра Терракота"><i style="--palette-a:#fbe3d3;--palette-b:#e85d35;--palette-c:#3c2820"></i><span>Терракота</span></button><button type="button" data-palette="ocean" title="Океан" aria-label="Палитра Океан"><i style="--palette-a:#daeafa;--palette-b:#2879cb;--palette-c:#152f4b"></i><span>Океан</span></button><button type="button" data-palette="violet" title="Лаванда" aria-label="Палитра Лаванда"><i style="--palette-a:#ece3fa;--palette-b:#8661cc;--palette-c:#302042"></i><span>Лаванда</span></button><button type="button" data-palette="rose" title="Роза" aria-label="Палитра Роза"><i style="--palette-a:#f8dfe8;--palette-b:#ce668b;--palette-c:#442635"></i><span>Роза</span></button></div><label class="studio-switch"><input id="custom-colors" type="checkbox"><span>Настроить свои цвета</span><i aria-hidden="true"></i></label><div class="studio-color-row"><label for="background-color"><input id="background-color" type="color" value="#e4e8db"><span>Фон</span></label><label for="accent-color"><input id="accent-color" type="color" value="#e85d35"><span>Акцент</span></label><label for="text-color"><input id="text-color" type="color" value="#242522"><span>Текст</span></label></div></div>
+            <div class="studio-control-section">
+              <div class="studio-field"><label for="card-format">Формат карточки</label><select id="card-format"><option value="portrait">Лента · 4:5</option><option value="portrait34">Маркетплейс · 3:4</option><option value="square">Квадрат · 1:1</option><option value="story">История · 9:16</option></select></div>
+              <div class="studio-field" data-workflow-control><label for="duplicate-format">Копия карточки</label><select id="duplicate-format"><option value="">Копия в другом формате</option><option value="portrait">Лента · 4:5</option><option value="portrait34">Маркетплейс · 3:4</option><option value="square">Квадрат · 1:1</option><option value="story">История · 9:16</option></select></div>
+              <div class="studio-two-columns"><div class="studio-field"><label for="font-family">Шрифт</label><select id="font-family"></select></div><div class="studio-field"><label for="text-align">Выравнивание</label><select id="text-align"><option value="left">По левому краю</option><option value="center">По центру</option></select></div></div>
+              <div class="studio-range"><label for="text-scale">Размер текста <output id="text-scale-value" for="text-scale">100%</output></label><input id="text-scale" type="range" min="80" max="120" value="100"></div>
+              <div class="studio-field design-presets-block">
+                <span class="studio-field-label"><label>Быстрый характер текста</label></span>
+                <div class="badge-presets" role="group" aria-label="Пресеты типографики">
+                  <button type="button" class="chip-button" data-type-preset="catalog">Каталог</button>
+                  <button type="button" class="chip-button" data-type-preset="poster">Крупный постер</button>
+                  <button type="button" class="chip-button" data-type-preset="boutique">Бутик · Центр</button>
+                  <button type="button" class="chip-button" data-type-preset="tech">Техно · Моно</button>
+                </div>
+              </div>
+              <div class="studio-field design-presets-block">
+                <span class="studio-field-label"><label>Форма рамки фото</label></span>
+                <div class="badge-presets" role="group" aria-label="Скругление рамки фото">
+                  <button type="button" class="chip-button" data-frame-preset="sharp">Острые 0 px</button>
+                  <button type="button" class="chip-button" data-frame-preset="soft">Мягкие 16 px</button>
+                  <button type="button" class="chip-button" data-frame-preset="round">Округлые 32 px</button>
+                  <button type="button" class="chip-button" data-frame-preset="capsule">Капсула 50 px</button>
+                </div>
+              </div>
+            </div>
+            <div class="studio-control-section">
+              <div class="control-section-heading"><h3>Палитра</h3><button id="photo-palette" class="studio-quiet-button studio-photo-palette" type="button" disabled>Палитра из фото</button></div>
+              <div class="badge-presets palette-group-filters" role="group" aria-label="Фильтр палитр">
+                <button type="button" class="chip-button" data-palette-group="all" aria-pressed="true">Все 18</button>
+                <button type="button" class="chip-button" data-palette-group="light" aria-pressed="false">Светлые</button>
+                <button type="button" class="chip-button" data-palette-group="dark" aria-pressed="false">Тёмные</button>
+                <button type="button" class="chip-button" data-palette-group="vivid" aria-pressed="false">Яркие</button>
+              </div>
+              <div class="studio-palettes" aria-label="Готовые палитры">
+                <button type="button" data-palette="forest" data-palette-tone="light" title="Шалфей" aria-label="Палитра Шалфей"><i style="--palette-a:#e4e8db;--palette-b:#3c5143;--palette-c:#232b24"></i><span>Шалфей</span></button>
+                <button type="button" data-palette="orange" data-palette-tone="light vivid" title="Терракота" aria-label="Палитра Терракота"><i style="--palette-a:#fbe3d3;--palette-b:#e85d35;--palette-c:#3c2820"></i><span>Терракота</span></button>
+                <button type="button" data-palette="ocean" data-palette-tone="light" title="Океан" aria-label="Палитра Океан"><i style="--palette-a:#daeafa;--palette-b:#2879cb;--palette-c:#152f4b"></i><span>Океан</span></button>
+                <button type="button" data-palette="violet" data-palette-tone="light" title="Лаванда" aria-label="Палитра Лаванда"><i style="--palette-a:#ece3fa;--palette-b:#8661cc;--palette-c:#302042"></i><span>Лаванда</span></button>
+                <button type="button" data-palette="rose" data-palette-tone="light" title="Роза" aria-label="Палитра Роза"><i style="--palette-a:#f8dfe8;--palette-b:#ce668b;--palette-c:#442635"></i><span>Роза</span></button>
+                <button type="button" data-palette="sand" data-palette-tone="light" title="Песок и лён" aria-label="Палитра Песок и лён"><i style="--palette-a:#f6efe2;--palette-b:#9c6634;--palette-c:#2d2218"></i><span>Песок</span></button>
+                <button type="button" data-palette="mint" data-palette-tone="light" title="Свежая мята" aria-label="Палитра Свежая мята"><i style="--palette-a:#dff5ee;--palette-b:#0d8a6a;--palette-c:#12332a"></i><span>Мята</span></button>
+                <button type="button" data-palette="clean" data-palette-tone="light vivid" title="Чистый Kaspi" aria-label="Палитра Чистый Kaspi"><i style="--palette-a:#ffffff;--palette-b:#e11d48;--palette-c:#111827"></i><span>Чистый</span></button>
+                <button type="button" data-palette="sky" data-palette-tone="light" title="Альпийский лёд" aria-label="Палитра Альпийский лёд"><i style="--palette-a:#eef6ff;--palette-b:#2563eb;--palette-c:#0f172a"></i><span>Лёд</span></button>
+                <button type="button" data-palette="obsidian" data-palette-tone="dark" title="Чёрное золото" aria-label="Палитра Чёрное золото"><i style="--palette-a:#141518;--palette-b:#d4af37;--palette-c:#f7f3e8"></i><span>Золото</span></button>
+                <button type="button" data-palette="cyber" data-palette-tone="dark vivid" title="Кибер-неон" aria-label="Палитра Кибер-неон"><i style="--palette-a:#09131c;--palette-b:#00e5c3;--palette-c:#eafffc"></i><span>Кибер</span></button>
+                <button type="button" data-palette="espresso" data-palette-tone="dark" title="Эспрессо" aria-label="Палитра Эспрессо"><i style="--palette-a:#221915;--palette-b:#e08e5a;--palette-c:#f9eee6"></i><span>Кофе</span></button>
+                <button type="button" data-palette="emerald" data-palette-tone="dark" title="Изумруд Luxe" aria-label="Палитра Изумруд Luxe"><i style="--palette-a:#0f241d;--palette-b:#52d19c;--palette-c:#ecfdf5"></i><span>Изумруд</span></button>
+                <button type="button" data-palette="midnight" data-palette-tone="dark" title="Полночь Индиго" aria-label="Палитра Полночь Индиго"><i style="--palette-a:#131836;--palette-b:#818cf8;--palette-c:#eef2ff"></i><span>Индиго</span></button>
+                <button type="button" data-palette="kaspi_red" data-palette-tone="light vivid" title="Акция Kaspi" aria-label="Палитра Акция Kaspi"><i style="--palette-a:#fff1f0;--palette-b:#f14635;--palette-c:#1f1615"></i><span>Акция</span></button>
+                <button type="button" data-palette="solar" data-palette-tone="light vivid" title="Солнечный хит" aria-label="Палитра Солнечный хит"><i style="--palette-a:#fef9c3;--palette-b:#ea580c;--palette-c:#1c1917"></i><span>Солнце</span></button>
+                <button type="button" data-palette="berry" data-palette-tone="light vivid" title="Ягодный пунш" aria-label="Палитра Ягодный пунш"><i style="--palette-a:#fae8ff;--palette-b:#c026d3;--palette-c:#3b0764"></i><span>Ягода</span></button>
+                <button type="button" data-palette="lime_pop" data-palette-tone="dark vivid" title="Лайм и кобальт" aria-label="Палитра Лайм и кобальт"><i style="--palette-a:#1e293b;--palette-b:#bef264;--palette-c:#f8fafc"></i><span>Лайм</span></button>
+              </div>
+              <div class="badge-presets color-smart-actions" role="group" aria-label="Быстрые действия с цветом">
+                <button id="random-palette-button" type="button" class="chip-button">Случайная палитра</button>
+                <button id="invert-colors-button" type="button" class="chip-button">Фон ↔ Текст</button>
+                <button id="harmonize-colors-button" type="button" class="chip-button">Под акцент</button>
+                <button id="reset-colors-button" type="button" class="chip-button">Цвета шаблона</button>
+              </div>
+              <label class="studio-switch"><input id="custom-colors" type="checkbox"><span>Настроить свои цвета</span><i aria-hidden="true"></i></label>
+              <div class="studio-color-row"><label for="background-color"><input id="background-color" type="color" value="#e4e8db"><span>Фон</span></label><label for="accent-color"><input id="accent-color" type="color" value="#e85d35"><span>Акцент</span></label><label for="text-color"><input id="text-color" type="color" value="#242522"><span>Текст</span></label></div>
+              <div class="contrast-checker-row">
+                <span id="contrast-badge" class="studio-mini-label" role="status">Контраст текста: проверка…</span>
+                <button id="fix-contrast-button" type="button" class="studio-text-button" hidden>Усилить контраст</button>
+              </div>
+              <button id="apply-design-all" type="button" class="studio-quiet-button design-apply-all">Применить дизайн ко всем слайдам</button>
+            </div>
           </section>
           <section id="panel-templates" data-editor-panel="templates" role="tabpanel" aria-labelledby="tab-templates" tabindex="0" hidden>
             <div class="control-section-heading"><h3>Коллекция шаблонов</h3><span id="template-count" class="studio-mini-label"></span></div><div id="template-grid" class="studio-template-grid" aria-label="Шаблоны карточки"></div>

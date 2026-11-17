@@ -720,4 +720,27 @@ html[data-theme="dark"] .studio-export-status.error { color: #ffb4a6; }
   padding-top: 14px;
   border-top: 1px solid var(--line);
 }
+.design-presets-block {
+  margin-top: 12px;
+}
+.palette-group-filters {
+  margin-bottom: 10px;
+}
+.color-smart-actions {
+  margin: 12px 0 6px;
+}
+.contrast-checker-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--soft);
+}
+.design-apply-all {
+  width: 100%;
+  margin-top: 12px;
+}
 

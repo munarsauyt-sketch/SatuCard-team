@@ -16,8 +16,24 @@
   const mobileNavigation = document.querySelector('.studio-mobile-view');
   const previewStage = $('preview-stage'), toolbar = document.querySelector('.studio-project-bar');
   const palettes = {
-    forest: ['#e1e8d9', '#466343', '#233126'], orange: ['#fff0e5', '#f06435', '#35251f'],
-    ocean: ['#dcedf5', '#087da1', '#112c3d'], violet: ['#ece5ff', '#8053df', '#2a2041'], rose: ['#fce5ed', '#c34f7a', '#462232']
+    forest: ['#e1e8d9', '#466343', '#233126'],
+    orange: ['#fff0e5', '#f06435', '#35251f'],
+    ocean: ['#dcedf5', '#087da1', '#112c3d'],
+    violet: ['#ece5ff', '#8053df', '#2a2041'],
+    rose: ['#fce5ed', '#c34f7a', '#462232'],
+    sand: ['#f6efe2', '#9c6634', '#2d2218'],
+    mint: ['#dff5ee', '#0d8a6a', '#12332a'],
+    clean: ['#ffffff', '#e11d48', '#111827'],
+    sky: ['#eef6ff', '#2563eb', '#0f172a'],
+    obsidian: ['#141518', '#d4af37', '#f7f3e8'],
+    cyber: ['#09131c', '#00e5c3', '#eafffc'],
+    espresso: ['#221915', '#e08e5a', '#f9eee6'],
+    emerald: ['#0f241d', '#52d19c', '#ecfdf5'],
+    midnight: ['#131836', '#818cf8', '#eef2ff'],
+    kaspi_red: ['#fff1f0', '#f14635', '#1f1615'],
+    solar: ['#fef9c3', '#ea580c', '#1c1917'],
+    berry: ['#fae8ff', '#c026d3', '#3b0764'],
+    lime_pop: ['#1e293b', '#bef264', '#f8fafc']
   };
   const samples = window.SATUCARD_SAMPLES;
   const textFields = { 'product-name': 'title', 'product-subtitle': 'subtitle', 'product-description': 'description', 'product-badge': 'badge', 'brand-name': 'brandName' };
@@ -216,6 +232,21 @@
         autoBadge.textContent = `−${pct}%`;
         autoBadge.dataset.badgePreset = `−${pct}%`;
       }
+    }
+    const contrastBadge = $('contrast-badge'), fixContrastBtn = $('fix-contrast-button');
+    if (contrastBadge) {
+      const lum = hex => {
+        const [r, g, b] = [1, 3, 5].map(i => {
+          const c = parseInt((hex || '#000000').slice(i, i + 2), 16) / 255;
+          return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+        });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      };
+      const l1 = lum(model.settings.background), l2 = lum(model.settings.textColor);
+      const ratio = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+      const grade = ratio >= 7 ? 'Отлично AAA ✓' : ratio >= 4.5 ? 'Хорошо AA ✓' : 'Слабый контраст !';
+      contrastBadge.textContent = `Контраст текста: ${ratio.toFixed(1)}:1 · ${grade}`;
+      if (fixContrastBtn) fixContrastBtn.hidden = ratio >= 4.5;
     }
   }
   function updateContentHints() {
@@ -726,6 +757,103 @@
     model.settings = renderer.normalize({ ...model.settings, template: button.dataset.template, customColors: false, background: template.background, accent: template.accent, textColor: template.textColor }); syncForm(); edited(true);
   });
   document.querySelectorAll('[data-palette]').forEach(button => button.addEventListener('click', () => { commit(); const [background, accent, textColor] = palettes[button.dataset.palette]; model.settings = renderer.normalize({ ...model.settings, customColors: true, background, accent, textColor }); syncForm(); edited(true); }));
+  document.querySelectorAll('[data-palette-group]').forEach(button => {
+    button.addEventListener('click', () => {
+      const group = button.dataset.paletteGroup;
+      document.querySelectorAll('[data-palette-group]').forEach(btn => btn.setAttribute('aria-pressed', String(btn === button)));
+      document.querySelectorAll('[data-palette]').forEach(card => {
+        const tones = (card.dataset.paletteTone || 'light').split(' ');
+        card.hidden = group !== 'all' && !tones.includes(group);
+      });
+    });
+  });
+  document.querySelectorAll('[data-type-preset]').forEach(button => {
+    button.addEventListener('click', () => {
+      const presets = {
+        catalog: { font: 'manrope', textAlign: 'left', textScale: 96 },
+        poster: { font: 'golos', textAlign: 'left', textScale: 115 },
+        boutique: { font: 'noto', textAlign: 'center', textScale: 104 },
+        tech: { font: 'plex', textAlign: 'left', textScale: 94 }
+      };
+      const preset = presets[button.dataset.typePreset];
+      if (!preset) return;
+      commit();
+      model.settings = renderer.normalize({ ...model.settings, ...preset });
+      syncForm(); edited(true);
+      status('project-status', 'Применён пресет типографики.');
+    });
+  });
+  document.querySelectorAll('[data-frame-preset]').forEach(button => {
+    button.addEventListener('click', () => {
+      const presets = {
+        sharp: { radius: 0, fit: 'cover' },
+        soft: { radius: 16, fit: 'contain' },
+        round: { radius: 32, fit: 'contain' },
+        capsule: { radius: 50, fit: 'cover' }
+      };
+      const preset = presets[button.dataset.framePreset];
+      if (!preset) return;
+      commit();
+      model.settings = renderer.normalize({ ...model.settings, photo: { ...model.settings.photo, ...preset } });
+      syncForm(); edited(true);
+      status('project-status', 'Обновлена форма рамки фото.');
+    });
+  });
+  let paletteCursor = 0;
+  $('random-palette-button')?.addEventListener('click', () => {
+    const keys = Object.keys(palettes);
+    paletteCursor = (paletteCursor + 1) % keys.length;
+    const key = keys[paletteCursor];
+    const [background, accent, textColor] = palettes[key];
+    commit();
+    model.settings = renderer.normalize({ ...model.settings, customColors: true, background, accent, textColor });
+    syncForm(); edited(true);
+    status('project-status', 'Выбрана новая цветовая палитра.');
+  });
+  $('invert-colors-button')?.addEventListener('click', () => {
+    commit();
+    const { background, textColor, accent } = model.settings;
+    model.settings = renderer.normalize({ ...model.settings, customColors: true, background: textColor, textColor: background, accent });
+    syncForm(); edited(true);
+    status('project-status', 'Фон и цвет текста поменяны местами.');
+  });
+  $('harmonize-colors-button')?.addEventListener('click', () => {
+    commit();
+    const accent = model.settings.accent || '#4948e8';
+    const r = parseInt(accent.slice(1, 3), 16), g = parseInt(accent.slice(3, 5), 16), b = parseInt(accent.slice(5, 7), 16);
+    const toHex = channels => '#' + channels.map(c => Math.max(0, Math.min(255, Math.round(c))).toString(16).padStart(2, '0')).join('');
+    const lightBg = toHex([r * 0.12 + 255 * 0.88, g * 0.12 + 255 * 0.88, b * 0.12 + 255 * 0.88]);
+    const darkInk = toHex([r * 0.25 + 18, g * 0.25 + 20, b * 0.25 + 24]);
+    model.settings = renderer.normalize({ ...model.settings, customColors: true, background: lightBg, accent, textColor: darkInk });
+    syncForm(); edited(true);
+    status('project-status', 'Фон и текст гармонизированы под выбранный акцент.');
+  });
+  $('reset-colors-button')?.addEventListener('click', () => {
+    commit();
+    const tpl = renderer.templates[model.settings.template] || renderer.templates.studio;
+    model.settings = renderer.normalize({ ...model.settings, customColors: false, background: tpl.background, accent: tpl.accent, textColor: tpl.textColor });
+    syncForm(); edited(true);
+    status('project-status', 'Возвращены родные цвета шаблона.');
+  });
+  $('fix-contrast-button')?.addEventListener('click', () => {
+    commit();
+    const bg = model.settings.background || '#ffffff';
+    const [r, g, b] = [1, 3, 5].map(i => parseInt(bg.slice(i, i + 2), 16));
+    const isLight = (r * 0.299 + g * 0.587 + b * 0.114) > 140;
+    model.settings = renderer.normalize({ ...model.settings, customColors: true, textColor: isLight ? '#141619' : '#f8fafc' });
+    syncForm(); edited(true);
+    status('project-status', 'Контраст текста усилен для высокой читаемости.');
+  });
+  $('apply-design-all')?.addEventListener('click', () => {
+    readForm(); commit();
+    const designKeys = ['template', 'font', 'textAlign', 'textScale', 'customColors', 'background', 'accent', 'textColor'];
+    for (const view of model.views) {
+      for (const key of designKeys) view.settings[key] = model.settings[key];
+      view.settings.photo = { ...view.settings.photo, radius: model.settings.photo.radius };
+    }
+    syncForm(); edited(true);
+    status('project-status', `Дизайн и палитра применены ко всем карточкам комплекта (${model.views.length}).`);
+  });
   $('photo-palette').addEventListener('click', applyPhotoPalette);
   document.querySelectorAll('[data-photo-filter]').forEach(button => button.addEventListener('click', () => {
     const filters = { original: [100, 100, 100], mono: [100, 110, 0], vivid: [103, 115, 130], soft: [110, 90, 85] }; commit();
