@@ -54,7 +54,7 @@ if (packsBox && typeof ONE_TIME_PACKS !== 'undefined') {
     const info = document.createElement('div');
     const badge = document.createElement('span');
     badge.className = 'pricing-pack-badge';
-    badge.textContent = 'РАЗОВАЯ ПОКУПКА · НАВСЕГДА';
+    badge.textContent = pack.priceKzt === 0 ? 'БЕСПЛАТНО · НАВСЕГДА' : 'РАЗОВАЯ ПОКУПКА · НАВСЕГДА';
     const title = document.createElement('h2');
     title.textContent = pack.name;
     const desc = document.createElement('p');
@@ -68,9 +68,21 @@ if (packsBox && typeof ONE_TIME_PACKS !== 'undefined') {
     price.textContent = money(pack.priceKzt);
     const link = document.createElement('a');
     link.className = 'pricing-button';
-    link.textContent = 'Открыть набор в кабинете';
-    link.href = accountUrl(pack);
-    link.addEventListener('click', () => { link.href = accountUrl(pack); });
+    if (pack.priceKzt === 0) {
+      const editorTarget = () => {
+        const url = new URL('editor.html', location.href);
+        const theme = document.documentElement.dataset.theme;
+        if (theme) url.searchParams.set('theme', theme);
+        return url.href;
+      };
+      link.textContent = 'Открыть в редакторе';
+      link.href = editorTarget();
+      link.addEventListener('click', () => { link.href = editorTarget(); });
+    } else {
+      link.textContent = 'Открыть набор в кабинете';
+      link.href = accountUrl(pack);
+      link.addEventListener('click', () => { link.href = accountUrl(pack); });
+    }
     action.append(price, link);
 
     card.append(info, action);

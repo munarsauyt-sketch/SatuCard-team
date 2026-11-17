@@ -33,7 +33,7 @@ export async function billingRpc(config, name, args) {
 }
 
 export function billingPlan(id) {
-  return BILLING_PLANS.find(plan => plan.id === id) || ONE_TIME_PACKS.find(pack => pack.id === id);
+  return BILLING_PLANS.find(plan => plan.id === id) || ONE_TIME_PACKS.find(pack => pack.id === id && pack.priceKzt > 0);
 }
 
 export function publicOrder(row) {
@@ -72,7 +72,7 @@ export function paymentDetails() {
 export const publicPlans = () => [
   ...BILLING_PLANS.map(({ id, name, priceKzt, models, includes, benefits }) =>
     ({ id, name, priceKzt, models, includes, benefits, days: ACCESS_DAYS })),
-  ...ONE_TIME_PACKS.map(({ id, name, priceKzt, description }) =>
+  ...ONE_TIME_PACKS.filter(pack => pack.priceKzt > 0).map(({ id, name, priceKzt, description }) =>
     ({ id, name, priceKzt, models: [], benefits: [description], days: 0, permanent: true }))
 ];
 

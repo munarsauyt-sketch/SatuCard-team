@@ -295,21 +295,11 @@
     { id: 'jewelry', label: 'Ювелирка и часы', note: 'Нуар · золото', template: 'noir', category: 'generic', badge: 'Подарок внутри', background: '#171a1b', accent: '#d8b675', textColor: '#f4ede0', features: ['Премиум покрытие', 'Фирменный футляр', 'Тонкая ручная работа'] },
     { id: 'food', label: 'Продукты и ЭКО', note: 'Матча · органика', template: 'matcha', category: 'home', badge: '100% натурально', background: '#e8edcb', accent: '#486134', textColor: '#25351d', features: ['Без сахара и ГМО', 'Свежая партия', 'Бережная фасовка'] }
   ];
-  let nichePackUnlocked = false;
+  let nichePackUnlocked = true;
   async function checkNichePackEntitlement() {
-    try {
-      const session = await window.SATUCARD_AUTH?.getSession().catch(() => null);
-      if (!session?.access_token) return;
-      const response = await fetch('api/billing', { headers: { Authorization: `Bearer ${session.access_token}` }, cache: 'no-store' });
-      if (!response.ok) return;
-      const data = await response.json();
-      nichePackUnlocked = Boolean(data.isAdmin || data.active || (Array.isArray(data.packs) && data.packs.includes('niche10')));
-      const statusEl = $('niche-pack-status'), linkEl = $('niche-pack-link');
-      if (nichePackUnlocked && statusEl) {
-        statusEl.textContent = 'Доступ открыт ✓';
-        if (linkEl) linkEl.hidden = true;
-      }
-    } catch (_) {}
+    nichePackUnlocked = true;
+    const statusEl = $('niche-pack-status');
+    if (statusEl) statusEl.textContent = 'Бесплатно · 0 ₸';
   }
   function renderThumbnails() {
     if ($('panel-templates').hidden) return;
@@ -359,9 +349,7 @@
         });
         nicheGrid.querySelectorAll('[data-niche-preset]').forEach(el => el.setAttribute('aria-pressed', String(el === button)));
         syncForm(); edited(true);
-        status('project-status', nichePackUnlocked
-          ? `Применён нишевый шаблон «${preset.label}».`
-          : `Нишевый шаблон «${preset.label}» применён. Пак из 10 ниш навсегда — 490 ₸ в разделе «Тарифы».`);
+        status('project-status', `Применён бесплатный нишевый шаблон «${preset.label}».`);
       });
     }
   }
