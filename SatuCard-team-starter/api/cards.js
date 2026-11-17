@@ -100,6 +100,7 @@ export async function POST(request) {
   const storageUrl = `${config.base}/storage/v1/object/cards/${imagePath}`;
   const headers = { apikey: config.key };
 
+  let uploaded = false;
   try {
     const upload = await fetch(storageUrl, {
       method: 'POST',
@@ -110,6 +111,7 @@ export async function POST(request) {
       console.error('SatuCard Storage upload failed:', upload.status);
       return json({ error: 'Не удалось сохранить изображение. Попробуйте позже.' }, 502);
     }
+    uploaded = true;
 
     const record = {
       id,
@@ -151,6 +153,7 @@ export async function POST(request) {
 
     return json({ id, imagePath, url: new URL(`/card.html?id=${id}`, request.url).href }, previous ? 200 : 201);
   } catch (error) {
+    if (uploaded) await fetch(storageUrl, { method: 'DELETE', headers }).catch(() => {});
     console.error('SatuCard publication failed:', error);
     return json({ error: 'Сервер временно недоступен. Попробуйте позже.' }, 502);
   }

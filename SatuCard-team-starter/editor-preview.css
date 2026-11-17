@@ -693,4 +693,31 @@ html[data-theme="dark"] .studio-export-status.error { color: #ffb4a6; }
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 12px;
 }
+.phone-preview-compare {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 16px;
+}
+.phone-grid-check {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--soft);
+}
+.phone-grid-check canvas {
+  width: 160px;
+  height: auto;
+  border-radius: 6px;
+  box-shadow: 0 4px 14px #0002;
+}
+.niche-presets-section {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
 

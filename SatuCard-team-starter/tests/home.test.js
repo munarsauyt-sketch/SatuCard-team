@@ -15,6 +15,7 @@ test('home offers quick editing, an editor fallback and actionable category exam
     assert.equal(studio.querySelector('#quick-file').type, 'file');
     assert.equal(studio.querySelectorAll('[data-hero-style]').length, 4);
     assert.equal(studio.querySelector('#quick-open').type, 'submit');
+    assert.equal(studio.querySelector('#quick-download').type, 'button');
     assert.equal(hero.querySelector('#quick-fallback a').getAttribute('href'), 'editor.html');
     const examples = dom.window.document.querySelectorAll('.preview-example');
     assert.equal(examples.length, 5);

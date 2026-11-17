@@ -49,6 +49,7 @@ test('site-telemetry SQL migration is repeatable and aggregates online & daily t
     await db.query('insert into public.site_monitor_config (id, token_hash) values (1, $1)', [tokenHash]);
 
     await db.query("select public.record_site_heartbeat('sess_mobile_1', 'vis_user_one', '/editor.html', 'mobile', true)");
+    await db.query("select public.record_site_heartbeat('sess_mobile_1', 'vis_user_one', '/editor.html', 'mobile', true)");
     await db.query("select public.record_site_heartbeat('sess_mobile_1', 'vis_user_one', '/video.html', 'mobile', true)");
     await db.query("select public.record_site_heartbeat('sess_desktop_1', 'vis_user_two', '/index.html', 'desktop', true)");
     await db.query("select public.record_site_heartbeat('sess_desktop_1', 'vis_user_two', '/index.html', 'desktop', false)");

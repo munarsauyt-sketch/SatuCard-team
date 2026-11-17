@@ -42,7 +42,24 @@
     }
     if (!removedPixels) throw new Error('Фон не найден. Немного увеличьте допуск или выберите другое фото.');
     if (tail >= count * 0.98) throw new Error('Почти всё изображение совпало с фоном. Уменьшите допуск или используйте контрастное фото.');
-    return { data, width, height, removedPixels, background, warning: 'Проверьте края и светлые детали товара. Это локальное удаление однотонного фона, не ИИ.' };
+    // Soft edge feathering and color decontamination on visited boundary pixels.
+    const softMax = Math.max(tolerance + 1, tolerance * 1.65);
+    if (tolerance > 0) {
+      for (let p = 0; p < count; p++) {
+        if (!seen[p] || data[p * 4 + 3] === 0) continue;
+        const dist = distance(p);
+        if (dist > tolerance && dist < softMax) {
+          const ratio = (dist - tolerance) / (softMax - tolerance);
+          const nextAlpha = Math.max(1, Math.round(data[p * 4 + 3] * ratio));
+          for (let c = 0; c < 3; c++) {
+            const unmixed = (data[p * 4 + c] - background[c] * (1 - ratio)) / Math.max(0.15, ratio);
+            data[p * 4 + c] = Math.max(0, Math.min(255, Math.round(unmixed)));
+          }
+          data[p * 4 + 3] = nextAlpha;
+        }
+      }
+    }
+    return { data, width, height, removedPixels, background, warning: 'Проверьте края и светлые детали товара. Края сглажены локально (без ИИ).' };
   }
 
   const crcTable = new Uint32Array(256);

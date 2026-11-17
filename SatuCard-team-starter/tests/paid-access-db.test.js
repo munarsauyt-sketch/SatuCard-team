@@ -261,3 +261,35 @@ test('settlement refunds unused units on the original UTC usage day', async () =
     assert.deepEqual(counters.rows.map(row => [row.today, row.units]), [[false, 300], [true, 0]]);
   } finally { await db.close(); }
 });
+
+test('niche10 pack grants permanent entitlement immediately without delaying subscription queue, and max3 team shares quota up to 5 seats', async () => {
+  const db = await database();
+  try {
+    const subOrder = await order(db, 1, 'basic');
+    const subGrant = (await confirm(db, subOrder, 'ref-sub-1')).grant;
+    const packOrder = await order(db, 1, 'niche10');
+    const packGrant = (await confirm(db, packOrder, 'ref-pack-1')).grant;
+    assert.ok(Date.parse(packGrant.expires_at) - Date.parse(packGrant.starts_at) > 3650 * 86400000);
+    const renewalOrder = await order(db, 1, 'plus');
+    const renewalGrant = (await confirm(db, renewalOrder, 'ref-sub-2')).grant;
+    assert.equal(renewalGrant.starts_at, subGrant.expires_at);
+
+    const userStatus = await status(db, 1);
+    assert.equal(userStatus.active.plan_id, 'basic');
+    assert.equal(userStatus.scheduled.length, 1);
+    assert.equal(userStatus.scheduled[0].plan_id, 'plus');
+    assert.deepEqual(userStatus.packs, ['niche10']);
+
+    const teamOrder = await order(db, 2, 'max3');
+    await confirm(db, teamOrder, 'ref-team-max3');
+    const added = await rpc(db, 'manage_team_member', [user(2), 'add', 'buyer3@example.test']);
+    assert.equal(added.team.members.length, 2);
+
+    const memberStatus = await status(db, 3);
+    assert.equal(memberStatus.active.plan_id, 'max3');
+    assert.equal(memberStatus.team.role, 'editor');
+
+    const memberReservation = await reserve(db, 3, 'cc/claude-opus-5-5', 1000);
+    assert.equal(memberReservation.allowed, true);
+  } finally { await db.close(); }
+});

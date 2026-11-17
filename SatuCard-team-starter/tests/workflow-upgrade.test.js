@@ -205,6 +205,9 @@ test('kaspi_main preflight, safe-zone geometry, CSV parser, shared Brand Kit, an
   assert.equal(parsed.length, 2);
   assert.deepEqual(JSON.parse(JSON.stringify(parsed[0])), { title: 'Кружка', subtitle: 'Сталь', price: 5490, badge: 'Хит Kaspi' });
 
+  const parsedWithPhoto = w.SATUCARD_WORKFLOW.parseCatalogCsv('title;subtitle;price;badge;photo\nКружка;Сталь;5490;Хит;2');
+  assert.equal(parsedWithPhoto[0].photo, '2');
+
   const svg = w.SATUCARD_QR.generateCardQrSvg('https://satucard.kz/card.html?id=' + id);
   assert.ok(svg.startsWith('<svg ') && svg.includes('<path d="M') && svg.includes('</svg>'));
 

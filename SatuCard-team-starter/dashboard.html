@@ -37,6 +37,15 @@
     </div>
     <p id="billing-next" hidden></p>
     <details id="billing-models" hidden><summary>Доступные модели</summary><ul id="billing-model-list"></ul></details>
+    <section id="billing-team" aria-labelledby="billing-team-title" hidden>
+      <h3 id="billing-team-title">Команда (до 5 человек)</h3>
+      <p id="billing-team-status"></p>
+      <ul id="billing-team-list"></ul>
+      <form id="billing-team-form" class="billing-form" hidden>
+        <label>Email участника <input id="billing-team-email" type="email" maxlength="254" required placeholder="colleague@example.com"></label>
+        <button class="button button-light" type="submit">Добавить в команду</button>
+      </form>
+    </section>
     <form id="billing-create" class="billing-form" hidden>
       <label>Тариф <select id="billing-plan" required></select></label>
       <button class="button button-orange" type="submit">Создать заявку</button>

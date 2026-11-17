@@ -2,7 +2,7 @@ import { TEMPLATES, MUSIC, FORMATS, DEMOS, MAX_LAYERS, clamp, clone, uid, layer,
 import { MediaStore, inspectFile, mixAudio, detectBeats } from './video-media.js';
 import { drawProject, hitLayer } from './video-renderer.js';
 import { saveProject, loadProject, packProject, unpackProject, saveBrand, loadBrand } from './video-storage.js';
-import { exportVideo } from './video-export.js';
+import { exportVideo, probeExportSupport } from './video-export.js';
 import { installVideoPlus } from './video-plus.js';
 import { snapTime } from './video-workflow.js';
 import { checkImportQuota } from './video-file-safety.js';
@@ -92,12 +92,25 @@ async function chooseTemplate(id){
   await switchProject(next);toast('Шаблон «'+next.name+'» готов. Замените товар во вкладке «Медиа».');
 }
 let activeTemplateFilter='Все',activeTemplateQuery='',templateGeneration=0;
+let videoProUnlocked=false;
+async function checkVideoProEntitlement(){
+  try{
+    const session=await window.SATUCARD_AUTH?.getSession().catch(()=>null);
+    if(!session?.access_token){videoProUnlocked=false;return;}
+    const response=await fetch('/api/billing',{headers:{Authorization:'Bearer '+session.access_token},cache:'no-store'});
+    if(!response.ok)return;
+    const data=await response.json();
+    videoProUnlocked=Boolean(data.isAdmin||data.active);
+  }catch(_){}
+}
+document.addEventListener('satucard:authchange',()=>checkVideoProEntitlement());
 const templateMedia=new MediaStore();
 async function renderTemplates(filter=activeTemplateFilter,query=activeTemplateQuery){
   activeTemplateFilter=filter;activeTemplateQuery=query;
   const generation=++templateGeneration;
   const list=$('#template-list');list.replaceChildren();
   document.querySelector('[data-library="templates"] .panel-heading>span').textContent=TEMPLATES.length;
+  let renderedCount=0;
   for(const template of TEMPLATES.filter(item=>(filter==='Все'||item.category===filter)&&[item.name,item.note,item.category].some(text=>text.toLocaleLowerCase().includes(query.toLocaleLowerCase().trim())))){
     const button=document.createElement('button');button.className='template-card';button.title=template.note;
     const thumb=document.createElement('canvas');thumb.width=216;thumb.height=288;
@@ -105,10 +118,30 @@ async function renderTemplates(filter=activeTemplateFilter,query=activeTemplateQ
     if(generation!==templateGeneration)return;
     // Thumbnails show the entire portrait at the same crop as the editor.
     const portrait=document.createElement('canvas');portrait.width=216;portrait.height=384;
-    drawProject(portrait,temp,templateMedia,.9);thumb.getContext('2d').drawImage(portrait,0,0,216,384,0,-25,216,384);
+    const drawThumbAt=t=>{drawProject(portrait,temp,templateMedia,t);thumb.getContext('2d').clearRect(0,0,216,288);thumb.getContext('2d').drawImage(portrait,0,0,216,384,0,-25,216,384);};
+    drawThumbAt(.9);
+    let hoverRaf=0,hoverStart=0;
+    const stopPreview=()=>{if(hoverRaf){cancelAnimationFrame(hoverRaf);hoverRaf=0;drawThumbAt(.9);}};
+    const startPreview=()=>{
+      if(hoverRaf||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+      hoverStart=performance.now();
+      const step=now=>{
+        const elapsed=((now-hoverStart)/1000)%Math.max(1,temp.duration);
+        drawThumbAt(elapsed);
+        hoverRaf=requestAnimationFrame(step);
+      };
+      hoverRaf=requestAnimationFrame(step);
+    };
+    button.addEventListener('pointerenter',startPreview);
+    button.addEventListener('pointerleave',stopPreview);
+    button.addEventListener('focus',startPreview);
+    button.addEventListener('blur',stopPreview);
     const title=document.createElement('strong');title.textContent=template.name;
     const note=document.createElement('small');note.textContent=temp.duration+' сек · '+template.category;
-    button.append(thumb,title,note);button.addEventListener('click',safely(()=>chooseTemplate(template.id)));list.append(button);
+    button.append(thumb,title,note);button.addEventListener('click',safely(()=>{stopPreview();return chooseTemplate(template.id);}));list.append(button);
+    renderedCount++;
+    if(renderedCount%8===0)await new Promise(resolve=>setTimeout(resolve,0));
+    if(generation!==templateGeneration)return;
   }
   if(!list.children.length){const empty=document.createElement('p');empty.className='muted';empty.textContent='Шаблоны не найдены. Измените поиск или категорию.';list.append(empty);}
 }
@@ -404,17 +437,37 @@ async function saveFile(){stop();const copy=clone(project),files=new Map(media.f
 on('#save-file','click',saveFile);on('#save-file-mobile','click',saveFile);
 on('#open-project','click',()=>$('#project-input').click());
 on('#project-input','change',async event=>{const file=event.target.files[0],expectedRevision=revision;try{if(file&&confirmReplace()){const saved=await unpackProject(file);await switchProject(saved.project,saved.files,expectedRevision);toast('Проект открыт.');}}finally{event.target.value='';}});
-on('#export','click',()=>{
-  stop();$('#export-progress').hidden=true;$('#export-start').hidden=false;$('#export-start').disabled=false;$('#export-status').textContent='';$('#export-download').hidden=true;$('#export-result').hidden=true;$('#export-close').disabled=false;dialog.showModal();
+function syncExportTierNote(){
+  const note=$('#export-tier-note');
+  if(!note)return;
+  const wantsFullHd=Number($('#export-quality').value)>1280;
+  note.hidden=!(wantsFullHd&&!videoProUnlocked);
+}
+on('#export-quality','change',syncExportTierNote);
+on('#export','click',async()=>{
+  stop();$('#export-progress').hidden=true;$('#export-start').hidden=false;$('#export-start').disabled=false;$('#export-status').textContent='';$('#export-download').hidden=true;$('#export-result').hidden=true;$('#export-close').disabled=false;
+  await checkVideoProEntitlement();
+  syncExportTierNote();
+  dialog.showModal();
 });
 dialog.addEventListener('cancel',event=>{if(exporting)event.preventDefault();});
 on('#export-cancel','click',()=>{controller?.abort();$('#export-status').textContent='Останавливаем экспорт…';});
 on('#export-start','click',async()=>{
-  if(exporting)return;stop();exporting=true;controller=new AbortController();
+  if(exporting)return;
+  const chosenHeight=Number($('#export-quality').value);
+  if(chosenHeight>1280&&!videoProUnlocked){
+    await checkVideoProEntitlement();
+    syncExportTierNote();
+    if(!videoProUnlocked){
+      $('#export-status').textContent='Full HD 1080p доступен на тарифе Видео Pro (от 1 500 ₸). Выберите HD 1280 px для бесплатного экспорта или подключите тариф.';
+      return;
+    }
+  }
+  stop();exporting=true;controller=new AbortController();
   $('#workspace').inert=true;$('#export-close').disabled=true;$('#export-cancel').hidden=false;$('#export-start').disabled=true;$('#export-progress').hidden=false;$('#export-progress').value=0;$('#export-quality').disabled=true;
   try{
     await document.fonts.ready;
-    const blob=await exportVideo(clone(project),media,{height:Number($('#export-quality').value),signal:controller.signal,onProgress:(value,message)=>{$('#export-progress').value=value;$('#export-status').textContent=message;}});
+    const blob=await exportVideo(clone(project),media,{height:chosenHeight,signal:controller.signal,onProgress:(value,message)=>{$('#export-progress').value=value;$('#export-status').textContent=message;}});
     if(resultUrl)URL.revokeObjectURL(resultUrl);resultUrl=URL.createObjectURL(blob);
     $('#export-progress').value=1;$('#export-status').textContent='Готово · '+(blob.size/1024/1024).toFixed(1)+' МБ';
     $('#export-result').src=resultUrl;$('#export-result').hidden=false;
@@ -441,13 +494,21 @@ async function init(){
   if(typeof window.VideoEncoder==='undefined'&&$('#export')){
     $('#export').title='WebCodecs недоступен в этом браузере — для экспорта MP4 откройте Chrome или Edge';
   }
+  checkVideoProEntitlement();
+  probeExportSupport().then(support=>{
+    if(!support.ok&&$('#export')){
+      $('#export').title=support.message;
+      toast(support.message);
+    }
+  }).catch(()=>{});
   try{const saved=await loadProject();if(saved){project=saved.project;media.files=saved.files;}}catch(error){handle(error);}
   await Promise.all([document.fonts.load('750 30px "Golos Text"'),document.fonts.load('600 30px "Manrope"'),document.fonts.load('700 30px "Noto Serif"'),document.fonts.load('400 20px "IBM Plex Mono"')]);
   const brand=await loadBrand().catch(()=>null);if(brand){$('#brand-color').value=brand.color;$('#brand-font').value=brand.font;}
-  await media.prepare(project);await media.seek(project,time,true);productForm();renderControls();renderInspector();renderTimeline();renderMedia();await renderTemplates();
+  await media.prepare(project);await media.seek(project,time,true);productForm();renderControls();renderInspector();renderTimeline();renderMedia();
   await installVideoPlus({project:()=>project,media:()=>media,current,time:()=>time,revision:()=>revision,snapshot,changed,seek,stop,draw,toast,showPanel,confirmReplace,switchProject,addLayer,searchTemplates:query=>renderTemplates(undefined,query),replace:replaceProject,edit:fn=>{const next=clone(project);fn(next);return replaceProject(next,true);}});
   const help=installVideoHelp({showPanel,stop});
   scheduleSave();await persist();document.body.dataset.ready='true';
+  renderTemplates().catch(handle);
   help.startIfNew();
 }
 init().catch(error=>{$('#save-status').textContent='Ошибка загрузки';handle(error);});

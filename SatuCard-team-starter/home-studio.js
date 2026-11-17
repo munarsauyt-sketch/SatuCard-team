@@ -8,12 +8,34 @@
   if (!form || !renderer || !project || !importer || !sample) return;
 
   const demoUrl = 'assets/images/ceramics.jpg';
+  const storageKey = 'satucard-home-quick-draft-v1';
   const file = $('quick-file'), upload = $('quick-upload'), example = $('quick-example');
   const title = $('quick-title'), price = $('quick-price'), canvas = $('hero-card');
-  const thumbnail = $('quick-photo'), open = $('quick-open'), drop = $('quick-drop'), result = $('quick-result');
+  const thumbnail = $('quick-photo'), open = $('quick-open'), downloadBtn = $('quick-download'), drop = $('quick-drop'), result = $('quick-result');
   const styles = [...form.querySelectorAll('[data-hero-style]')];
   let template = 'studio', image = null, source = null, isExample = true;
   let busy = false, frame = 0;
+
+  function saveQuickDraft() {
+    try {
+      if (isExample && title.value === sample.title && price.value === String(sample.price) && template === 'studio') {
+        localStorage.removeItem(storageKey);
+        return;
+      }
+      localStorage.setItem(storageKey, JSON.stringify({
+        title: title.value.slice(0, 60),
+        price: price.value.slice(0, 18),
+        template,
+        isExample,
+        source: isExample ? null : source,
+        savedAt: Date.now()
+      }));
+    } catch (_) {}
+  }
+
+  function clearQuickDraft() {
+    try { localStorage.removeItem(storageKey); } catch (_) {}
+  }
 
   const readSource = blob => new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -41,6 +63,7 @@
     result.setAttribute('aria-busy', String(value));
     upload.disabled = example.disabled = file.disabled = value;
     open.disabled = value || !image;
+    if (downloadBtn) downloadBtn.disabled = value || !image;
   }
 
   function priceValue() {
@@ -77,11 +100,44 @@
     thumbnail.src = photo.src;
     $('quick-upload-label').textContent = demo ? 'Загрузить фото' : 'Заменить фото';
     open.disabled = busy;
+    if (downloadBtn) downloadBtn.disabled = busy;
     paint();
+    saveQuickDraft();
   }
 
-  async function loadExample() {
+  function applyStyleSelection(nextTemplate) {
+    template = Object.hasOwn(renderer.templates, nextTemplate) ? nextTemplate : 'studio';
+    styles.forEach(item => item.setAttribute('aria-pressed', String(item.dataset.heroStyle === template)));
+  }
+
+  async function restoreQuickDraft() {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (!raw) return false;
+      const saved = JSON.parse(raw);
+      if (!saved || typeof saved !== 'object') return false;
+      const photoUrl = !saved.isExample && typeof saved.source === 'string' && saved.source.startsWith('data:image/')
+        ? saved.source
+        : demoUrl;
+      const photo = await decode(photoUrl);
+      title.value = typeof saved.title === 'string' ? saved.title.slice(0, 60) : sample.title;
+      price.value = typeof saved.price === 'string' ? saved.price.slice(0, 18) : String(sample.price);
+      price.removeAttribute('aria-invalid');
+      applyStyleSelection(saved.template);
+      showPhoto(photo, photoUrl === demoUrl ? null : photoUrl, photoUrl === demoUrl);
+      setStatus('Черновик восстановлен. Скачайте PNG или откройте в редакторе.');
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  async function loadExample(resetDraft = false) {
     if (busy) return;
+    if (resetDraft) {
+      clearQuickDraft();
+      applyStyleSelection('studio');
+    }
     setBusy(true);
     setStatus('Загружаем пример…');
     try {
@@ -147,7 +203,7 @@
     file.value = '';
     addPhoto(selected);
   });
-  example.addEventListener('click', loadExample);
+  example.addEventListener('click', () => loadExample(true));
   drop.addEventListener('dragover', event => {
     event.preventDefault();
     if (!busy) drop.classList.add('is-dragging');
@@ -160,7 +216,10 @@
     drop.classList.remove('is-dragging');
     addPhoto(event.dataTransfer?.files[0]);
   });
-  title.addEventListener('input', paint);
+  title.addEventListener('input', () => {
+    paint();
+    saveQuickDraft();
+  });
   price.addEventListener('input', () => {
     const invalid = Number.isNaN(priceValue());
     const wasInvalid = price.getAttribute('aria-invalid') === 'true';
@@ -168,12 +227,51 @@
     if (invalid && !wasInvalid) setStatus('Укажите цену числом до 999 999 999,99 ₸.', true);
     if (!invalid && wasInvalid) setStatus();
     paint();
+    saveQuickDraft();
   });
   styles.forEach(button => button.addEventListener('click', () => {
-    template = button.dataset.heroStyle;
-    styles.forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+    applyStyleSelection(button.dataset.heroStyle);
     paint();
+    saveQuickDraft();
   }));
+
+  downloadBtn?.addEventListener('click', async () => {
+    if (busy || !image) return;
+    if (Number.isNaN(priceValue())) {
+      setStatus('Укажите цену числом до 999 999 999,99 ₸.', true);
+      price.focus();
+      return;
+    }
+    setBusy(true);
+    setStatus('Готовим PNG…');
+    try {
+      const surface = document.createElement('canvas');
+      const state = settings();
+      renderer.render(surface, state, { photo: image }, { scale: 1 });
+      const blob = await new Promise(resolve => {
+        if (typeof surface.toBlob === 'function') surface.toBlob(resolve, 'image/png');
+        else resolve(null);
+      });
+      const safeName = (state.title || 'satucard').replace(/[<>:"/\\|?*\u0000-\u001f]/g, '').trim().slice(0, 60) || 'satucard';
+      const link = document.createElement('a');
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        link.href = url;
+        link.download = `${safeName}.png`;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+      } else {
+        link.href = surface.toDataURL('image/png');
+        link.download = `${safeName}.png`;
+        link.click();
+      }
+      setStatus('PNG скачан. Откройте в редакторе для комплекта слайдов.');
+    } catch (_) {
+      setStatus('Не удалось скачать PNG. Откройте карточку в редакторе.', true);
+    } finally {
+      setBusy(false);
+    }
+  });
 
   form.addEventListener('submit', async event => {
     event.preventDefault();
@@ -215,6 +313,8 @@
   });
   form.hidden = false;
   $('quick-fallback').hidden = true;
-  loadExample();
+  restoreQuickDraft().then(restored => {
+    if (!restored) loadExample();
+  });
   document.fonts?.ready.then(paint);
 })();

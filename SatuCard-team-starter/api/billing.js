@@ -16,7 +16,7 @@ export async function GET(request) {
   try {
     const { config, user, isAdmin } = await account(request);
     if (!paidAccessEnabled()) return accountJson({
-      ready: false, ordering: false, isAdmin, active: null, scheduled: [], orders: [],
+      ready: false, ordering: false, isAdmin, active: null, scheduled: [], orders: [], packs: [], team: null,
       models: availableAiModels({ isAdmin }), plans: publicPlans(), payment: paymentDetails(),
       message: 'Платные тарифы готовятся к запуску.'
     });
@@ -30,12 +30,13 @@ export async function GET(request) {
     try { data = await billingRpc(config, 'get_billing_status', { p_user_id: user.id }); }
     catch (error) {
       if (error.code !== 'billing_unavailable') throw error;
-      return accountJson({ ready: false, ordering: false, isAdmin, active: null, scheduled: [], orders: [],
+      return accountJson({ ready: false, ordering: false, isAdmin, active: null, scheduled: [], orders: [], packs: [], team: null,
         models: availableAiModels({ isAdmin }), plans: publicPlans(), payment: paymentDetails(), message: error.message });
     }
     if (!Array.isArray(data.orders) || !Array.isArray(data.scheduled)) throw new Error('Invalid billing status');
     return accountJson({ ready: true, ordering: paymentRequestsEnabled(), isAdmin, active: publicGrant(data.active), scheduled: data.scheduled.map(publicGrant),
-      orders: data.orders.map(publicOrder), models: availableAiModels({ isAdmin, active: data.active }),
+      orders: data.orders.map(publicOrder), packs: Array.isArray(data.packs) ? data.packs : [], team: data.team || null,
+      models: availableAiModels({ isAdmin, active: data.active }),
       plans: publicPlans(), payment: paymentDetails() });
   } catch (error) { return accountFailure(error); }
 }
@@ -50,6 +51,18 @@ export async function POST(request) {
     catch (error) { if (error instanceof AccountError) throw error; throw new AccountError('Неверные данные заявки.', 400, 'invalid_input'); }
     if (!body || typeof body !== 'object' || Array.isArray(body)) throw new AccountError('Неверные данные заявки.', 400, 'invalid_input');
     let data;
+    if (body.action === 'team_add' || body.action === 'team_remove') {
+      const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
+        throw new AccountError('Укажите корректный email участника команды.', 400, 'invalid_input');
+      }
+      data = await billingRpc(config, 'manage_team_member', {
+        p_user_id: user.id,
+        p_action: body.action === 'team_add' ? 'add' : 'remove',
+        p_email: email
+      });
+      return accountJson({ team: data.team || null }, 200);
+    }
     if (body.action === 'create') {
       if (!paymentRequestsEnabled()) throw new AccountError('Новые заявки на оплату пока закрыты.', 503, 'checkout_unavailable');
       if (!billingPlan(body.planId) || !billingId(body.requestId)) throw new AccountError('Выберите тариф и повторите оформление.', 400, 'invalid_input');

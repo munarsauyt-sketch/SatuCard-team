@@ -78,6 +78,20 @@ create table if not exists public.paid_ai_reservations (
 );
 create index if not exists paid_ai_inflight_idx on public.paid_ai_reservations(user_id, created_at)
   where outcome = 'pending';
+create table if not exists public.team_workspaces (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null unique references auth.users(id) on delete cascade,
+  name text not null default 'Команда SatuCard',
+  max_seats integer not null default 5 check (max_seats between 1 and 5),
+  created_at timestamptz not null default clock_timestamp()
+);
+create table if not exists public.team_members (
+  workspace_id uuid not null references public.team_workspaces(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  role text not null default 'editor' check (role in ('owner', 'editor')),
+  joined_at timestamptz not null default clock_timestamp(),
+  primary key (workspace_id, user_id)
+);
 
 alter table public.billing_accounts enable row level security;
 alter table public.billing_orders enable row level security;
@@ -85,8 +99,11 @@ alter table public.billing_grants enable row level security;
 alter table public.paid_ai_limits enable row level security;
 alter table public.paid_ai_daily_usage enable row level security;
 alter table public.paid_ai_reservations enable row level security;
+alter table public.team_workspaces enable row level security;
+alter table public.team_members enable row level security;
 revoke all on public.billing_accounts, public.billing_orders, public.billing_grants,
-  public.paid_ai_limits, public.paid_ai_daily_usage, public.paid_ai_reservations
+  public.paid_ai_limits, public.paid_ai_daily_usage, public.paid_ai_reservations,
+  public.team_workspaces, public.team_members
   from public, anon, authenticated, service_role;
 
 create or replace function public.create_billing_order(p_user_id uuid, p_plan_id text, p_request_id uuid)
@@ -153,13 +170,24 @@ begin
   end if;
   if saved.status <> 'pending' then raise exception 'Order is not pending' using errcode = '22023'; end if;
   at_time := clock_timestamp();
-  select greatest(at_time, coalesce(max(expires_at), at_time)) into starts
-    from public.billing_grants where user_id = customer and revoked_at is null;
+  if saved.plan_id = 'niche10' then
+    starts := at_time;
+  else
+    select greatest(at_time, coalesce(max(expires_at), at_time)) into starts
+      from public.billing_grants where user_id = customer and revoked_at is null and plan_id <> 'niche10';
+  end if;
   update public.billing_orders set status = 'confirmed', confirmed_at = at_time,
     confirmed_by = p_admin_user_id, payment_ref = reference where id = p_order_id returning * into saved;
   insert into public.billing_grants(user_id, order_id, plan_id, tier, token_limit, starts_at, expires_at)
-    values(customer, saved.id, saved.plan_id, saved.tier, saved.token_limit, starts, starts + interval '720 hours')
+    values(customer, saved.id, saved.plan_id, saved.tier, saved.token_limit, starts,
+      case when saved.plan_id = 'niche10' then starts + interval '36500 days' else starts + interval '720 hours' end)
     returning * into access;
+  if saved.plan_id = 'max3' then
+    insert into public.team_workspaces(owner_id) values(customer) on conflict (owner_id) do nothing;
+    insert into public.team_members(workspace_id, user_id, role)
+      select id, customer, 'owner' from public.team_workspaces where owner_id = customer
+      on conflict (workspace_id, user_id) do nothing;
+  end if;
   return jsonb_build_object('order', to_jsonb(saved), 'grant', to_jsonb(access));
 end;
 $$;
@@ -206,15 +234,82 @@ declare
   active jsonb;
   scheduled jsonb;
   orders jsonb;
+  packs jsonb;
+  team jsonb;
+  ws_id uuid;
+  ws_role text;
 begin
   select to_jsonb(g) into active from public.billing_grants g
-    where user_id = p_user_id and revoked_at is null and starts_at <= at_time and expires_at > at_time
+    where user_id = p_user_id and revoked_at is null and plan_id <> 'niche10' and starts_at <= at_time and expires_at > at_time
     order by starts_at desc limit 1;
+  if active is null then
+    select to_jsonb(g) into active
+      from public.billing_grants g
+      join public.team_workspaces w on w.owner_id = g.user_id
+      join public.team_members m on m.workspace_id = w.id
+      where m.user_id = p_user_id and g.plan_id = 'max3' and g.revoked_at is null
+        and g.starts_at <= at_time and g.expires_at > at_time
+      order by g.starts_at desc limit 1;
+  end if;
   select coalesce(jsonb_agg(to_jsonb(g) order by starts_at), '[]'::jsonb) into scheduled
-    from public.billing_grants g where user_id = p_user_id and revoked_at is null and starts_at > at_time;
+    from public.billing_grants g where user_id = p_user_id and revoked_at is null and plan_id <> 'niche10' and starts_at > at_time;
+  select coalesce(jsonb_agg(distinct plan_id), '[]'::jsonb) into packs
+    from public.billing_grants where user_id = p_user_id and revoked_at is null and plan_id = 'niche10' and starts_at <= at_time and expires_at > at_time;
   select coalesce(jsonb_agg(to_jsonb(o) order by created_at desc, id desc), '[]'::jsonb) into orders
     from (select * from public.billing_orders where user_id = p_user_id order by created_at desc, id desc limit 20) o;
-  return jsonb_build_object('active', active, 'scheduled', scheduled, 'orders', orders);
+  select m.workspace_id, m.role into ws_id, ws_role
+    from public.team_members m where m.user_id = p_user_id order by (m.role = 'owner') desc, m.joined_at asc limit 1;
+  if ws_id is not null then
+    select jsonb_build_object(
+      'workspaceId', w.id,
+      'name', w.name,
+      'role', ws_role,
+      'maxSeats', w.max_seats,
+      'members', coalesce((
+        select jsonb_agg(jsonb_build_object('userId', tm.user_id, 'email', u.email, 'role', tm.role) order by (tm.role = 'owner') desc, tm.joined_at asc)
+        from public.team_members tm join auth.users u on u.id = tm.user_id
+        where tm.workspace_id = w.id
+      ), '[]'::jsonb)
+    ) into team from public.team_workspaces w where w.id = ws_id;
+  end if;
+  return jsonb_build_object('active', active, 'scheduled', scheduled, 'orders', orders, 'packs', packs, 'team', team);
+end;
+$$;
+
+create or replace function public.manage_team_member(p_user_id uuid, p_action text, p_email text)
+returns jsonb language plpgsql security definer set search_path = '' as $$
+declare
+  ws public.team_workspaces%rowtype;
+  target_user uuid;
+  seat_count integer;
+begin
+  if p_user_id is null or p_action not in ('add', 'remove') or p_email is null or char_length(btrim(p_email)) not between 3 and 254 then
+    raise exception 'Invalid team member request' using errcode = '22023';
+  end if;
+  insert into public.team_workspaces(owner_id) values(p_user_id) on conflict (owner_id) do nothing;
+  select * into strict ws from public.team_workspaces where owner_id = p_user_id for update;
+  insert into public.team_members(workspace_id, user_id, role) values(ws.id, p_user_id, 'owner')
+    on conflict (workspace_id, user_id) do nothing;
+  select id into target_user from auth.users where lower(email) = lower(btrim(p_email)) limit 1;
+  if not found then
+    raise exception 'User not found' using errcode = 'P0002';
+  end if;
+  if p_action = 'add' then
+    select count(*) into seat_count from public.team_members where workspace_id = ws.id;
+    if not exists(select 1 from public.team_members where workspace_id = ws.id and user_id = target_user) and seat_count >= ws.max_seats then
+      raise exception 'Team seat limit reached' using errcode = '22023';
+    end if;
+    insert into public.billing_accounts(user_id) values(target_user) on conflict do nothing;
+    insert into public.team_members(workspace_id, user_id, role)
+      values(ws.id, target_user, case when target_user = p_user_id then 'owner' else 'editor' end)
+      on conflict (workspace_id, user_id) do nothing;
+  else
+    if target_user = p_user_id then
+      raise exception 'Owner cannot be removed' using errcode = '22023';
+    end if;
+    delete from public.team_members where workspace_id = ws.id and user_id = target_user;
+  end if;
+  return jsonb_build_object('team', (public.get_billing_status(p_user_id))->'team');
 end;
 $$;
 
@@ -259,7 +354,14 @@ begin
     else return jsonb_build_object('allowed', false, 'code', 'model_unavailable');
   end case;
   select * into account from public.billing_accounts where user_id = p_user_id for update;
-  if not found then return jsonb_build_object('allowed', false, 'code', 'access_expired'); end if;
+  if not found then
+    if exists(select 1 from public.team_members where user_id = p_user_id) then
+      insert into public.billing_accounts(user_id) values(p_user_id) on conflict do nothing;
+      select * into account from public.billing_accounts where user_id = p_user_id for update;
+    else
+      return jsonb_build_object('allowed', false, 'code', 'access_expired');
+    end if;
+  end if;
   -- Every quota mutation takes account -> global config -> grant/request locks.
   select * into strict limits from public.paid_ai_limits where singleton = true for update;
   at_time := clock_timestamp();
@@ -279,8 +381,16 @@ begin
     return jsonb_build_object('allowed', false, 'code', 'duplicate_request');
   end if;
   select * into access from public.billing_grants
-    where user_id = p_user_id and revoked_at is null and starts_at <= at_time and expires_at > at_time
-    order by starts_at desc limit 1 for update;
+    where revoked_at is null and plan_id <> 'niche10' and starts_at <= at_time and expires_at > at_time
+      and (
+        user_id = p_user_id
+        or (plan_id = 'max3' and user_id in (
+          select w.owner_id from public.team_workspaces w
+          join public.team_members m on m.workspace_id = w.id
+          where m.user_id = p_user_id
+        ))
+      )
+    order by (user_id = p_user_id) desc, starts_at desc limit 1 for update;
   if not found then return jsonb_build_object('allowed', false, 'code', 'access_expired'); end if;
   if access.tier < min_tier then return jsonb_build_object('allowed', false, 'code', 'plan_required'); end if;
   if (select count(*) from public.paid_ai_reservations where user_id = p_user_id and outcome = 'pending') >= 2 then
@@ -303,7 +413,7 @@ begin
   update public.billing_grants set tokens_reserved = tokens_reserved + p_token_cap where id = access.id;
   insert into public.paid_ai_reservations(request_id, user_id, grant_id, model_id, multiplier_hundredths,
     token_cap, provider_cap_units, usage_day)
-    values(p_request_id, p_user_id, access.id, p_model_id, coefficient, p_token_cap, reserve_units::bigint, today);
+    values(p_request_id, access.user_id, access.id, p_model_id, coefficient, p_token_cap, reserve_units::bigint, today);
   update public.billing_accounts set last_attempt_at = at_time where user_id = p_user_id;
   return jsonb_build_object('allowed', true, 'reservation_id', p_request_id);
 end;
@@ -350,11 +460,13 @@ $$;
 revoke all on function public.create_billing_order(uuid,text,uuid),
   public.confirm_billing_order(uuid,uuid,text,integer), public.cancel_billing_order(uuid,uuid),
   public.reject_billing_order(uuid,uuid,text), public.get_billing_status(uuid), public.get_billing_admin_queue(),
+  public.manage_team_member(uuid,text,text),
   public.reserve_paid_ai_attempt(uuid,uuid,text,bigint), public.settle_paid_ai_attempt(uuid,bigint,text)
   from public, anon, authenticated;
 grant execute on function public.create_billing_order(uuid,text,uuid),
   public.confirm_billing_order(uuid,uuid,text,integer), public.cancel_billing_order(uuid,uuid),
   public.reject_billing_order(uuid,uuid,text), public.get_billing_status(uuid), public.get_billing_admin_queue(),
+  public.manage_team_member(uuid,text,text),
   public.reserve_paid_ai_attempt(uuid,uuid,text,bigint), public.settle_paid_ai_attempt(uuid,bigint,text)
   to service_role;
 commit;

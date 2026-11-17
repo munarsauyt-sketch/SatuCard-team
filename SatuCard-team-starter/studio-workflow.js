@@ -14,7 +14,8 @@
       title: ['title', 'name', 'product', 'название', 'товар', 'имя'],
       subtitle: ['subtitle', 'desc', 'description', 'подзаголовок', 'описание'],
       price: ['price', 'cost', 'цена', 'стоимость'],
-      badge: ['badge', 'tag', 'label', 'плашка', 'бейдж']
+      badge: ['badge', 'tag', 'label', 'плашка', 'бейдж'],
+      photo: ['photo', 'image', 'img', 'фото', 'картинка']
     };
     const colIndex = {};
     let hasHeader = false;
@@ -35,7 +36,10 @@
       const rawPrice = get('price', 2).replace(/[^\d]/g, '');
       const price = rawPrice ? Number(rawPrice) : null;
       const badge = get('badge', 3).slice(0, 24);
-      return { title, subtitle, price: Number.isFinite(price) ? price : null, badge };
+      const photo = get('photo', 4).slice(0, 40);
+      const item = { title, subtitle, price: Number.isFinite(price) ? price : null, badge };
+      if (photo) item.photo = photo;
+      return item;
     }).filter(Boolean);
   }
   window.SATUCARD_WORKFLOW = { parseCatalogCsv };
@@ -105,6 +109,8 @@
       }
       if (document.activeElement !== $('view-label')) $('view-label').value = model.views.find(view => view.id === model.activeViewId).label;
       $('remove-view').disabled = model.views.length <= 1; $('add-view').disabled = model.views.length >= 8; $('make-set').disabled = model.views.length > 6;
+      if ($('make-full-kit')) $('make-full-kit').disabled = model.views.length >= 8;
+      if ($('sync-product-kit')) $('sync-product-kit').disabled = model.views.length <= 1;
       $('duplicate-format').disabled = model.views.length >= 8;
       for (const option of $('duplicate-format').options) option.disabled = option.value === model.settings.format;
       $('remove-background').disabled = removing || !model.photoId;
@@ -115,11 +121,24 @@
     document.addEventListener('satucard:editor-change', renderViews);
     renderViews();
     ['cloud-save', 'cloud-copy', 'cloud-refresh', 'copy-offline', 'download-set', 'check-export'].forEach(id => { $(id).disabled = false; });
+    if ($('cloud-optimize')) $('cloud-optimize').disabled = false;
     const actOnSet = action => { try { action(); message('set-status', 'Изменение комплекта можно отменить. Тексты и оформление каждой карточки редактируются отдельно.'); } catch (error) { message('set-status', error.message, true); } };
     $('view-earlier').addEventListener('click', () => actOnSet(() => editor.moveView(-1)));
     $('view-later').addEventListener('click', () => actOnSet(() => editor.moveView(1)));
     $('apply-brand').addEventListener('click', () => actOnSet(() => editor.applyBrand()));
     $('make-set').addEventListener('click', () => actOnSet(() => editor.makeSet()));
+    $('make-full-kit')?.addEventListener('click', () => {
+      try {
+        const count = editor.makeFullKit?.() || 0;
+        message('set-status', `Мастер комплекта добавил ${count} слайда (Преимущества, Характеристики, Размеры, Комплектация).`);
+      } catch (error) { message('set-status', error.message, true); }
+    });
+    $('sync-product-kit')?.addEventListener('click', () => {
+      try {
+        editor.syncProductAcrossViews?.();
+        message('set-status', 'Название, цена и бренд синхронизированы во всех карточках комплекта.');
+      } catch (error) { message('set-status', error.message, true); }
+    });
     $('add-view').addEventListener('click', () => actOnSet(() => editor.addView()));
     $('duplicate-format').addEventListener('change', event => {
       const { value } = event.target;
@@ -160,16 +179,34 @@
       return surface.toDataURL('image/jpeg', 0.65);
     }
     let cloudSizeTimer;
+    function updateCloudSizeIndicator() {
+      if (!$('cloud-size')) return;
+      try {
+        const bytes = new Blob([editor.snapshot(true).serialized]).size;
+        const pct = Math.min(999, Math.round((bytes / 3500000) * 100));
+        $('cloud-size').textContent = 'Размер проекта ' + (bytes / 1000000).toFixed(2) + ' МБ (' + pct + '% от 3,5 МБ)' + (bytes > 3450000 ? '. Нажмите «Сжать фото для облака» или скачайте локальный файл.' : '.');
+      } catch (_) {}
+    }
+    document.querySelector('.cloud-panel')?.addEventListener('toggle', event => {
+      if (event.currentTarget.open) updateCloudSizeIndicator();
+    });
     document.addEventListener('satucard:editor-change', () => {
       clearTimeout(cloudSizeTimer);
-      if (!document.querySelector('.cloud-panel').open) return;
-      cloudSizeTimer = setTimeout(() => {
-        if (!$('cloud-size')) return;
-        try {
-          const bytes = new Blob([editor.snapshot(true).serialized]).size;
-          $('cloud-size').textContent = 'Размер проекта ' + (bytes / 1000000).toFixed(2) + ' МБ' + (bytes > 3450000 ? '. Для облака уменьшите фото или скачайте файл проекта.' : '.');
-        } catch (_) {}
-      }, 300);
+      if (!document.querySelector('.cloud-panel')?.open) return;
+      cloudSizeTimer = setTimeout(updateCloudSizeIndicator, 300);
+    });
+    $('cloud-optimize')?.addEventListener('click', async () => {
+      if (cloudBusy || !editor.optimizePhotosForCloud) return;
+      setBusy(true);
+      try {
+        const shrunk = await editor.optimizePhotosForCloud();
+        updateCloudSizeIndicator();
+        message('cloud-status', shrunk ? `Оптимизировано фото: ${shrunk}. Теперь проект легче сохранить в облако.` : 'Фотографии уже компактные или используют встроенный пример.');
+      } catch (error) {
+        message('cloud-status', error.message || 'Не удалось сжать фото.', true);
+      } finally {
+        setBusy(false);
+      }
     });
     async function saveCloud(asCopy) {
       if (cloudBusy) return; setBusy(true); const generation = cloudGeneration, revision = editor.revision;
@@ -517,7 +554,15 @@
             price: row.price,
             showPrice: row.price !== null
           };
-          const { blob } = await editor.renderExport(nextSettings, snapshot.images, format, scale);
+          let rowImages = snapshot.images;
+          if (row.photo) {
+            const idx = Number(row.photo) - 1;
+            const viewEntry = snapshot.model.views[idx];
+            if (viewEntry && snapshot.viewImages[viewEntry.id]?.photo) {
+              rowImages = snapshot.viewImages[viewEntry.id];
+            }
+          }
+          const { blob } = await editor.renderExport(nextSettings, rowImages, format, scale);
           const name = `${String(index + 1).padStart(2, '0')}-${safeName(row.title)}.${format.extension}`;
           files.push({ name, bytes: new Uint8Array(await blob.arrayBuffer()) });
           await new Promise(resolve => setTimeout(resolve, 0));

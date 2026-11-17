@@ -151,9 +151,11 @@ async function refresh() {
   try {
     const data = await request();
     if (version !== generation) return;
-    status.textContent = data.isAdmin ? 'Доступ администратора'
+    const hasNichePack = Array.isArray(data.packs) && data.packs.includes('niche10');
+    const packSuffix = hasNichePack ? ' · Пак «10 нишевых шаблонов» (навсегда)' : '';
+    status.textContent = (data.isAdmin ? 'Доступ администратора'
       : data.active ? data.active.planName + ' · до ' + date(data.active.expiresAt) + ' по времени Казахстана'
-      : data.message || 'Бесплатный план. Для sAI можно подключить тариф на 30 дней.';
+      : data.message || 'Бесплатный план. Для sAI можно подключить тариф на 30 дней.') + packSuffix;
     $('billing-usage').hidden = !data.active;
     if (data.active) {
       const remaining = data.active.remainingPercent;
@@ -165,9 +167,32 @@ async function refresh() {
     $('billing-next').textContent = data.scheduled.map(plan => plan.planName + ' начнётся ' + date(plan.startsAt)).join(' · ');
     const activePlan = data.active ? data.plans.find(item => item.id === data.active.planId) : null;
     const activeBenefits = (activePlan?.benefits || []).map(text => element('li', text));
+    if (hasNichePack) activeBenefits.push(element('li', 'Пак «10 нишевых шаблонов» открыт навсегда'));
     const modelItems = [...activeBenefits, ...data.models.map(model => element('li', model.label))];
     $('billing-models').hidden = !modelItems.length;
     $('billing-model-list').replaceChildren(...modelItems);
+    const teamBox = $('billing-team');
+    if (teamBox) {
+      const canManageTeam = data.active?.planId === 'max3' || data.team?.role === 'owner';
+      const showTeam = Boolean(data.team || data.active?.planId === 'max3');
+      teamBox.hidden = !showTeam;
+      if (showTeam) {
+        const members = Array.isArray(data.team?.members) ? data.team.members : [];
+        const maxSeats = data.team?.maxSeats || 5;
+        $('billing-team-status').textContent = `Участников: ${members.length || 1} из ${maxSeats}. Участники получают общий доступ к ИИ-моделям и лимиту тарифа Команда.`;
+        const teamList = $('billing-team-list');
+        teamList.replaceChildren(...members.map(member => {
+          const li = element('li', `${member.email || member.userId} (${member.role === 'owner' ? 'владелец' : 'участник'}) `);
+          if (canManageTeam && member.role !== 'owner' && member.email) {
+            const removeBtn = button('Исключить', () => update({ action: 'team_remove', email: member.email }));
+            li.append(removeBtn);
+          }
+          return li;
+        }));
+        const teamForm = $('billing-team-form');
+        if (teamForm) teamForm.hidden = !canManageTeam || members.length >= maxSeats;
+      }
+    }
     $('billing-create').hidden = !data.ordering;
     availablePlans = Array.isArray(data.plans) ? data.plans : [];
     const select = $('billing-plan');
@@ -197,11 +222,11 @@ document.addEventListener('satucard:authchange', event => {
   accountId = next;
   pendingCreate = null;
   status.textContent = 'Проверяем доступ…';
-  for (const id of ['billing-admin', 'billing-create', 'billing-usage', 'billing-next', 'billing-models', 'billing-plan-benefits']) {
+  for (const id of ['billing-admin', 'billing-create', 'billing-usage', 'billing-next', 'billing-models', 'billing-plan-benefits', 'billing-team']) {
     const el = $(id);
     if (el) el.hidden = true;
   }
-  for (const id of ['billing-orders', 'billing-admin-orders', 'billing-model-list', 'billing-plan-benefits']) {
+  for (const id of ['billing-orders', 'billing-admin-orders', 'billing-model-list', 'billing-plan-benefits', 'billing-team-list']) {
     const el = $(id);
     if (el) el.replaceChildren();
   }
@@ -212,6 +237,13 @@ $('billing-support').append(link(SUPPORT.phone, SUPPORT.phoneHref),
   ...SUPPORT.emails.map(email => link(email, 'mailto:' + email)));
 $('billing-plan').addEventListener('change', event => {
   renderSelectedPlanBenefits(availablePlans, event.target.value);
+});
+$('billing-team-form')?.addEventListener('submit', event => {
+  event.preventDefault();
+  const emailInput = $('billing-team-email');
+  const email = emailInput?.value.trim();
+  if (busy || !email) return;
+  update({ action: 'team_add', email }, () => { if (emailInput) emailInput.value = ''; });
 });
 $('billing-refresh').addEventListener('click', refresh);
 $('billing-create').addEventListener('submit', event => {

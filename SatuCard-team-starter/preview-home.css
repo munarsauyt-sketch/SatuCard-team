@@ -212,9 +212,19 @@ html[data-theme=dark] .quick-status.is-error { color: #ffbcaa; }
 }
 .preview-home .render-wrap:has(canvas.rendered) .canvas-fallback { display: none; }
 .quick-canvas { width: min(100%, 244px); box-shadow: 0 10px 22px #20271e2a; }
+.quick-result-actions {
+  display: grid;
+  gap: 8px;
+  width: min(100%, 244px);
+}
+.quick-download.button,
 .quick-open.button {
+  width: 100%;
+  justify-content: space-between;
   min-height: 44px;
   padding: 9px 14px;
+}
+.quick-open.button {
   border-color: var(--line);
   background: var(--surface);
   color: var(--ink);

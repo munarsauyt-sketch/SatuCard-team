@@ -28,8 +28,10 @@
   const galleryCards = cards.filter(canvas => canvas.closest('[data-template-item]'));
   const originalSamples = new Map(galleryCards.map(canvas => [canvas, canvas.dataset.photo]));
   const productSelector = document.querySelector('[data-demo-product]');
+  const purposeSelector = document.querySelector('[data-demo-purpose]');
   const prices = new Intl.NumberFormat('ru-RU');
   let gallerySample = 'headphones';
+  let galleryPurpose = 'cover';
   function loadImage(key) {
     if (images.has(key)) return images.get(key);
     const promise = new Promise((resolve, reject) => {
@@ -45,7 +47,8 @@
       const image = await loadImage(key);
       if (canvas.dataset.photo !== key) return;
       const sample = samples[key];
-      renderer.render(canvas, { ...sample, title: sample.headline, subtitle: sample.title, description: '', template: canvas.dataset.template, format: 'portrait', brandName: 'YOUR STORE', photo: { fit: 'cover', radius: 24, ...sample.photo } }, { photo: image }, { scale: .48 });
+      const extra = galleryPurpose !== 'cover' ? { purpose: galleryPurpose, showPrice: false } : {};
+      renderer.render(canvas, { ...sample, title: sample.headline, subtitle: sample.title, description: '', template: canvas.dataset.template, format: 'portrait', brandName: 'YOUR STORE', ...extra, photo: { fit: 'cover', radius: 24, ...sample.photo } }, { photo: image }, { scale: .48 });
       canvas.classList.add('rendered');
     } catch (_) {
       // Keep the real photo visible if local canvas or image rendering is unavailable.
@@ -60,6 +63,8 @@
     link.setAttribute('aria-label', `${sample.title}. Открыть шаблон ${renderer.templates[link.dataset.editorTemplate].label} в редакторе`);
     const url = new URL(link.href, location.href);
     url.searchParams.set('photo', key); url.searchParams.set('style', link.dataset.editorTemplate);
+    if (galleryPurpose !== 'cover') url.searchParams.set('purpose', galleryPurpose);
+    else url.searchParams.delete('purpose');
     url.searchParams.set('theme', document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
     link.href = url.href;
     canvas.classList.remove('rendered');
@@ -75,6 +80,9 @@
   function updateGallery() {
     gallerySample = samples[productSelector?.value] ? productSelector.value : 'mixed';
     if (productSelector) productSelector.value = gallerySample;
+    const validPurposes = ['cover', 'advantages', 'specifications', 'dimensions', 'contents', 'instructions'];
+    galleryPurpose = validPurposes.includes(purposeSelector?.value) ? purposeSelector.value : 'cover';
+    if (purposeSelector) purposeSelector.value = galleryPurpose;
     galleryCards.forEach(canvas => {
       canvas.dataset.photo = gallerySample === 'mixed' ? originalSamples.get(canvas) : gallerySample;
       updateGalleryCard(canvas);
@@ -93,6 +101,7 @@
     });
   });
   productSelector?.addEventListener('change', updateGallery);
+  purposeSelector?.addEventListener('change', updateGallery);
   // Browsers may restore a select after Back; keep the links and previews in sync.
   window.addEventListener('pageshow', updateGallery);
   document.querySelectorAll('[data-editor-template]').forEach(link => link.addEventListener('click', () => {

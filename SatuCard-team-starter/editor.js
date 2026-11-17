@@ -274,15 +274,51 @@
     document.querySelectorAll('[data-palette]').forEach(button => button.setAttribute('aria-pressed', String(model.settings.customColors && palettes[button.dataset.palette].every((value, index) => value === model.settings[['background', 'accent', 'textColor'][index]]))));
     $('photo-palette').disabled = !model.photoId;
     if ($('fullscreen-dialog').open) renderer.render($('fullscreen-canvas'), model.settings, imageAssets());
-    if ($('phone-dialog').open) renderer.render($('phone-canvas'), model.settings, imageAssets());
+    if ($('phone-dialog').open) {
+      renderer.render($('phone-canvas'), model.settings, imageAssets());
+      if ($('phone-grid-canvas')) renderer.render($('phone-grid-canvas'), model.settings, imageAssets(), { scale: 0.36 });
+    }
   }
   function requestRender(thumbs = false) {
     if (!framePending) { framePending = true; requestAnimationFrame(renderNow); }
     if (thumbs) { clearTimeout(thumbTimer); thumbTimer = setTimeout(renderThumbnails, 220); }
   }
+  const nichePresets = [
+    { id: 'electronics', label: 'Электроника', note: 'Неон · рассрочка', template: 'neon', category: 'electronics', badge: '0·0·12', background: '#071522', accent: '#45e5da', textColor: '#eaffff', features: ['Гарантия 12 мес', 'Быстрая зарядка', 'Оригинал 100%'] },
+    { id: 'cosmetics', label: 'Косметика', note: 'Пастель · уход', template: 'bloom', category: 'beauty', badge: 'Хит продаж', background: '#ece3f5', accent: '#8759bd', textColor: '#402c57', features: ['Гипоаллергенно', 'Натуральный состав', 'Для всех типов кожи'] },
+    { id: 'apparel', label: 'Одежда и обувь', note: 'Журнал · размеры', template: 'editorial', category: 'clothing', badge: 'Новинка', background: '#eee9df', accent: '#b44836', textColor: '#292720', features: ['Размеры S–XXL', 'Дышащая ткань', 'Держит форму'] },
+    { id: 'auto', label: 'Автотовары', note: 'Графит · техно', template: 'graphite', category: 'electronics', badge: 'В наличии', background: '#212427', accent: '#f59e0b', textColor: '#f3f4f4', features: ['Универсальное крепление', 'Морозостойкий корпус', 'Простая установка'] },
+    { id: 'home', label: 'Дом и уют', note: 'Витрина · тепло', template: 'showcase', category: 'home', badge: 'Хит продаж', background: '#fff4e5', accent: '#a4482c', textColor: '#39231d', features: ['Экологичный материал', 'Лёгкий уход', 'Подарочная упаковка'] },
+    { id: 'kaspi_juma', label: 'Kaspi Жұма', note: 'Акцент · акция', template: 'bold', category: 'generic', badge: 'Рассрочка 0·0·12', background: '#fef08a', accent: '#dc2626', textColor: '#1c1917', features: ['Выгода по акции', 'Быстрая доставка', 'Проверка при получении'] },
+    { id: 'sport', label: 'Спорт и фитнес', note: 'Поп-арт · драйв', template: 'pop', category: 'generic', badge: 'Хит продаж', background: '#1e3a8a', accent: '#bef264', textColor: '#ffffff', features: ['Усиленная прочность', 'Не скользит в руке', 'Компактное хранение'] },
+    { id: 'kids', label: 'Детские товары', note: 'Облако · мягкий', template: 'cloud', category: 'generic', badge: 'Безопасно 0+', background: '#e8f7ff', accent: '#0284c7', textColor: '#0f172a', features: ['Безопасные материалы', 'Без острых углов', 'Сертифицировано'] },
+    { id: 'jewelry', label: 'Ювелирка и часы', note: 'Нуар · золото', template: 'noir', category: 'generic', badge: 'Подарок внутри', background: '#171a1b', accent: '#d8b675', textColor: '#f4ede0', features: ['Премиум покрытие', 'Фирменный футляр', 'Тонкая ручная работа'] },
+    { id: 'food', label: 'Продукты и ЭКО', note: 'Матча · органика', template: 'matcha', category: 'home', badge: '100% натурально', background: '#e8edcb', accent: '#486134', textColor: '#25351d', features: ['Без сахара и ГМО', 'Свежая партия', 'Бережная фасовка'] }
+  ];
+  let nichePackUnlocked = false;
+  async function checkNichePackEntitlement() {
+    try {
+      const session = await window.SATUCARD_AUTH?.getSession().catch(() => null);
+      if (!session?.access_token) return;
+      const response = await fetch('api/billing', { headers: { Authorization: `Bearer ${session.access_token}` }, cache: 'no-store' });
+      if (!response.ok) return;
+      const data = await response.json();
+      nichePackUnlocked = Boolean(data.isAdmin || data.active || (Array.isArray(data.packs) && data.packs.includes('niche10')));
+      const statusEl = $('niche-pack-status'), linkEl = $('niche-pack-link');
+      if (nichePackUnlocked && statusEl) {
+        statusEl.textContent = 'Доступ открыт ✓';
+        if (linkEl) linkEl.hidden = true;
+      }
+    } catch (_) {}
+  }
   function renderThumbnails() {
     if ($('panel-templates').hidden) return;
     document.querySelectorAll('[data-template]').forEach(button => renderer.render(button.querySelector('canvas'), { ...model.settings, template: button.dataset.template, customColors: false, format: 'portrait' }, imageAssets(), { scale: 0.16 }));
+    document.querySelectorAll('[data-niche-preset]').forEach(button => {
+      const preset = nichePresets.find(item => item.id === button.dataset.nichePreset);
+      if (!preset) return;
+      renderer.render(button.querySelector('canvas'), { ...model.settings, template: preset.template, customColors: true, background: preset.background, accent: preset.accent, textColor: preset.textColor, badge: preset.badge, format: 'portrait' }, imageAssets(), { scale: 0.16 });
+    });
   }
   function buildDesignOptions() {
     $('template-count').textContent = `${Object.keys(renderer.templates).length} стилей`;
@@ -293,6 +329,40 @@
       const thumb = document.createElement('canvas'); thumb.className = 'template-thumb'; thumb.setAttribute('aria-hidden', 'true');
       const label = document.createElement('span'); label.className = 'template-label'; label.textContent = template.label;
       button.append(thumb, label); $('template-grid').append(button);
+    }
+    const nicheGrid = $('niche-presets-grid');
+    if (nicheGrid) {
+      for (const preset of nichePresets) {
+        const button = document.createElement('button'); button.type = 'button'; button.className = 'template-card'; button.dataset.nichePreset = preset.id;
+        button.setAttribute('aria-label', `Ниша: ${preset.label}. ${preset.note}`); button.setAttribute('aria-pressed', 'false');
+        const thumb = document.createElement('canvas'); thumb.className = 'template-thumb'; thumb.setAttribute('aria-hidden', 'true');
+        const label = document.createElement('span'); label.className = 'template-label'; label.textContent = preset.label;
+        const note = document.createElement('small'); note.textContent = preset.note;
+        button.append(thumb, label, note); nicheGrid.append(button);
+      }
+      nicheGrid.addEventListener('click', event => {
+        const button = event.target.closest('[data-niche-preset]'); if (!button) return;
+        const preset = nichePresets.find(item => item.id === button.dataset.nichePreset); if (!preset) return;
+        commit();
+        const isDemo = Boolean(activeView().sampleKey);
+        const nextFeatures = isDemo || model.settings.features.every(f => !f.trim()) ? preset.features : model.settings.features;
+        model.settings = renderer.normalize({
+          ...model.settings,
+          template: preset.template,
+          category: preset.category,
+          customColors: true,
+          background: preset.background,
+          accent: preset.accent,
+          textColor: preset.textColor,
+          badge: model.settings.badge || preset.badge,
+          features: nextFeatures
+        });
+        nicheGrid.querySelectorAll('[data-niche-preset]').forEach(el => el.setAttribute('aria-pressed', String(el === button)));
+        syncForm(); edited(true);
+        status('project-status', nichePackUnlocked
+          ? `Применён нишевый шаблон «${preset.label}».`
+          : `Нишевый шаблон «${preset.label}» применён. Пак из 10 ниш навсегда — 490 ₸ в разделе «Тарифы».`);
+      });
     }
   }
   function updateHistory() { $('undo-button').disabled = !history?.canUndo; $('redo-button').disabled = !history?.canRedo; }
@@ -925,7 +995,11 @@
   });
   function endDrag(event) { if (!dragging || event.pointerId !== dragging.id) return; dragging = null; canvas.classList.remove('is-dragging'); edited(); }
   ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(type => canvas.addEventListener(type, endDrag));
-  $('phone-preview-button').addEventListener('click', () => { renderer.render($('phone-canvas'), model.settings, imageAssets()); $('phone-dialog').showModal(); });
+  $('phone-preview-button').addEventListener('click', () => {
+    renderer.render($('phone-canvas'), model.settings, imageAssets());
+    if ($('phone-grid-canvas')) renderer.render($('phone-grid-canvas'), model.settings, imageAssets(), { scale: 0.36 });
+    $('phone-dialog').showModal();
+  });
   $('phone-close').addEventListener('click', () => $('phone-dialog').close());
   canvas.addEventListener('dblclick', event => {
     const bounds = canvas.getBoundingClientRect(), scale = 900 / bounds.width, x = (event.clientX - bounds.left) * scale, y = (event.clientY - bounds.top) * scale;
@@ -982,13 +1056,15 @@
       localStorage.setItem('satucard-editor-return', flow);
     } catch (_) {}
   }));
-  async function updateAuth() { const session = Boolean(await window.SATUCARD_AUTH?.getSession()); $('publish-login').hidden = session; if ($('publish-login-note')) $('publish-login-note').hidden = session; }
+  async function updateAuth() { const session = Boolean(await window.SATUCARD_AUTH?.getSession()); $('publish-login').hidden = session; if ($('publish-login-note')) $('publish-login-note').hidden = session; checkNichePackEntitlement(); }
   document.addEventListener('satucard:authchange', updateAuth); updateAuth();
   async function initialize() {
     await draftClaim;
     buildDesignOptions(); activateTab('photo'); syncForm(); fitPreview(); const params = new URLSearchParams(location.search);
     document.querySelectorAll('[data-palette]').forEach(button => { const chip = button.querySelector('i'); palettes[button.dataset.palette].forEach((color, index) => chip.style.setProperty('--palette-' + ['a', 'b', 'c'][index], color)); });
-    if (renderer.templates[params.get('style')]) model.settings.template = params.get('style'); if (renderer.formats[params.get('format')]) model.settings.format = params.get('format');
+    if (renderer.templates[params.get('style')]) model.settings.template = params.get('style');
+    if (renderer.formats[params.get('format')]) model.settings.format = params.get('format');
+    if (renderer.purposes[params.get('purpose')]) model.settings.purpose = params.get('purpose');
     await loadSample(Object.hasOwn(samples, params.get('photo')) ? params.get('photo') : 'headphones', true);
     if (!initialized) { syncActiveView(); initialModel = clone(model); history = project.createHistory(model); initialized = true; updateHistory(); requestRender(true); }
     try {
@@ -1097,6 +1173,70 @@
         ['Подробности', { purpose: 'specifications', subtitle: 'Подробности о товаре', features: [], showPrice: false, badge: '' }]
       ]) model.views.push({ id: crypto.randomUUID(), label, settings: renderer.normalize({ ...base, ...changes }), photoIds: [...model.photoIds], sampleKey: activeView().sampleKey });
       edited(true);
+    },
+    makeFullKit() {
+      readForm(); commit();
+      const base = clone(model.settings);
+      const existingPurposes = new Set(model.views.map(v => v.settings.purpose || 'cover'));
+      const slides = [
+        ['Преимущества', 'advantages', { purpose: 'advantages', subtitle: 'Главные преимущества', description: '', showPrice: false, badge: '' }],
+        ['Характеристики', 'specifications', { purpose: 'specifications', subtitle: 'Характеристики товара', showPrice: false, badge: '' }],
+        ['Размеры', 'dimensions', { purpose: 'dimensions', subtitle: 'Размеры и габариты', features: ['Ширина и высота', 'Компактная форма', 'Точные пропорции'], description: '', showPrice: false, badge: '' }],
+        ['Комплектация', 'contents', { purpose: 'contents', subtitle: 'Что входит в комплект', features: ['Основной товар', 'Фирменная упаковка', 'Инструкция на RU / KZ'], description: '', showPrice: false, badge: '' }]
+      ];
+      let added = 0;
+      for (const [label, purpose, changes] of slides) {
+        if (model.views.length >= 8) break;
+        if (existingPurposes.has(purpose)) continue;
+        const slidePhotos = model.libraryIds.length > 1
+          ? [model.libraryIds[(model.views.length) % model.libraryIds.length]]
+          : [...model.photoIds];
+        model.views.push({
+          id: crypto.randomUUID(),
+          label,
+          settings: renderer.normalize({ ...base, ...changes }),
+          photoIds: slidePhotos,
+          sampleKey: activeView().sampleKey
+        });
+        existingPurposes.add(purpose);
+        added++;
+      }
+      if (!added) throw new Error('Все слайды комплекта уже добавлены (или достигнут лимит 8 карточек).');
+      edited(true);
+      return added;
+    },
+    syncProductAcrossViews() {
+      readForm(); commit();
+      const sharedKeys = ['title', 'price', 'oldPrice', 'brandName', 'showBrand', 'category'];
+      for (const view of model.views) {
+        for (const key of sharedKeys) view.settings[key] = model.settings[key];
+      }
+      syncForm(); edited(true);
+    },
+    async optimizePhotosForCloud() {
+      readForm(); commit();
+      let shrunk = 0;
+      for (const id of model.libraryIds) {
+        if (id.startsWith('sample-')) continue;
+        const entry = assets.get(id);
+        if (!entry?.image) continue;
+        const img = entry.image;
+        const scale = Math.min(1, 1280 / Math.max(img.naturalWidth || 1, img.naturalHeight || 1));
+        const surface = document.createElement('canvas');
+        surface.width = Math.max(1, Math.round((img.naturalWidth || 900) * scale));
+        surface.height = Math.max(1, Math.round((img.naturalHeight || 900) * scale));
+        const ctx = surface.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, surface.width, surface.height);
+        ctx.drawImage(img, 0, 0, surface.width, surface.height);
+        const compressed = surface.toDataURL('image/jpeg', 0.78);
+        if (compressed.length < (entry.source?.length || Infinity)) {
+          entry.source = compressed;
+          shrunk++;
+        }
+      }
+      edited(true);
+      return shrunk;
     },
     moveView(delta) {
       cancelDrag(); readForm(); commit(); const index = model.views.findIndex(view => view.id === model.activeViewId), target = index + delta;

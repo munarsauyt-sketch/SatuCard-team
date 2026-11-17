@@ -2,6 +2,26 @@ import { FORMATS } from './video-model.js';
 import { drawProject } from './video-renderer.js';
 import { mixAudio } from './video-media.js';
 
+export async function probeExportSupport({height=1280}={}) {
+  try {
+    if (typeof window !== 'undefined' && typeof window.VideoEncoder === 'undefined') {
+      return { video: false, audio: false, ok: false, message: 'В этом браузере нет WebCodecs. Для экспорта MP4 откройте студию в Chrome или Edge.' };
+    }
+    const { Quality, canEncodeVideo, canEncodeAudio } = await import('./assets/vendor/mediabunny/mediabunny.mjs');
+    const quality = new Quality({ bitrate: height > 1280 ? 7e6 : 4e6 });
+    const video = await canEncodeVideo('avc', { width: 720, height: 1280, quality }).catch(() => false);
+    const audio = await canEncodeAudio('aac', { numberOfChannels: 2, sampleRate: 48000 }).catch(() => false);
+    const message = !video
+      ? 'Браузер не поддерживает аппаратный экспорт H.264. Для сохранения MP4 откройте Chrome или Edge.'
+      : !audio
+        ? 'Браузер не кодирует звук AAC — ролик можно экспортировать без звука или в Chrome / Edge.'
+        : 'Устройство готово к экспорту MP4 (H.264 + AAC)';
+    return { video: Boolean(video), audio: Boolean(audio), ok: Boolean(video), message };
+  } catch (_) {
+    return { video: false, audio: false, ok: false, message: 'Проверка экспорта недоступна в этом окружении.' };
+  }
+}
+
 export async function exportVideo(project,store,{height=1280,signal,onProgress=()=>{}}={}) {
   const { Output,Mp4OutputFormat,BufferTarget,CanvasSource,AudioBufferSource,Quality,canEncodeVideo,canEncodeAudio }=await import('./assets/vendor/mediabunny/mediabunny.mjs');
   const format=FORMATS[project.format],ratio=height/Math.max(format.width,format.height);

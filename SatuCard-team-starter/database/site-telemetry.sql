@@ -70,7 +70,15 @@ set search_path = ''
 as $$
 declare
   v_today date := (now() at time zone 'Asia/Almaty')::date;
+  v_recent_same_path boolean := false;
 begin
+  select exists(
+    select 1 from public.site_presence
+    where session_id = p_session_id
+      and path = p_path
+      and last_seen_at > now() - interval '5 seconds'
+  ) into v_recent_same_path;
+
   delete from public.site_presence
   where last_seen_at < now() - interval '15 minutes';
 
@@ -82,7 +90,7 @@ begin
         device = excluded.device,
         last_seen_at = now();
 
-  if p_is_pageview then
+  if p_is_pageview and not v_recent_same_path then
     insert into public.site_traffic_daily (day, path, device, views)
     values (v_today, p_path, p_device, 1)
     on conflict (day, path, device) do update
