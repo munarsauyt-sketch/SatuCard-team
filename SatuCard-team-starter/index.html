@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ru" data-default-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -22,8 +22,15 @@
   <script src="intro.js?v=20261030" defer></script>
   <script src="interface-language.js?v=quick-studio" defer></script>
   <link rel="stylesheet" href="folio.css">
+  <link rel="stylesheet" href="hero-depth.css">
 </head>
 <body class="preview-home">
+<div class="landing-depth" aria-hidden="true">
+  <div class="landing-grid"></div>
+  <div class="landing-glow landing-glow-warm"></div>
+  <div class="landing-glow landing-glow-amber"></div>
+  <div class="landing-noise"></div>
+</div>
 <a class="skip-link" href="#main">К содержимому</a>
 <header class="site-header"><div class="container header-inner">
   <a class="brand" href="index.html" aria-label="SatuCard — главная"><img class="brand-logo-icon" src="assets/favicon.svg?v=catalog-design" alt="">SatuCard<span class="brand-dot">.</span></a>
@@ -36,10 +43,11 @@
   <section class="mark-hero" aria-labelledby="home-title">
     <div class="container cover-spread">
       <div class="cover-copy">
+        <div class="cover-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m12 3 2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4L12 3Z"/></svg><span>Генератор карточек для Kaspi, Instagram и WB</span></div>
         <h1 id="home-title">Товар <br>в кадре<span>.</span></h1>
         <p>Превратите фото товара в карточку для маркетплейса или короткое видео для соцсетей.</p>
         <div class="cover-actions">
-          <a class="button cover-primary" href="#quick-start">Создать карточку <span aria-hidden="true">↘</span></a>
+          <a class="button cover-primary" href="#quick-start">Создать карточку <span aria-hidden="true">↗</span></a>
           <a class="text-link" href="video.html">Видеостудия <span aria-hidden="true">↗</span></a>
         </div>
         <div class="cover-picker" role="group" aria-label="Выбор товара" hidden>
@@ -50,15 +58,39 @@
         </div>
       </div>
       <figure class="cover-frame">
-        <div class="cover-art" data-product="ceramics">
-          <img id="cover-photo" src="assets/images/ceramics.jpg" width="800" height="1200" alt="Белая чашка кофе в солнечном свете" fetchpriority="high">
-          <canvas id="cover-card" aria-label="Пример готовой карточки" hidden></canvas>
+        <div class="showcase-toolbar">
+          <span class="showcase-caption">Одно фото. Готовая карточка.</span>
           <div class="cover-switch" role="group" aria-label="Режим просмотра" hidden>
-            <button type="button" data-cover-mode="photo" aria-pressed="true">Фото</button>
+            <button type="button" data-cover-mode="photo" aria-pressed="false">Фото</button>
             <button type="button" data-cover-mode="card" aria-pressed="false">Карточка</button>
           </div>
+          <button type="button" class="showcase-motion" aria-label="Остановить анимацию" aria-pressed="false" hidden><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path class="motion-pause" d="M7 4v12M13 4v12"/><path class="motion-play" d="m7 4 9 6-9 6V4Z"/></svg></button>
         </div>
-        <figcaption><span class="exposure" aria-hidden="true">01 / 03</span><a id="cover-open" href="editor.html?photo=ceramics&amp;style=studio"><span id="cover-name">Керамическая чашка</span><span aria-hidden="true"> ↗</span></a><span id="cover-price">4 900 ₸</span></figcaption>
+        <div class="showcase-stage">
+          <div class="showcase-sheet" aria-hidden="true"></div>
+          <div class="cover-art" data-product="ceramics" style="--split:0%">
+            <img id="cover-photo" src="assets/images/ceramics.jpg" width="800" height="1200" alt="Белая чашка кофе в солнечном свете" fetchpriority="high">
+            <canvas id="cover-card" role="img" aria-label="Пример готовой карточки" hidden></canvas>
+            <div class="cover-comparison" hidden>
+              <div class="compare-line" aria-hidden="true"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m8 8-4 4 4 4m8-8 4 4-4 4M11 7v10m2-10v10"/></svg></span></div>
+              <input id="cover-compare" type="range" min="0" max="100" value="0" aria-label="Сравнить исходное фото и готовую карточку" aria-describedby="cover-compare-hint">
+            </div>
+          </div>
+          <div class="showcase-glass showcase-badge">
+            <span class="showcase-badge-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9L12 3Z"/></svg></span>
+            <span>Хит Kaspi <span class="showcase-badge-term">• 0-0-12</span></span>
+          </div>
+          <div class="showcase-glass showcase-offer">
+            <span class="showcase-offer-label">Ваша карточка готова</span>
+            <div class="showcase-price"><strong id="cover-price">4 500 ₸</strong><del id="cover-old-price">5 900 ₸</del></div>
+            <div class="showcase-exports" hidden>
+              <button type="button" id="cover-png" aria-label="Скачать пример карточки в PNG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4"/></svg>PNG</button>
+              <button type="button" id="cover-video" aria-label="Перенести пример в видеостудию"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m10 9 5 3-5 3V9Z"/></svg><span>Видео</span></button>
+            </div>
+          </div>
+        </div>
+        <div class="compare-help" id="cover-compare-hint" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 12h18m-4-4 4 4-4 4M7 8l-4 4 4 4"/></svg><span>Двигайте ползунок — смотрите разницу</span></div>
+        <figcaption><span class="exposure" aria-hidden="true">01 / 03</span><button id="cover-open" type="button" aria-label="Открыть пример в редакторе" hidden><span id="cover-name" data-product-label>Керамическая чашка</span><span aria-hidden="true"> ↗</span></button><span class="showcase-demo">Пример оформления</span></figcaption>
         <span id="cover-status" class="sr-only" role="status"></span>
       </figure>
     </div>
