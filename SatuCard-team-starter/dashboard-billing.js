@@ -68,12 +68,14 @@ async function request(path = '', body) {
 async function update(body, onSuccess) {
   if (busy) return;
   busy = true;
+  document.querySelectorAll('.billing-panel button').forEach(control => { control.disabled = true; });
+  status.textContent = 'Обновляем данные…'; status.dataset.state = 'loading';
   try {
     await request('', body);
     onSuccess?.();
     await refresh();
-  } catch (error) { status.textContent = error.message; }
-  finally { busy = false; }
+  } catch (error) { status.textContent = error.message; status.dataset.state = 'error'; }
+  finally { busy = false; document.querySelectorAll('.billing-panel button').forEach(control => { control.disabled = false; }); }
 }
 
 function adminActions(order) {
@@ -148,9 +150,19 @@ function orderRow(order, payment, isAdmin) {
 
 async function refresh() {
   const version = ++generation;
+  const panel = document.querySelector('.billing-panel');
+  panel?.setAttribute('aria-busy', 'true');
+  $('billing-refresh').disabled = true;
+  if ($('billing-retry')) { $('billing-retry').hidden = true; $('billing-retry').disabled = true; }
+  status.dataset.state = 'loading';
   try {
     const data = await request();
     if (version !== generation) return;
+    status.dataset.state = 'ready';
+    if ($('billing-plan-badge')) {
+      $('billing-plan-badge').textContent = data.isAdmin ? 'Администратор' : data.active?.planName || 'Бесплатный';
+      $('billing-plan-badge').dataset.state = data.isAdmin || data.active ? 'active' : 'free';
+    }
     status.textContent = data.isAdmin ? 'Доступ администратора'
       : data.active ? data.active.planName + ' · до ' + date(data.active.expiresAt) + ' по времени Казахстана'
       : data.message || 'Бесплатный план. Для sAI можно подключить тариф на 30 дней.';
@@ -182,13 +194,31 @@ async function refresh() {
     $('billing-orders').replaceChildren(...(data.orders.length
       ? data.orders.map(order => orderRow(order, data.payment, false)) : [element('p', 'Пока нет покупок.')]));
     $('billing-admin').hidden = !(data.isAdmin && data.ready);
+    const management = document.querySelector('.billing-management');
+    if (management && (data.isAdmin || data.orders.some(order => order.status === 'pending') || new URLSearchParams(location.search).has('plan'))) management.open = true;
     if (data.isAdmin && data.ready) {
       const queue = await request('?admin=1');
       if (version !== generation) return;
       $('billing-admin-orders').replaceChildren(...(queue.orders.length
         ? queue.orders.map(order => orderRow(order, data.payment, true)) : [element('p', 'Нет заявок на проверку.')]));
     }
-  } catch (error) { if (version === generation) status.textContent = error.message; }
+  } catch (error) {
+    if (version === generation) {
+      status.textContent = error.message;
+      status.dataset.state = 'error';
+      $('billing-usage').hidden = true;
+      $('billing-next').hidden = true;
+      $('billing-models').hidden = true;
+      if ($('billing-retry')) $('billing-retry').hidden = false;
+      if ($('billing-plan-badge')) { $('billing-plan-badge').textContent = 'Нет данных'; $('billing-plan-badge').dataset.state = 'error'; }
+    }
+  } finally {
+    if (version === generation) {
+      panel?.setAttribute('aria-busy', 'false');
+      $('billing-refresh').disabled = false;
+      if ($('billing-retry')) $('billing-retry').disabled = false;
+    }
+  }
 }
 
 document.addEventListener('satucard:authchange', event => {
@@ -197,6 +227,7 @@ document.addEventListener('satucard:authchange', event => {
   accountId = next;
   pendingCreate = null;
   status.textContent = 'Проверяем доступ…';
+  if ($('billing-plan-badge')) { $('billing-plan-badge').textContent = 'Проверяем доступ'; delete $('billing-plan-badge').dataset.state; }
   for (const id of ['billing-admin', 'billing-create', 'billing-usage', 'billing-next', 'billing-models', 'billing-plan-benefits']) {
     const el = $(id);
     if (el) el.hidden = true;
@@ -214,6 +245,7 @@ $('billing-plan').addEventListener('change', event => {
   renderSelectedPlanBenefits(availablePlans, event.target.value);
 });
 $('billing-refresh').addEventListener('click', refresh);
+$('billing-retry')?.addEventListener('click', refresh);
 $('billing-create').addEventListener('submit', event => {
   event.preventDefault();
   const planId = $('billing-plan').value;

@@ -124,8 +124,10 @@ export async function packProject(project,files) {
 }
 export async function unpackProject(file) {
   if(file.size>MAX_TOTAL*1.4)throw new Error('Файл проекта слишком большой.');
-  const saved=JSON.parse(await file.text());
-  if(saved.app!=='SatuCardVideoFile'||saved.version!==1||!Array.isArray(saved.media)||saved.media.length>40)throw new Error('Выберите файл проекта .satuvideo.json.');
+  let saved;
+  try{saved=JSON.parse(await file.text());}
+  catch{throw new Error('Файл проекта повреждён. Выберите другой файл .satuvideo.json.');}
+  if(!saved||saved.app!=='SatuCardVideoFile'||saved.version!==1||!Array.isArray(saved.media)||saved.media.length>40)throw new Error('Выберите файл проекта .satuvideo.json.');
   const project=validateProject(saved.project),files=new Map();
   let total=0;
   for(const entry of saved.media){

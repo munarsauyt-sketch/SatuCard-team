@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ru" data-default-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -30,8 +30,9 @@
   <script src="local-projects.js" defer></script><script src="editor-tour.js?v=wide-tools-1" defer></script>
   <script src="interface-language.js?v=catalog-design" defer></script>
   <link rel="stylesheet" href="folio.css">
+  <script src="product-interface.js" defer></script>
 </head>
-<body class="studio-page">
+<body class="product-ui studio-page">
   <a class="skip-link" href="#main">К редактору</a>
   <svg class="studio-icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 5-5 4 4 4-6 5 7"/></symbol>
@@ -55,14 +56,14 @@
 
   <header class="site-header studio-header"><div class="container header-inner">
     <a class="brand" href="index.html" aria-label="SatuCard — главная"><img class="brand-logo-icon" src="assets/favicon.svg?v=catalog-design" alt="">SatuCard<span class="brand-dot">.</span></a><span class="studio-label">Студия</span>
-    <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="main-nav" aria-label="Открыть меню">☰</button>
+    <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="main-nav" aria-label="Открыть меню"><span class="menu-bars" aria-hidden="true"></span></button>
     <nav id="main-nav" aria-label="Основная навигация"><a href="index.html">Главная</a><a href="editor.html" aria-current="page">Редактор</a><a href="video.html">Видео</a><a href="examples.html">Шаблоны</a><a href="pricing.html">Тарифы</a></nav>
     <div class="studio-header-actions"><button class="theme-toggle" type="button" data-theme-toggle aria-label="Тёмная тема" aria-pressed="false"><span aria-hidden="true">◐</span><span class="theme-toggle-text">Тема</span></button><a class="header-account" data-account-link href="auth.html">Войти</a></div>
   </div></header>
 
   <main id="main" class="studio-main">
     <div class="studio-project-bar">
-      <div class="studio-project-title">
+      <div class="studio-project-title"><span class="workspace-app-label">Дизайн-студия</span>
         <h1>Редактор карточек</h1>
         <span id="draft-status" class="draft-status" role="status">Новый проект</span>
       </div>
@@ -101,6 +102,9 @@
     <noscript><p class="notice">Включите JavaScript, чтобы редактировать карточку и сохранить изображение.</p></noscript>
 
     <div class="studio-layout">
+      <div class="studio-command-rail" aria-label="Инструменты карточки">
+        <div class="studio-tool-heading"><div class="studio-tabs" role="tablist" aria-label="Разделы редактора"><button id="tab-photo" type="button" role="tab" data-editor-tab="photo" aria-controls="panel-photo" aria-selected="true"><svg class="studio-icon"><use href="#i-image"/></svg>Фото</button><button id="tab-content" type="button" role="tab" data-editor-tab="content" aria-controls="panel-content" aria-selected="false" tabindex="-1"><svg class="studio-icon"><use href="#i-text"/></svg>Тексты</button><button id="tab-design" type="button" role="tab" data-editor-tab="design" aria-controls="panel-design" aria-selected="false" tabindex="-1"><svg class="studio-icon"><use href="#i-design"/></svg>Дизайн</button><button id="tab-templates" type="button" role="tab" data-editor-tab="templates" aria-controls="panel-templates" aria-selected="false" tabindex="-1"><svg class="studio-icon"><use href="#i-design"/></svg>Шаблоны</button></div><a href="#preview" class="studio-quiet-button tool-canvas-link">К холсту ↑</a></div>
+      </div>
       <section id="preview" class="studio-workspace" aria-labelledby="preview-heading">
         <div class="workspace-heading">
           <div class="workspace-identity"><span class="workspace-live-dot" aria-hidden="true"></span><h2 id="preview-heading">Холст</h2><span id="format-description">4:5 · 900 × 1125</span></div>
@@ -121,7 +125,7 @@
         <div class="workspace-bottom-bar"><p id="preview-hint"><svg class="studio-icon"><use href="#i-image"/></svg>Кадрируйте фото или откройте тексты</p><button id="open-ai-chat" class="ai-floating-launch" type="button" data-open-ai aria-controls="ai-chat" aria-expanded="false" aria-label="Открыть чат sAI"><svg class="studio-icon" aria-hidden="true"><use href="#i-spark"/></svg>sAI</button><div class="workspace-zoom"><button id="preview-fit-button" type="button" class="studio-icon-button" aria-label="Вписать карточку в окно" title="Вписать в окно"><svg class="studio-icon"><use href="#i-fit"/></svg></button><label for="preview-zoom" class="sr-only">Масштаб просмотра</label><input id="preview-zoom" type="range" min="50" max="200" value="100"><output id="preview-zoom-value" for="preview-zoom">Вписано</output></div></div>
       </section>
       <aside id="studio-settings" class="studio-sidebar" aria-label="Настройки карточки">
-        <div class="studio-tool-heading"><div class="studio-tabs" role="tablist" aria-label="Разделы редактора"><button id="tab-photo" type="button" role="tab" data-editor-tab="photo" aria-controls="panel-photo" aria-selected="true"><svg class="studio-icon"><use href="#i-image"/></svg>Фото</button><button id="tab-content" type="button" role="tab" data-editor-tab="content" aria-controls="panel-content" aria-selected="false" tabindex="-1"><svg class="studio-icon"><use href="#i-text"/></svg>Тексты</button><button id="tab-design" type="button" role="tab" data-editor-tab="design" aria-controls="panel-design" aria-selected="false" tabindex="-1"><svg class="studio-icon"><use href="#i-design"/></svg>Дизайн</button><button id="tab-templates" type="button" role="tab" data-editor-tab="templates" aria-controls="panel-templates" aria-selected="false" tabindex="-1"><svg class="studio-icon"><use href="#i-design"/></svg>Шаблоны</button></div><a href="#preview" class="studio-quiet-button tool-canvas-link">К холсту ↑</a></div>
+        <div class="inspector-caption"><span>Параметры карточки</span><span class="inspector-tab-label">Фото</span></div>
         <form id="editor-form" class="studio-form" novalidate>
           <section id="panel-photo" data-editor-panel="photo" role="tabpanel" aria-labelledby="tab-photo" tabindex="0">
             <div class="panel-intro"><h2>Фотографии</h2></div>
@@ -247,6 +251,7 @@
     </div>
 
     <section class="studio-deck" aria-label="Комплект и проект">
+      <div class="deck-heading"><div><span class="section-caption">Ваш проект</span><h2>От обложки к комплекту</h2></div><p>Слайды, файлы и публикация — в одном месте.</p></div>
         <div class="workflow-set"><div class="workflow-set-heading"><strong>Комплект</strong><span>До 8 карточек</span></div><div id="product-views" class="workflow-view-tabs" aria-label="Карточки комплекта"></div>
           <div class="workflow-actions"><button id="make-set" type="button" class="studio-small-button" disabled>+ Карточки с деталями</button><button id="add-view" type="button" class="studio-quiet-button" disabled>Дублировать</button><button id="view-earlier" type="button" class="studio-quiet-button" aria-label="Переместить карточку раньше">← Раньше</button><button id="view-later" type="button" class="studio-quiet-button" aria-label="Переместить карточку позже">Позже →</button><button id="apply-brand" type="button" class="studio-quiet-button">Применить бренд ко всем</button><button id="remove-view" type="button" class="studio-text-button" disabled>Удалить карточку</button></div>
           <div class="studio-view-name"><label for="view-label">Имя карточки</label><input id="view-label" type="text" maxlength="60"></div><p id="set-status" role="status"></p>

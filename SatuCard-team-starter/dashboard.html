@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ru" data-default-theme="dark">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Ваша коллекция — SatuCard</title>
@@ -13,8 +13,9 @@
   <script src="dashboard-billing.js?v=pricing-v2" type="module"></script>
   <script src="interface-language.js?v=catalog-design" defer></script>
   <link rel="stylesheet" href="folio.css">
+  <script src="product-interface.js" defer></script>
 </head>
-<body class="account-page dashboard-page">
+<body class="product-ui account-page dashboard-page">
 <a class="skip-link" href="#main">К содержимому</a>
 <header class="site-header"><div class="container header-inner">
   <a class="brand" href="index.html" aria-label="SatuCard — главная"><img class="brand-logo-icon" src="assets/favicon.svg?v=catalog-design" alt="">SatuCard<span class="brand-dot">.</span></a>
@@ -24,20 +25,23 @@
   <a class="header-account" data-account-link href="dashboard.html" aria-current="page">Профиль</a>
 </div></header>
 <main id="main" class="dashboard-main container" data-state="loading">
-  <div class="dashboard-heading"><div><p class="account-kicker">ЛИЧНЫЙ КАБИНЕТ / ВАШ МАГАЗИН</p><h1>Всё, что вы<br>создали<span>.</span></h1><p>Ваша коллекция карточек. Готова к следующей продаже.</p></div><a class="button button-orange" href="editor.html">Создать карточку <span aria-hidden="true">↗</span></a></div>
-  <section class="profile-panel" aria-labelledby="profile-title"><div class="profile-avatar" aria-hidden="true">S</div><div class="profile-details"><span class="profile-label">ВАШ ПРОФИЛЬ</span><h2 id="profile-title">Загружаем профиль…</h2><p id="profile-email"></p><p id="profile-created"></p></div><span class="profile-connection"><i aria-hidden="true"></i>Ваше пространство</span><a class="button button-light" href="profile.html?edit=1">Изменить профиль</a><button class="button button-light" id="logout-button" type="button">Выйти <span aria-hidden="true">↗</span></button></section>
+  <div class="dashboard-heading"><div><p class="account-kicker">Рабочее пространство</p><h1>Ваша коллекция<span>.</span></h1><p>Продолжайте проекты и управляйте готовыми карточками.</p></div><div class="collection-create"><a class="button button-light" href="video.html">Создать видео</a><a class="button button-orange" href="editor.html">Создать карточку <span aria-hidden="true">↗</span></a></div></div>
+  <div class="dashboard-overview">
+  <section class="profile-panel" aria-labelledby="profile-title"><div class="profile-avatar" aria-hidden="true">S</div><div class="profile-details"><span class="profile-label">Ваш профиль</span><h2 id="profile-title">Загружаем профиль…</h2><p id="profile-email"></p><p id="profile-created"></p></div><span class="profile-connection"><i aria-hidden="true"></i>Ваше пространство</span><a class="button button-light" href="profile.html?edit=1">Изменить профиль</a><button class="button button-light" id="logout-button" type="button">Выйти <span aria-hidden="true">↗</span></button></section>
   <section class="billing-panel" aria-labelledby="billing-title">
     <div class="billing-heading">
-      <div><p class="account-kicker">sAI / ВАШ ТАРИФ</p><h2 id="billing-title">Тариф и лимиты</h2></div>
+      <div><p class="account-kicker">Доступ к sAI</p><h2 id="billing-title">Тариф и лимиты</h2></div><span id="billing-plan-badge" class="plan-badge">Проверяем доступ</span>
       <a class="button button-light" href="pricing.html">Сравнить тарифы</a>
     </div>
     <p id="billing-status" role="status" aria-live="polite">Проверяем доступ…</p>
+    <button id="billing-retry" type="button" class="button button-light" hidden>Повторить проверку</button>
     <div id="billing-usage" class="billing-usage" hidden>
       <label for="billing-progress" id="billing-remaining"></label>
       <progress id="billing-progress" max="100" value="0"></progress>
     </div>
     <p id="billing-next" hidden></p>
     <details id="billing-models" hidden><summary>Доступные модели</summary><ul id="billing-model-list"></ul></details>
+    <details class="billing-management"><summary>Тарифы, покупки и заявки</summary><div class="billing-management-content">
     <form id="billing-create" class="billing-form" hidden>
       <label>Тариф <select id="billing-plan" required></select></label>
       <button class="button button-orange" type="submit">Создать заявку</button>
@@ -47,12 +51,18 @@
     <section id="billing-admin" aria-labelledby="billing-admin-title" hidden><h3 id="billing-admin-title">Заявки на проверку</h3><div id="billing-admin-orders"></div></section>
     <div class="billing-support"><strong>Поддержка по оплате</strong><div id="billing-support"></div></div>
     <button type="button" class="button button-light" id="billing-refresh">Обновить тариф и заявки</button>
+    </div></details>
   </section>
-  <section class="dashboard-projects workflow-panel"><h2>На этом устройстве</h2><label for="local-project-search">Найти черновик</label><input id="local-project-search" type="search"><p id="local-project-status" role="status"></p><ul id="local-project-list" class="local-project-list"></ul></section><section class="dashboard-projects workflow-panel" aria-labelledby="projects-title"><h2 id="projects-title">Редактируемые проекты</h2><p>Приватные комплекты с фото, текстами и настройками. Нажмите «Редактировать», чтобы продолжить.</p><label for="projects-search">Найти товар</label><input id="projects-search" type="search" maxlength="80"><label><input id="projects-archived" type="checkbox">Архив</label><button id="projects-more" class="button button-light" type="button" hidden>Ещё проекты</button><button id="projects-refresh" type="button" class="button button-light">Обновить проекты</button><p id="projects-status" role="status">Загружаем проекты…</p><ul id="dashboard-project-list" class="workflow-project-list"></ul></section>
+  </div>
+  <div class="collection-layout">
+  <section class="dashboard-projects workflow-panel local-collection"><div class="collection-section-heading"><div><span class="section-caption">Локально</span><h2>На этом устройстве</h2></div><svg class="collection-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4"/></svg></div><div class="collection-search"><label for="local-project-search">Найти черновик</label><input id="local-project-search" type="search" placeholder="Название карточки"></div><p id="local-project-status" role="status"></p><div id="local-project-empty" class="project-empty-state" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M8 3h8l4 4v14H4V3h4Zm7 0v5h5M8 12h8m-8 4h5"/></svg><span>Здесь появятся ваши черновики</span><a href="editor.html">Создать первую карточку ↗</a></div><ul id="local-project-list" class="local-project-list"></ul></section>
+  <section class="dashboard-projects workflow-panel cloud-collection" aria-labelledby="projects-title"><div class="collection-section-heading"><div><span class="section-caption">В облаке</span><h2 id="projects-title">Редактируемые проекты</h2></div><button id="projects-refresh" type="button" class="button button-light">Обновить проекты</button></div><p class="collection-description">Приватные комплекты с фото, текстами и настройками. Нажмите «Редактировать», чтобы продолжить.</p><div class="collection-toolbar"><div class="collection-search"><label for="projects-search">Найти товар</label><input id="projects-search" type="search" maxlength="80" placeholder="Название проекта"></div><label class="archive-toggle"><input id="projects-archived" type="checkbox">Архив</label></div><p id="projects-status" role="status">Загружаем проекты…</p><div id="projects-loading" class="project-skeletons" aria-hidden="true"><span></span><span></span></div><div id="projects-empty" class="project-empty-state" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 7V5h7l3 3h8v12H3V7Z"/><path d="M12 11v6m-3-3h6"/></svg><span>Ничего не найдено</span><a href="editor.html">Открыть редактор ↗</a></div><ul id="dashboard-project-list" class="workflow-project-list"></ul><button id="projects-more" class="button button-light" type="button" hidden>Ещё проекты</button></section>
+  </div>
   <section class="dashboard-cards" aria-labelledby="cards-title"><div class="dashboard-section-title"><h2 id="cards-title">Опубликованные карточки</h2><span id="cards-count" class="cards-count"></span></div>
     <p id="dashboard-status" class="collection-status" role="status" aria-live="polite">Загружаем вашу коллекцию…</p>
+    <button id="dashboard-retry" class="button button-light" type="button" hidden>Повторить загрузку</button>
     <div id="cards-loading" class="collection-loading" aria-hidden="true"><div class="card-skeleton"><div></div><i></i><span></span></div><div class="card-skeleton"><div></div><i></i><span></span></div><div class="card-skeleton"><div></div><i></i><span></span></div></div>
-    <div id="dashboard-empty" class="collection-empty" hidden><div><h3>Пока нет опубликованных карточек</h3><p>Создайте карточку в редакторе и опубликуйте её по ссылке. Она появится здесь.</p><a class="button button-dark" href="editor.html">Открыть редактор <span aria-hidden="true">↗</span></a></div></div>
+    <div id="dashboard-empty" class="collection-empty" hidden><svg class="empty-collection-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="9" y="12" width="24" height="30" rx="4"/><path d="M18 7h17a4 4 0 0 1 4 4v24M16 31l5-6 5 4 4-5M16 19h9"/></svg><div><h3>Пока нет опубликованных карточек</h3><p>Создайте карточку в редакторе и опубликуйте её по ссылке. Она появится здесь.</p><a class="button button-dark" href="editor.html">Открыть редактор <span aria-hidden="true">↗</span></a></div></div>
     <div id="my-cards" class="my-cards-grid" aria-live="polite"></div>
   </section>
   <aside class="collection-tip"><p>Откройте галерею, чтобы примерить разные шаблоны к одному товару.</p><a href="examples.html">Выбрать шаблон ↗</a></aside>

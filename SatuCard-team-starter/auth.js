@@ -8,16 +8,44 @@ document.addEventListener('DOMContentLoaded', async () => {
   const fromBilling = query.get('billing') === '1';
   let mode = query.get('mode') === 'signup' ? 'signup' : 'login';
   let busy = false, codeEmail = '', codeSignup = false, resendAfter = 0;
+  const submitLabels = new Map();
+  const fields = ['auth-email', 'auth-password', 'auth-confirm', 'email-code'];
   const googleLabel = () => mode === 'signup' ? 'Зарегистрироваться с Google' : 'Войти с Google';
-  const show = (message, type = 'error') => { notice.textContent = message; notice.className = `auth-notice ${type}`; };
+  const show = (message, type = 'error') => {
+    notice.textContent = message; notice.className = `auth-notice ${type}`;
+    if (message && type === 'error') notice.focus({ preventScroll: true });
+  };
+  function clearField(id) {
+    $(id).removeAttribute('aria-invalid');
+    const error = $(id + '-error');
+    if (error) { error.hidden = true; error.textContent = ''; }
+  }
+  function invalidField(id, message) {
+    const error = $(id + '-error');
+    $(id).setAttribute('aria-invalid', 'true');
+    if (error) { error.textContent = message; error.hidden = false; }
+    show(message); $(id).focus();
+  }
+  fields.forEach(id => $(id).addEventListener('input', () => clearField(id)));
   function setBusy(value) {
     busy = value;
     $('auth-card-content').setAttribute('aria-busy', String(value));
     $('auth-card-content').querySelectorAll('input, button').forEach(control => { control.disabled = value; });
+    [form, codeForm].forEach(activeForm => {
+      const submit = activeForm.querySelector('[type=submit]');
+      if (value && !activeForm.hidden && !activeForm.closest('[hidden]')) {
+        if (!submitLabels.has(submit)) submitLabels.set(submit, submit.textContent);
+        submit.textContent = 'Проверяем…';
+      } else if (!value && submitLabels.has(submit)) {
+        submit.textContent = submitLabels.get(submit); submitLabels.delete(submit);
+      }
+    });
   }
   function setMode(next) {
     if (busy) return;
     mode = next; form.reset(); show(''); codeForm.hidden = true; $('auth-main-options').hidden = false;
+    fields.forEach(clearField);
+    form.setAttribute('aria-labelledby', next === 'signup' ? 'auth-signup-tab' : 'auth-login-tab');
     $('auth-confirm-field').hidden = next !== 'signup';
     $('email-code-login').hidden = next !== 'login';
     $('auth-title').textContent = next === 'signup' ? 'Создайте аккаунт' : 'С возвращением';
@@ -84,9 +112,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   form.addEventListener('submit', async event => {
     event.preventDefault(); if (busy) return;
     const email = $('auth-email').value.trim().toLowerCase(), password = $('auth-password').value;
-    if (!validEmail(email)) return show('Введите корректный email.');
-    if (password.length < 8) return show('Пароль должен содержать минимум 8 символов.');
-    if (mode === 'signup' && password !== $('auth-confirm').value) return show('Пароли не совпадают.');
+    fields.forEach(clearField);
+    if (!validEmail(email)) return invalidField('auth-email', 'Введите корректный email.');
+    if (password.length < 8) return invalidField('auth-password', 'Пароль должен содержать минимум 8 символов.');
+    if (mode === 'signup' && password !== $('auth-confirm').value) return invalidField('auth-confirm', 'Пароли не совпадают.');
     setBusy(true); show('Связываемся с сервером…', 'loading');
     try {
       if (mode === 'signup') { await auth.signUp({ email, password }); showCode(email, true, true); }
@@ -96,7 +125,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   $('email-code-login').addEventListener('click', () => {
     const email = $('auth-email').value.trim().toLowerCase();
-    if (!validEmail(email)) return show('Сначала укажите email, на который зарегистрирован аккаунт.');
+    if (!validEmail(email)) return invalidField('auth-email', 'Сначала укажите email, на который зарегистрирован аккаунт.');
     showCode(email, false, false);
   });
   $('send-email-code').addEventListener('click', async () => {
@@ -110,7 +139,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   codeForm.addEventListener('submit', async event => {
     event.preventDefault(); if (busy) return;
     const token = $('email-code').value.trim();
-    if (!/^\d{6,8}$/.test(token)) return show('Введите код из письма: от 6 до 8 цифр.');
+    clearField('email-code');
+    if (!/^\d{6,8}$/.test(token)) return invalidField('email-code', 'Введите код из письма: от 6 до 8 цифр.');
     setBusy(true);
     try { await auth.verifyEmailCode({ email: codeEmail, token, signup: codeSignup }); await enterAccount(); }
     catch (error) { show(error.message); }

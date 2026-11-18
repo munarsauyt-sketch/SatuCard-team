@@ -8,6 +8,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const page = document.querySelector('.dashboard-main');
   const loading = document.querySelector('#cards-loading');
   const empty = document.querySelector('#dashboard-empty');
+  const retry = document.querySelector('#dashboard-retry');
+  const profilePanel = document.querySelector('.profile-panel');
+  retry?.addEventListener('click', () => location.reload());
+  profilePanel.setAttribute('aria-busy', 'true');
   grid.setAttribute('aria-busy', 'true');
   const logout = document.querySelector('#logout-button');
   logout.addEventListener('click', async () => {
@@ -29,11 +33,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch (error) {
     if (['sign_in_required', 'mail_proof_required', 'email_unconfirmed'].includes(error.code)) { location.replace(auth.accountPage('auth.html', { verify: '1' })); return; }
     status.textContent = error.message || 'Не удалось загрузить профиль.';
+    status.dataset.state = 'error';
+    if (retry) retry.hidden = false;
     document.querySelector('#profile-title').textContent = 'Профиль недоступен';
     loading.hidden = true;
     page.dataset.state = 'error';
     grid.setAttribute('aria-busy', 'false');
     return;
+  } finally {
+    profilePanel.setAttribute('aria-busy', 'false');
   }
 
   try {
@@ -75,12 +83,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const actions = document.createElement('div');
         actions.className = 'publication-actions';
         const edit = document.createElement('a');
+        edit.className = 'button button-light';
         edit.textContent = 'Обновить карточку';
         const params = new URLSearchParams({ publication: card.id });
         try { const draft = localStorage.getItem('satucard-publication-draft-' + card.id); if (draft) params.set('draft', draft); } catch (_) {}
         edit.href = 'editor.html?' + params;
         const remove = document.createElement('button');
-        remove.type = 'button'; remove.textContent = 'Снять с публикации';
+        remove.type = 'button'; remove.className = 'button button-danger'; remove.textContent = 'Снять с публикации';
         remove.addEventListener('click', async () => {
           if (!confirm('Снять «' + card.title + '» с публикации? Ссылка перестанет открываться.')) return;
           remove.disabled = true;
@@ -93,7 +102,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             item.remove(); status.textContent = 'Карточка снята с публикации.';
             loadedTotal = Math.max(0, loadedTotal - 1);
             count.textContent = String(grid.children.length);
-          } catch (error) { status.textContent = error.message || 'Не удалось снять карточку с публикации.'; }
+            status.dataset.state = 'ready';
+            empty.hidden = grid.children.length > 0 || !!document.querySelector('#load-more-cards');
+            page.dataset.state = empty.hidden ? 'ready' : 'empty';
+          } catch (error) { status.textContent = error.message || 'Не удалось снять карточку с публикации.'; status.dataset.state = 'error'; }
           finally { remove.disabled = false; }
         });
         actions.append(edit, remove); item.append(link, actions); grid.append(item);
@@ -109,6 +121,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     status.textContent = cards.length ? '' : 'В коллекции пока нет опубликованных карточек.';
     empty.hidden = cards.length > 0;
     page.dataset.state = cards.length ? 'ready' : 'empty';
+    status.dataset.state = page.dataset.state;
     renderCards(cards);
 
     if (initial.nextOffset !== null) {
@@ -126,8 +139,13 @@ document.addEventListener('DOMContentLoaded', async () => {
           renderCards(next.cards);
           nextOffset = next.nextOffset;
           if (nextOffset === null) moreButton.remove();
+          empty.hidden = grid.children.length > 0 || nextOffset !== null;
+          page.dataset.state = empty.hidden ? 'ready' : 'empty';
+          status.textContent = '';
+          status.dataset.state = page.dataset.state;
         } catch (error) {
           status.textContent = error.message || 'Не удалось загрузить ещё карточки.';
+          status.dataset.state = 'error';
         } finally {
           moreButton.disabled = false;
         }
@@ -136,6 +154,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   } catch (error) {
     status.textContent = error.message || 'Не удалось загрузить карточки.';
+    status.dataset.state = 'error';
+    if (retry) retry.hidden = false;
     page.dataset.state = 'error';
   } finally {
     loading.hidden = true;

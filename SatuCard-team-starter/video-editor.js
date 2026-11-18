@@ -441,7 +441,17 @@ const filename=()=>project.name.replace(/[<>:"/\\|?*\u0000-\u001f]/g,'').trim().
 async function saveFile(){stop();const copy=clone(project),files=new Map(media.files),name=filename();await persist();download(await packProject(copy,files),name+'.satuvideo.json');toast('Проект с исходными медиа сохранён в файл.');}
 on('#save-file','click',saveFile);on('#save-file-mobile','click',saveFile);
 on('#open-project','click',()=>$('#project-input').click());
-on('#project-input','change',async event=>{const file=event.target.files[0],expectedRevision=revision;try{if(file&&confirmReplace()){const saved=await unpackProject(file);await switchProject(saved.project,saved.files,expectedRevision);toast('Проект открыт.');}}finally{event.target.value='';}});
+on('#project-input','change',async event=>{
+  const file=event.target.files[0],expectedRevision=revision;
+  try{
+    if(file&&confirmReplace()){
+      let saved;
+      try{saved=await unpackProject(file);}
+      catch(error){toast(error.message||'Не удалось прочитать проект. Выберите другой файл.');return;}
+      await switchProject(saved.project,saved.files,expectedRevision);toast('Проект открыт.');
+    }
+  }finally{event.target.value='';}
+});
 on('#export','click',()=>{
   stop();$('#export-progress').hidden=true;$('#export-start').hidden=false;$('#export-start').disabled=false;$('#export-status').textContent='';$('#export-download').hidden=true;$('#export-result').hidden=true;$('#export-close').disabled=false;dialog.showModal();
 });

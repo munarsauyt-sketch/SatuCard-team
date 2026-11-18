@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ru" data-default-theme="dark">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Ваше пространство — SatuCard</title>
@@ -15,8 +15,9 @@
   <script src="marketing.js?v=catalog-design" defer></script>
   <script src="interface-language.js?v=catalog-design" defer></script>
   <link rel="stylesheet" href="folio.css">
+  <script src="product-interface.js" defer></script>
 </head>
-<body class="account-page auth-page">
+<body class="product-ui account-page auth-page">
 <a class="skip-link" href="#main">К содержимому</a>
 <header class="site-header"><div class="container header-inner">
   <a class="brand" href="index.html" aria-label="SatuCard — главная"><img class="brand-logo-icon" src="assets/favicon.svg?v=catalog-design" alt="">SatuCard<span class="brand-dot">.</span></a>
@@ -28,13 +29,13 @@
 <main id="main" class="auth-main container">
   <div class="auth-shell">
     <section class="auth-intro" aria-labelledby="account-heading">
-      <h1 id="account-heading">Карточки вашего магазина</h1>
+      <span class="auth-eyebrow">Рабочее пространство продавца</span><h1 id="account-heading">Ваши товары. <br>Ваш почерк.</h1>
       <p>Храните проекты и управляйте опубликованными карточками из кабинета.</p>
-      <figure class="auth-card-example">
+      <div class="auth-preview-stack"><span class="auth-preview-sheet" aria-hidden="true"></span><figure class="auth-card-example">
         <div><canvas data-mark-card data-template="studio" data-photo="ceramics" aria-label="Карточка керамической чашки"></canvas>
         <img src="assets/images/ceramics.jpg" alt="Фотография керамической чашки" class="canvas-fallback"></div>
         <figcaption>Пример карточки</figcaption>
-      </figure>
+      </figure><span class="auth-preview-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m6 12 4 4 8-8"/></svg>Фото, тексты и стиль — вместе</span></div><ul class="auth-benefits"><li>Сохранённые комплекты карточек</li><li>Публикации по одной ссылке</li><li>Карточки и видео в одном процессе</li></ul>
     </section>
     <section class="auth-card" id="auth-card-content" aria-labelledby="auth-title">
       <div class="auth-tabs" role="tablist" aria-label="Вход или регистрация">
@@ -46,14 +47,14 @@
       <div id="auth-main-options">
       <button id="auth-google" class="auth-google" type="button" aria-describedby="auth-google-note">
         <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5Z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65Z"/><path fill="#FBBC05" d="M10.53 28.59A14.4 14.4 0 0 1 9.75 24c0-1.59.28-3.13.79-4.59l-7.98-6.19A23.85 23.85 0 0 0 0 24c0 3.87.93 7.53 2.56 10.78l7.97-6.19Z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.91-5.8l-7.73-6c-2.15 1.45-4.92 2.3-8.18 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48Z"/></svg>
-        <span>Продолжить с Google</span>
+        <span>Войти с Google</span>
       </button>
       <p id="auth-google-note" class="auth-google-note">Для входа и регистрации. Пароль Google остаётся у Google.</p>
       <div class="auth-divider"><span>или используйте email</span></div>
-      <form id="auth-form" novalidate>
-        <label for="auth-email">Email</label><input id="auth-email" name="email" type="email" autocomplete="email" inputmode="email" required placeholder="name@example.com">
-        <label for="auth-password">Пароль</label><div class="password-wrap"><input id="auth-password" name="password" type="password" minlength="8" autocomplete="current-password" required placeholder="Минимум 8 символов"><button type="button" data-password-toggle="auth-password" aria-pressed="false">Показать</button></div>
-        <div id="auth-confirm-field" hidden><label for="auth-confirm">Повторите пароль</label><div class="password-wrap"><input id="auth-confirm" name="confirm" type="password" autocomplete="new-password" placeholder="Тот же пароль"><button type="button" data-password-toggle="auth-confirm" aria-pressed="false">Показать</button></div></div>
+      <form id="auth-form" novalidate aria-labelledby="auth-login-tab">
+        <label for="auth-email">Email</label><input id="auth-email" name="email" type="email" autocomplete="email" inputmode="email" required placeholder="name@example.com" aria-describedby="auth-email-error"><p id="auth-email-error" class="field-error" hidden></p>
+        <label for="auth-password">Пароль</label><div class="password-wrap"><input id="auth-password" name="password" type="password" minlength="8" autocomplete="current-password" required placeholder="Минимум 8 символов" aria-describedby="auth-password-error"><button type="button" data-password-toggle="auth-password" aria-pressed="false">Показать</button></div><p id="auth-password-error" class="field-error" hidden></p>
+        <div id="auth-confirm-field" hidden><label for="auth-confirm">Повторите пароль</label><div class="password-wrap"><input id="auth-confirm" name="confirm" type="password" autocomplete="new-password" placeholder="Тот же пароль" aria-describedby="auth-confirm-error"><button type="button" data-password-toggle="auth-confirm" aria-pressed="false">Показать</button></div><p id="auth-confirm-error" class="field-error" hidden></p></div>
         <button id="auth-submit" class="button button-orange auth-submit" type="submit">Войти в SatuCard</button>
       </form>
       <button id="email-code-login" class="auth-inline-button" type="button">Не знаете пароль? Войти по коду из письма</button>
@@ -61,12 +62,12 @@
       <form id="email-code-form" class="account-details-form" hidden novalidate>
         <p>Почта для подтверждения: <strong id="code-email"></strong></p>
         <label for="email-code">Код из письма</label>
-        <input id="email-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" pattern="[0-9]{6,8}" placeholder="Код подтверждения">
+        <input id="email-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" pattern="[0-9]{6,8}" placeholder="Код подтверждения" aria-describedby="email-code-error"><p id="email-code-error" class="field-error" hidden></p>
         <button class="button button-orange auth-submit" type="submit">Подтвердить почту</button>
         <button id="send-email-code" class="auth-inline-button" type="button">Получить письмо</button>
         <button id="code-back" class="auth-inline-button" type="button">Другой способ входа</button>
       </form>
-      <p id="auth-notice" class="auth-notice" role="status" aria-live="polite"></p>
+      <p id="auth-notice" class="auth-notice" role="status" aria-live="polite" tabindex="-1"></p>
       <p class="auth-footnote"><span aria-hidden="true">↳</span>Пароль от SatuCard и пароль от Google — разные пароли. Подтверждайте только собственную почту.</p>
       <a class="auth-editor-link" href="editor.html">Сначала попробовать редактор <span aria-hidden="true">↗</span></a>
     </section>
