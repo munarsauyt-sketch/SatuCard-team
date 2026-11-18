@@ -68,18 +68,18 @@
   let publication = null;
   let photoVersion = 0, logoVersion = 0, projectVersion = 0;
   let draftQueue = Promise.resolve();
-  let draftId = crypto.randomUUID(), pendingDraftId = null, draftDirty = false;
-  try {
-    draftId = new URLSearchParams(location.search).get('draft') || sessionStorage.getItem('satucard-active-draft') || draftId;
-    sessionStorage.setItem('satucard-active-draft', draftId);
-  } catch (_) { /* IndexedDB still works when session storage is unavailable. */ }
+  let draftId = crypto.randomUUID(), draftDirty = false;
+  function rememberDraft() {
+    try { sessionStorage.setItem('satucard-active-draft', draftId); } catch (_) {}
+    // Reloading a template link should resume edits made from that link.
+    try { window.history.replaceState({ ...window.history.state, satucardDraftId: draftId }, ''); } catch (_) {}
+  }
   // A duplicated tab gets its own writer while retaining the recoverable original.
   function claimDraftWriter() {
     if (!navigator.locks) return Promise.resolve();
     return new Promise(ready => navigator.locks.request('satucard-draft-' + draftId, { ifAvailable: true }, async lock => {
       if (!lock) {
         draftId = crypto.randomUUID();
-        try { sessionStorage.setItem('satucard-active-draft', draftId); } catch (_) {}
         await claimDraftWriter();
         ready();
         return;
@@ -88,7 +88,6 @@
       await new Promise(resolve => window.addEventListener('pagehide', resolve, { once: true }));
     }).catch(() => ready()));
   }
-  let draftClaim = claimDraftWriter();
   let revision = 0, productContextVersion = 0;
   const activeView = () => model.views.find(view => view.id === model.activeViewId);
   function changeProductContext() { model.productContextId = ++productContextVersion; }
@@ -551,16 +550,24 @@
       model.settings = renderer.normalize({ ...model.settings, ...samples[key], oldPrice: null, photo: { ...renderer.normalize({}).photo, ...samples[key].photo } });
       syncActiveView(); activeView().sampleKey = key; changeProductContext(); syncForm();
       status('file-status', 'Демонстрационный товар. Загрузите своё фото и укажите его данные.');
-      if (initialize) { syncActiveView(); initialModel = clone(model); history = project.createHistory(model); initialized = true; updateHistory(); requestRender(true); } else edited(true);
-    } catch (error) { if (isCurrent()) status('file-status', error.message, true); if (initialize) { initialized = true; syncActiveView(); initialModel = clone(model); history = project.createHistory(model); updateHistory(); requestRender(true); } }
+      if (!initialize) edited(true);
+    } catch (error) { if (isCurrent()) status('file-status', error.message, true); }
   }
-  async function restoreProject(value, expectedRevision, cancelled = () => false) {
+  async function restoreProject(value, expectedRevision, cancelled = () => false, resume = false) {
     const parsed = project.parseProject(value, renderer.normalize), version = ++projectVersion, started = revision;
     ++photoVersion; ++logoVersion;
     const loaded = [];
     try {
       const refs = new Map();
-      for (const item of parsed.photos || []) { const id = await registerAsset(item.source); loaded.push(id); refs.set(item.id, id); }
+      for (const item of parsed.photos || []) {
+        // The synchronous journal references the saved photo IDs.
+        if (resume && assets.get(item.id)?.source === item.source) {
+          refs.set(item.id, item.id);
+          continue;
+        }
+        const id = await registerAsset(item.source, resume && !assets.has(item.id) ? item.id : undefined);
+        loaded.push(id); refs.set(item.id, id);
+      }
       const legacyPhoto = parsed.photo ? await registerAsset(parsed.photo) : null; if (legacyPhoto) loaded.push(legacyPhoto);
       const logoId = parsed.logo ? await registerAsset(parsed.logo) : null; if (logoId) loaded.push(logoId);
       if (cancelled() || version !== projectVersion || started !== revision || (expectedRevision !== undefined && expectedRevision !== revision)) throw new Error("Проект изменился во время загрузки. Откройте файл ещё раз.");
@@ -571,7 +578,12 @@
       });
       const activeViewId = parsed.activeViewId || 'main', active = views.find(view => view.id === activeViewId);
       model = { settings: parsed.settings, photoId: active.photoIds[0] || null, photoIds: [...active.photoIds], libraryIds: parsed.photos ? [...refs.values()] : legacyPhoto ? [legacyPhoto] : [], logoId, views, activeViewId };
-      changeProductContext(); syncActiveView(); syncForm(); edited(true); fitPreview();
+      changeProductContext(); syncActiveView(); syncForm();
+      if (resume) {
+        history = project.createHistory(model);
+        updateHistory(); notifyChange();
+      } else edited(true);
+      fitPreview();
       status('file-status', model.libraryIds.length ? 'Фотографии восстановлены из проекта.' : 'Загрузите фото товара.'); status('brand-logo-status', logoId ? 'Логотип восстановлен из проекта.' : '');
     } catch (error) { loaded.forEach(id => assets.delete(id)); throw error; }
     finally { loaded.forEach(id => pendingAssets.delete(id)); releaseUnusedAssets(); }
@@ -1093,24 +1105,21 @@
     }
     catch (error) { status('project-status', error.message, true); }
   });
-  async function restorePendingDraft() {
+  async function restorePendingDraft(resume = false) {
     try {
-      if (!pendingDraft) return;
-      await restoreProject(pendingDraft);
+      if (!pendingDraft) return false;
+      await restoreProject(pendingDraft, undefined, undefined, resume);
       pendingDraft = null;
       $('draft-restore-banner').hidden = true;
       status('project-status', 'Черновик восстановлен вместе с фотографиями.');
-    } catch (error) { status('project-status', error.message, true); }
+      return true;
+    } catch (error) {
+      $('draft-restore-banner').hidden = false;
+      status('project-status', error.message, true);
+      return false;
+    }
   }
-  $('restore-draft-button').addEventListener('click', restorePendingDraft);
-  $('discard-draft-button').addEventListener('click', () => {
-    pendingDraft = null;
-    $('draft-restore-banner').hidden = true;
-    draftId = crypto.randomUUID();
-    draftClaim = claimDraftWriter();
-    try { sessionStorage.setItem('satucard-active-draft', draftId); } catch (_) {}
-    status('draft-status', 'Новый товар · предыдущие проекты в списке');
-  });
+  $('restore-draft-button').addEventListener('click', () => restorePendingDraft());
   document.querySelectorAll('a[href="auth.html"]').forEach(link => link.addEventListener('click', () => {
     saveDraftSoon();
     try {
@@ -1124,34 +1133,61 @@
   async function updateAuth() { const session = Boolean(await window.SATUCARD_AUTH?.getSession()); $('publish-login').hidden = session; if ($('publish-login-note')) $('publish-login-note').hidden = session; }
   document.addEventListener('satucard:authchange', updateAuth); updateAuth();
   async function initialize() {
-    await draftClaim;
-    buildDesignOptions(); activateTab('photo'); syncForm(); fitPreview(); const params = new URLSearchParams(location.search);
-    if (renderer.templates[params.get('style')]) model.settings.template = params.get('style'); if (renderer.formats[params.get('format')]) model.settings.format = params.get('format');
-    await loadSample(Object.hasOwn(samples, params.get('photo')) ? params.get('photo') : 'headphones', true);
-    if (!initialized) { syncActiveView(); initialModel = clone(model); history = project.createHistory(model); initialized = true; updateHistory(); requestRender(true); }
-    try {
-      const requestedDraft = params.get('draft');
-      const own = await project.draftAction('get', undefined, requestedDraft || draftId);
-      const drafts = own || requestedDraft ? [] : await project.draftAction('list');
-      const latest = drafts?.filter?.(entry => entry?.payload).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
-      pendingDraftId = requestedDraft || (own ? draftId : latest?.id || 'current');
-      let saved = requestedDraft ? own : own || latest?.payload || await project.draftAction('get');
-      if (saved) {
-        saved = project.recoverJournal?.(pendingDraftId, saved) || saved;
-        const parsed = project.parseProject(saved, renderer.normalize);
-        pendingDraft = saved;
-        $('draft-restore-banner').querySelector('p').textContent = 'Продолжить «' + (parsed.settings.title || 'Без названия') + '». Другие товары доступны в списке проектов.';
-        $('draft-restore-banner').hidden = false;
-        status('draft-status', 'Есть сохранённый черновик');
-        if (requestedDraft) await restorePendingDraft();
-      } else if (requestedDraft) {
-        status('draft-status', 'Черновик не найден на этом устройстве.', true);
-      } else status('draft-status', 'Локальное автосохранение');
+    const params = new URLSearchParams(location.search);
+    const requestedDraft = params.get('draft');
+    const style = params.get('style'), format = params.get('format'), photo = params.get('photo');
+    const hasStyle = Object.hasOwn(renderer.templates, style), hasFormat = Object.hasOwn(renderer.formats, format);
+    const hasPhoto = Object.hasOwn(samples, photo);
+    const newProject = params.get('new') === '1' || hasStyle || hasFormat || hasPhoto || params.has('publication');
+    buildDesignOptions(); activateTab('photo'); syncForm(); fitPreview();
+    if (hasStyle) model.settings.template = style;
+    if (hasFormat) model.settings.format = format;
+    await loadSample(hasPhoto ? photo : 'headphones', true);
+    syncActiveView(); initialModel = clone(model); history = project.createHistory(model);
+    initialized = true; updateHistory();
+
+    let sourceId = window.history.state?.satucardDraftId || requestedDraft, saved;
+    if (!sourceId && !newProject) {
+      try { sourceId = sessionStorage.getItem('satucard-active-draft'); } catch (_) {}
     }
-    catch (_) { status('draft-status', 'Автосохранение недоступно — используйте «Сохранить проект».'); }
+    let storageUnavailable = false;
+    try {
+      if (sourceId) saved = await project.draftAction('get', undefined, sourceId);
+      if (!saved && !requestedDraft && !newProject) {
+        const drafts = await project.draftAction('list');
+        const latest = drafts.filter(entry => entry?.payload).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
+        sourceId = latest?.id ?? 'current';
+        saved = latest?.payload ?? await project.draftAction('get');
+      }
+    } catch (_) { storageUnavailable = true; }
+    if (saved) draftId = sourceId;
+    await claimDraftWriter();
+    rememberDraft();
+    if (saved) {
+      pendingDraft = project.recoverJournal(sourceId, saved);
+      if (await restorePendingDraft(true)) {
+        if (draftId === sourceId) status('draft-status', 'Сохранено на устройстве');
+        else saveDraftSoon();
+      } else {
+        // Keep failed-to-open drafts available for recovery without editing their source.
+        if (draftId === sourceId) {
+          draftId = crypto.randomUUID();
+          await claimDraftWriter();
+          rememberDraft();
+        }
+        status('draft-status', 'Не удалось открыть черновик', true);
+      }
+    } else if (storageUnavailable) {
+      status('draft-status', 'Автосохранение недоступно — используйте «Скачать проект».', true);
+    } else if (requestedDraft) {
+      status('draft-status', 'Черновик не найден на этом устройстве.', true);
+    } else {
+      status('draft-status', 'Локальное автосохранение');
+    }
     form.inert = false;
     ['download-button', 'copy-card-image', 'publish-button', 'save-project-button', 'load-project-input'].forEach(id => { $(id).disabled = false; });
     fitPreview();
+    requestRender(true);
     const publicationId = params.get('publication');
     if (publicationId) {
       try {
