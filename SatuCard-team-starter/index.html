@@ -18,8 +18,10 @@
   <script src="photo-import.js" defer></script>
   <script src="studio-project.js?v=studio-refresh-1" defer></script>
   <script src="home-studio.js?v=quick-studio" defer></script>
+  <script src="showcase.js" defer></script>
   <script src="intro.js?v=20261030" defer></script>
   <script src="interface-language.js?v=quick-studio" defer></script>
+  <link rel="stylesheet" href="folio.css">
 </head>
 <body class="preview-home">
 <a class="skip-link" href="#main">К содержимому</a>
@@ -32,21 +34,41 @@
 </div></header>
 <main id="main">
   <section class="mark-hero" aria-labelledby="home-title">
-    <div class="container hero-copy">
-      <h1 id="home-title">Карточка товара<br>из вашего фото</h1>
-      <p>Загрузите фото, добавьте название и цену. Готовая карточка появится прямо здесь.</p>
-    </div>
-
-    <div class="container hero-workspace">
-      <div class="workspace-decoration" aria-hidden="true">
-        <img class="workspace-photo workspace-photo-left" src="assets/images/skincare.jpg" alt="" width="200" height="250">
-        <img class="workspace-photo workspace-photo-right" src="assets/images/sneaker.jpg" alt="" width="200" height="250">
+    <div class="container cover-spread">
+      <div class="cover-copy">
+        <h1 id="home-title">Товар <br>в кадре<span>.</span></h1>
+        <p>Превратите фото товара в карточку для маркетплейса или короткое видео для соцсетей.</p>
+        <div class="cover-actions">
+          <a class="button cover-primary" href="#quick-start">Создать карточку <span aria-hidden="true">↘</span></a>
+          <a class="text-link" href="video.html">Видеостудия <span aria-hidden="true">↗</span></a>
+        </div>
+        <div class="cover-picker" role="group" aria-label="Выбор товара" hidden>
+          <button type="button" data-cover-product="ceramics" data-style="studio" aria-label="Посуда" aria-pressed="true"><img src="assets/images/ceramics.jpg" width="64" height="64" alt=""></button>
+          <button type="button" data-cover-product="headphones" data-style="blueprint" aria-label="Наушники" aria-pressed="false"><img src="assets/images/headphones.jpg" width="64" height="64" alt=""></button>
+          <button type="button" data-cover-product="skincare" data-style="bloom" aria-label="Косметика" aria-pressed="false"><img src="assets/images/skincare.jpg" width="64" height="64" alt=""></button>
+          <span>Выберите товар</span>
+        </div>
       </div>
-
+      <figure class="cover-frame">
+        <div class="cover-art" data-product="ceramics">
+          <img id="cover-photo" src="assets/images/ceramics.jpg" width="800" height="1200" alt="Белая чашка кофе в солнечном свете" fetchpriority="high">
+          <canvas id="cover-card" aria-label="Пример готовой карточки" hidden></canvas>
+          <button type="button" id="cover-zoom" aria-pressed="false" hidden>Лупа 2×</button>
+          <div class="cover-switch" role="group" aria-label="Режим просмотра" hidden>
+            <button type="button" data-cover-mode="photo" aria-pressed="true">Фото</button>
+            <button type="button" data-cover-mode="card" aria-pressed="false">Карточка</button>
+          </div>
+        </div>
+        <figcaption><span class="exposure" aria-hidden="true">01 / 03</span><a id="cover-open" href="editor.html?photo=ceramics&amp;style=studio"><span id="cover-name">Керамическая чашка</span><span aria-hidden="true"> ↗</span></a><span id="cover-price">4 900 ₸</span></figcaption>
+        <span id="cover-status" class="sr-only" role="status"></span>
+      </figure>
+    </div>
+    <div class="container hero-workspace" id="quick-start">
+      <div class="bench-intro"><h2>Попробуйте на своём фото</h2><p>Загрузите снимок и выберите оформление. Название и цена обновятся на карточке сразу.</p></div>
       <form id="home-studio" class="preview-studio" aria-label="Быстрый редактор карточки" hidden>
         <div class="quick-controls">
           <div class="quick-heading">
-            <h2>Ваш товар</h2>
+            <h3>Ваш товар</h3>
             <button class="quick-link" id="quick-example" type="button">Попробовать на примере</button>
           </div>
 
@@ -123,7 +145,7 @@
       </a>
     </div>
   </section>
-  <section class="container video-feature" aria-labelledby="video-feature-title">
+  <section class="container video-feature" aria-labelledby="video-feature-title" data-reveal>
     <div class="video-feature-copy">
       <h2 id="video-feature-title">Из карточки в короткий ролик</h2>
       <p>Перенесите фото, цену и название в видеостудию. Добавьте движение, текст и музыку, затем скачайте MP4.</p>

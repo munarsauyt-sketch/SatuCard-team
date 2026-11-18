@@ -8,6 +8,14 @@
   const cards = [...document.querySelectorAll('[data-mark-card]')];
   const galleryRoot = document.querySelector('.gallery-grid') || document.querySelector('[data-template-item]')?.parentElement;
   if (galleryRoot) {
+    const sizeButton = document.getElementById('gallery-size');
+    if (sizeButton) {
+      sizeButton.hidden = false;
+      sizeButton.addEventListener('click', () => {
+        const large = galleryRoot.classList.toggle('large-prints');
+        sizeButton.setAttribute('aria-pressed', String(large));
+      });
+    }
     const existing = new Set([...document.querySelectorAll('[data-template-item]')].map(item => item.dataset.templateItem));
     for (const [key, template] of Object.entries(renderer.templates)) {
       if (existing.has(key)) continue;

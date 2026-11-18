@@ -98,15 +98,38 @@ async function renderTemplates(filter=activeTemplateFilter,query=activeTemplateQ
   activeTemplateFilter=filter;activeTemplateQuery=query;
   const generation=++templateGeneration;
   const list=$('#template-list');list.replaceChildren();
+  const portrait=document.createElement('canvas');portrait.width=216;portrait.height=384;
   document.querySelector('[data-library="templates"] .panel-heading>span').textContent=TEMPLATES.length;
   for(const template of TEMPLATES.filter(item=>(filter==='Все'||item.category===filter)&&[item.name,item.note,item.category].some(text=>text.toLocaleLowerCase().includes(query.toLocaleLowerCase().trim())))){
     const button=document.createElement('button');button.className='template-card';button.title=template.note;
     const thumb=document.createElement('canvas');thumb.width=216;thumb.height=288;
     const temp=templateProject(template.id);await templateMedia.prepare(temp);
     if(generation!==templateGeneration)return;
-    // Thumbnails show the entire portrait at the same crop as the editor.
-    const portrait=document.createElement('canvas');portrait.width=216;portrait.height=384;
-    drawProject(portrait,temp,templateMedia,.9);thumb.getContext('2d').drawImage(portrait,0,0,216,384,0,-25,216,384);
+    // Reuse one drawing surface for the library. Only the inspected thumbnail repaints.
+    let previewTime=.9, pending=0;
+    const paint=()=>{
+      pending=0;
+      if(generation!==templateGeneration)return;
+      drawProject(portrait,temp,templateMedia,previewTime);
+      thumb.getContext('2d').drawImage(portrait,0,0,216,384,0,-25,216,384);
+    };
+    const scrub=time=>{
+      previewTime=clamp(time,.15,temp.duration-.15);
+      if(!pending)pending=requestAnimationFrame(paint);
+    };
+    paint();
+    button.addEventListener('pointermove',event=>{
+      if(event.pointerType!=='mouse')return;
+      const rect=thumb.getBoundingClientRect();
+      scrub((event.clientX-rect.left)/rect.width*temp.duration);
+    });
+    button.addEventListener('keydown',event=>{
+      if(event.key!=='ArrowLeft'&&event.key!=='ArrowRight')return;
+      event.preventDefault();event.stopPropagation();
+      scrub(previewTime+(event.key==='ArrowRight'?1:-1));
+    });
+    button.addEventListener('pointerleave',()=>scrub(.9));
+    button.addEventListener('blur',()=>scrub(.9));
     const title=document.createElement('strong');title.textContent=template.name;
     const note=document.createElement('small');note.textContent=temp.duration+' сек · '+template.category;
     button.append(thumb,title,note);button.addEventListener('click',safely(()=>chooseTemplate(template.id)));list.append(button);
