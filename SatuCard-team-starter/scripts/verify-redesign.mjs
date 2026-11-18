@@ -11,7 +11,7 @@ const output = resolve(process.env.REDESIGN_ARTIFACTS || resolve(tmpdir(), 'satu
 await mkdir(output, { recursive: true });
 const origin = 'http://127.0.0.1:8795';
 const pages = ['index', 'editor', 'video', 'auth', 'dashboard'];
-const mime = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.jpg': 'image/jpeg', '.png': 'image/png', '.svg': 'image/svg+xml', '.ttf': 'font/ttf', '.woff2': 'font/woff2', '.mp4': 'video/mp4', '.webm': 'video/webm' };
+const mime = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.jpg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.ttf': 'font/ttf', '.woff2': 'font/woff2', '.mp4': 'video/mp4', '.webm': 'video/webm' };
 const headers = JSON.parse(await readFile(resolve(root, 'vercel.json'), 'utf8')).routes[0].headers;
 const session = { access_token: 'ui-test-access-token', refresh_token: 'ui-test-refresh-token', expires_at: Math.floor(Date.now() / 1000) + 3600, user: { id: 'ui-test-user', email: 'interface@example.invalid', email_confirmed_at: '2026-01-01T00:00:00Z' } };
 const profile = { name: 'Тестовый профиль', email: session.user.email, created_at: '2026-01-01T00:00:00Z', profile_completed_at: '2026-01-01T00:00:00Z' };

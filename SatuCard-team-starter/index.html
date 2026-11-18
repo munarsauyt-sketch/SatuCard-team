@@ -48,8 +48,8 @@
         <h1 id="home-title">Товар <br>в кадре<span>.</span></h1>
         <p>Превратите фото товара в карточку для маркетплейса или короткое видео для соцсетей.</p>
         <div class="cover-actions">
-          <a class="button cover-primary" href="#quick-start">Создать карточку <span aria-hidden="true">↗</span></a>
-          <a class="text-link" href="video.html">Видеостудия <span aria-hidden="true">↗</span></a>
+          <a class="button cover-primary" href="#quick-start"><span>Создать карточку</span><span class="cta-arrow-badge" aria-hidden="true">↗</span></a>
+          <a class="text-link cover-secondary" href="video.html"><span>Видеостудия</span><span aria-hidden="true">↗</span></a>
         </div>
         <div class="cover-picker" role="group" aria-label="Выбор товара" hidden>
           <button type="button" data-cover-product="ceramics" data-style="studio" aria-label="Посуда" aria-pressed="true"><img src="assets/images/ceramics.jpg" width="64" height="64" alt=""></button>
@@ -57,6 +57,11 @@
           <button type="button" data-cover-product="skincare" data-style="bloom" aria-label="Косметика" aria-pressed="false"><img src="assets/images/skincare.jpg" width="64" height="64" alt=""></button>
           <span>Выберите товар</span>
         </div>
+        <dl class="cover-specs" aria-label="Основные возможности">
+          <div><dt>0 ₸</dt><dd>Редактор без водяных знаков</dd></div>
+          <div><dt>14+</dt><dd>Шаблонов для Kaspi и WB</dd></div>
+          <div><dt>MP4</dt><dd>Видеостудия в браузере</dd></div>
+        </dl>
       </div>
       <figure class="cover-frame">
         <div class="showcase-toolbar">
@@ -185,7 +190,7 @@
       <a class="button" href="video.html">Открыть видеостудию <span aria-hidden="true">↗</span></a>
     </div>
     <figure class="video-feature-preview">
-      <img src="assets/images/video-workbench.webp" width="1200" height="741" loading="lazy" decoding="async" alt="Видеостудия SatuCard с холстом и монтажной шкалой">
+      <img src="assets/images/video-workbench.webp" width="1200" height="741" loading="eager" decoding="sync" alt="Видеостудия SatuCard с холстом и монтажной шкалой">
     </figure>
   </section>
 
@@ -208,6 +213,94 @@
     </figure>
   </section>
   </div>
+  <section class="container landing-pricing" id="home-pricing" aria-labelledby="home-pricing-title">
+    <div class="preview-section-heading landing-pricing-heading">
+      <div>
+        <span class="section-caption">Прозрачные тарифы</span>
+        <h2 id="home-pricing-title">Тарифы в тенге</h2>
+        <p>Редактор карточек и базовое видео — 0 ₸ навсегда. Платные планы подключаются на 30 дней без автосписания.</p>
+      </div>
+      <a class="text-link" href="pricing.html">Сравнить тарифы <span aria-hidden="true">↗</span></a>
+    </div>
+    <div class="home-pricing-grid">
+      <article class="home-tier-card home-tier-free">
+        <div class="home-tier-top">
+          <span class="home-tier-kicker">Базовый доступ</span>
+          <h3>Старт</h3>
+        </div>
+        <p class="home-tier-price"><strong>0 ₸</strong><span>навсегда</span></p>
+        <ul class="home-tier-list">
+          <li>Редактор карточек и 14 шаблонов</li>
+          <li>Базовый видеоредактор в браузере</li>
+          <li>PNG, JPG, WebP и MP4 без водяных знаков</li>
+        </ul>
+        <a class="button button-light home-tier-cta" href="editor.html">Открыть редактор <span aria-hidden="true">↗</span></a>
+      </article>
+      <article class="home-tier-card">
+        <div class="home-tier-top">
+          <span class="home-tier-kicker">30 дней · 5 млн токенов</span>
+          <h3>Видео Pro + ИИ Старт</h3>
+        </div>
+        <p class="home-tier-price"><strong>1 500 ₸</strong><span>за 30 дней</span></p>
+        <ul class="home-tier-list">
+          <li>Видео Full HD 1080p</li>
+          <li>Больше сцен, эффектов и переходов</li>
+          <li>Базовый sAI (RU / KZ)</li>
+        </ul>
+        <a class="button button-light home-tier-cta" href="dashboard.html?plan=basic#billing-title">Выбрать тариф <span aria-hidden="true">↗</span></a>
+      </article>
+      <article class="home-tier-card home-tier-featured">
+        <div class="home-tier-top">
+          <span class="home-tier-kicker home-tier-kicker-accent">Популярный · 8 млн токенов</span>
+          <h3>ИИ Плюс</h3>
+        </div>
+        <p class="home-tier-price"><strong>2 990 ₸</strong><span>за 30 дней</span></p>
+        <ul class="home-tier-list">
+          <li>Всё из тарифа «Видео Pro + ИИ Старт»</li>
+          <li>Увеличенный лимит токенов sAI</li>
+          <li>GPT-6.1 Terra, GPT-6 Sol, Claude Opus 4.8</li>
+        </ul>
+        <a class="button button-orange home-tier-cta" href="dashboard.html?plan=plus#billing-title"><span>Выбрать тариф</span><span class="cta-arrow-badge" aria-hidden="true">↗</span></a>
+      </article>
+      <article class="home-tier-card">
+        <div class="home-tier-top">
+          <span class="home-tier-kicker">30 дней · 10 млн токенов</span>
+          <h3>ИИ Макс</h3>
+        </div>
+        <p class="home-tier-price"><strong>4 990 ₸</strong><span>за 30 дней</span></p>
+        <ul class="home-tier-list">
+          <li>Всё из тарифа «ИИ Плюс»</li>
+          <li>Полный выбор старших моделей sAI</li>
+          <li>GPT-6 Astra, GPT-6.1 Sol, Claude Opus 5.5</li>
+        </ul>
+        <a class="button button-light home-tier-cta" href="dashboard.html?plan=max#billing-title">Выбрать тариф <span aria-hidden="true">↗</span></a>
+      </article>
+      <article class="home-tier-card">
+        <div class="home-tier-top">
+          <span class="home-tier-kicker">30 дней · 30 млн токенов</span>
+          <h3>Команда (5 чел)</h3>
+        </div>
+        <p class="home-tier-price"><strong>9 990 ₸</strong><span>за 30 дней</span></p>
+        <ul class="home-tier-list">
+          <li>До 5 человек в одном пространстве</li>
+          <li>Общие карточки и видео</li>
+          <li>Общий ИИ-чат и лимит ×3</li>
+        </ul>
+        <a class="button button-light home-tier-cta" href="dashboard.html?plan=max3#billing-title">Выбрать тариф <span aria-hidden="true">↗</span></a>
+      </article>
+    </div>
+    <div class="home-pack-strip">
+      <div class="home-pack-copy">
+        <span class="home-tier-kicker home-tier-kicker-accent">Разовая покупка · навсегда</span>
+        <h3>Пак «10 нишевых шаблонов»</h3>
+        <p>10 отдельных шаблонов под ниши Kaspi и WB — остаются в вашем редакторе навсегда без подписки.</p>
+      </div>
+      <div class="home-pack-action">
+        <p class="home-pack-price"><strong>490 ₸</strong><span>оплата переводом на карту / Kaspi</span></p>
+        <a class="button button-light" href="dashboard.html?plan=niche10#billing-title">Открыть набор в кабинете <span aria-hidden="true">↗</span></a>
+      </div>
+    </div>
+  </section>
 </main>
 <footer class="site-footer container">
   <a class="brand" href="index.html" aria-label="SatuCard — главная"><img class="brand-logo-icon" src="assets/favicon.svg?v=catalog-design" alt="">SatuCard<span class="brand-dot">.</span></a>

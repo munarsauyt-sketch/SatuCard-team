@@ -17,26 +17,36 @@
 .billing-support a, .billing-order a:not(.button) { color: var(--brand-accent-ink); text-decoration: underline; }
 
 .product-ui.dashboard-page .billing-heading { align-items: center; gap: 12px; }
-.product-ui.dashboard-page .billing-heading h2 { font-size: 21px; }
-.product-ui.dashboard-page .billing-heading > .button { margin-left: auto; min-height: 34px; padding: 8px 11px; font-size: 10px; }
-.plan-badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 7px; padding: 6px 9px; border: 1px solid var(--ui-edge); background: var(--ui-panel); font-size: 10px; color: var(--brand-muted); }
-.plan-badge[data-state=active] { color: var(--brand-accent-ink); background: var(--brand-accent-soft); border-color: rgba(232,122,84,.16); }
-.plan-badge[data-state=error] { color: var(--ui-danger); }
-.product-ui.dashboard-page #billing-status { font-size: 12px; line-height: 1.7; color: var(--brand-muted); margin: 20px 0; }
-.product-ui.dashboard-page .billing-usage { max-width: none; padding: 16px; border: 1px solid var(--ui-edge); border-radius: 11px; background: var(--ui-input); margin-block: 16px; }
-.product-ui.dashboard-page .billing-usage label { font-size: 11px; display: block; margin-bottom: 10px; }
-.product-ui.dashboard-page .billing-usage progress { height: 6px; }
-.product-ui.dashboard-page .billing-panel details { font-size: 12px; border-top: 1px solid var(--ui-edge); padding-top: 14px; margin-top: 16px; }
-.product-ui.dashboard-page .billing-panel summary { font-size: 11px; padding-block: 3px; color: var(--brand-muted); }
+.product-ui.dashboard-page .billing-heading h2 { font-size: 22px; }
+.product-ui.dashboard-page .billing-heading > .button { margin-left: auto; min-height: 36px; padding: 8px 14px; font-size: 12px; font-weight: 600; border-radius: 999px; }
+.plan-badge {
+  display: inline-flex; align-items: center; gap: 6px; border-radius: 999px;
+  padding: 5px 12px; border: 1px solid var(--ui-edge); background: var(--ui-panel);
+  font-size: 11px; font-weight: 600; color: var(--brand-muted);
+}
+.plan-badge[data-state=active] {
+  color: var(--brand-accent-ink); background: var(--brand-accent-soft);
+  border-color: color-mix(in srgb, var(--ui-accent) 28%, transparent);
+}
+.plan-badge[data-state=error] { color: var(--ui-danger); border-color: color-mix(in srgb, var(--ui-danger) 30%, transparent); }
+.product-ui.dashboard-page #billing-status { font-size: 13px; line-height: 1.6; color: var(--brand-muted); margin: 16px 0; }
+.product-ui.dashboard-page .billing-usage {
+  max-width: none; padding: 16px 18px; border: 1px solid var(--ui-edge);
+  border-radius: 14px; background: var(--ui-input); margin-block: 16px;
+}
+.product-ui.dashboard-page .billing-usage label { font-size: 13px; font-weight: 600; color: var(--brand-ink); display: block; margin-bottom: 10px; }
+.product-ui.dashboard-page .billing-usage progress { height: 8px; }
+.product-ui.dashboard-page .billing-panel details { font-size: 13px; border-top: 1px solid var(--ui-edge); padding-top: 14px; margin-top: 16px; }
+.product-ui.dashboard-page .billing-panel summary { font-size: 13px; font-weight: 600; padding-block: 4px; color: var(--brand-muted); }
 .product-ui.dashboard-page .billing-panel details[open] > summary { color: var(--brand-ink); }
-.product-ui.dashboard-page .billing-management-content { padding-top: 10px; }
-.product-ui.dashboard-page .billing-form label { font-size: 11px; flex: 1; min-width: 0; }
-.product-ui.dashboard-page .billing-form select { width: 100%; font-size: 11px; }
-.product-ui.dashboard-page .billing-panel h3 { font-size: 14px; margin: 20px 0 12px; }
-.product-ui.dashboard-page .billing-panel :is(.billing-order p,#billing-orders > p,.billing-plan-benefits,#billing-next) { color: var(--brand-muted); font-size: 11px; line-height: 1.7; }
-.product-ui.dashboard-page .billing-panel .button { font-size: 11px; min-height: 36px; padding: 9px 12px; }
-.product-ui.dashboard-page .billing-order { background: var(--ui-input); border-color: var(--ui-edge); font-size: 12px; }
-.product-ui.dashboard-page .billing-support { font-size: 10px; line-height: 1.8; padding-top: 16px; border-top: 1px solid var(--ui-edge); }
-.product-ui.dashboard-page .billing-support strong { display: block; font-size: 11px; margin-bottom: 8px; }
-.product-ui.dashboard-page #billing-model-list { padding-left: 16px; color: var(--brand-muted); line-height: 1.7; font-size: 11px; }
-@media(max-width:480px) { .product-ui.dashboard-page .billing-heading > .button { margin-left: 0; } }
+.product-ui.dashboard-page .billing-management-content { padding-top: 12px; }
+.product-ui.dashboard-page .billing-form label { font-size: 12px; font-weight: 550; flex: 1; min-width: 0; }
+.product-ui.dashboard-page .billing-form select { width: 100%; font-size: 13px; }
+.product-ui.dashboard-page .billing-panel h3 { font-size: 15px; margin: 20px 0 12px; }
+.product-ui.dashboard-page .billing-panel :is(.billing-order p, #billing-orders > p, .billing-plan-benefits, #billing-next) { color: var(--brand-muted); font-size: 12px; line-height: 1.65; }
+.product-ui.dashboard-page .billing-panel .button { font-size: 12px; font-weight: 600; min-height: 38px; padding: 8px 14px; border-radius: 999px; }
+.product-ui.dashboard-page .billing-order { background: var(--ui-input); border-color: var(--ui-edge); border-radius: 14px; font-size: 13px; }
+.product-ui.dashboard-page .billing-support { font-size: 12px; line-height: 1.7; padding-top: 16px; border-top: 1px solid var(--ui-edge); }
+.product-ui.dashboard-page .billing-support strong { display: block; font-size: 12px; margin-bottom: 6px; color: var(--brand-ink); }
+.product-ui.dashboard-page #billing-model-list { padding-left: 18px; color: var(--brand-muted); line-height: 1.65; font-size: 12px; }
+@media (max-width: 480px) { .product-ui.dashboard-page .billing-heading > .button { margin-left: 0; } }

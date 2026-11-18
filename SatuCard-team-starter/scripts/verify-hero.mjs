@@ -11,7 +11,7 @@ const output = resolve(process.env.HERO_OUTPUT_DIR || resolve(tmpdir(), 'satucar
 await mkdir(output, { recursive: true });
 const origin = 'http://127.0.0.1:8785';
 const browser = await chromium.launch({ headless: true, channel: process.env.BROWSER_CHANNEL || 'chrome' });
-const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.ttf': 'font/ttf', '.woff2': 'font/woff2' };
+const mime = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.jpg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.ttf': 'font/ttf', '.woff2': 'font/woff2' };
 async function routing(context) {
   await context.route('**/*', route => {
     const url = new URL(route.request().url());
