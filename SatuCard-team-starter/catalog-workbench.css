@@ -868,3 +868,12 @@ html[data-theme="light"] .video-workbench .rail {
     transform: none;
   }
 }
+.language-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(6px, 2vw, 16px); }
+.language-pair figure { margin: 0; min-width: 0; }
+.language-pair figcaption { margin: .75rem 0 .4rem; font-weight: 700; }
+.language-pair canvas { display: block; width: 100%; height: auto; max-height: 52vh; object-fit: contain; object-position: top; }
+#language-compare { padding: .65rem 1rem; background: var(--work-surface); color: var(--work-ink); }
+#language-compare[open]:not([hidden]) + #preview-stage { display: none; }
+#language-compare summary { cursor: pointer; font-weight: 700; }
+#compare-status { margin-top: .6rem; }
+#product-canvas.is-picking-detail { cursor: crosshair; touch-action: none; }

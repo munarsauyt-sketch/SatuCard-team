@@ -62,6 +62,29 @@ test('title contrast reflects the solid background in Minimal only', () => {
   assert.equal(renderer.render(scene.canvas, { template: 'neon', ...palette }).titleContrast, undefined);
 });
 
+test('macro detail magnifies the same transformed primary photo exactly twice and dimension label is exported', () => {
+  const primary = { width: 550, height: 400 }, extra = { width: 300, height: 260 };
+  for (const purpose of Object.keys(renderer.purposes)) {
+    const scene = fakeCanvas();
+    renderer.render(scene.canvas, { purpose, photo: { rotation: 27, flip: true, zoom: 1.2 },
+      annotations: { lens: true, x: 32, y: 45, dimension: true, label: '24 см' } },
+      { photo: primary, photos: [primary, extra] }, { scale: 2 });
+    const draws = scene.images.filter(draw => draw.image === primary);
+    assert.equal(draws.length, 2);
+    assert.deepEqual(draws[1].args, draws[0].args);
+    draws[0].transform.slice(0, 4).forEach((v, i) => assert.ok(Math.abs(draws[1].transform[i] - 2 * v) < 1e-8));
+    assert.equal(scene.images.filter(draw => draw.image === extra).length, 1);
+    assert.equal(scene.text.filter(row => row.value === '24 см').length, 1);
+  }
+});
+
+test('bilingual comparison uses measured field sizes and excludes a drop of exactly 20 percent', () => {
+  const layout = (titleFontSize, size) => ({titleFontSize, hitAreas:[{field:'feature-2', fontSize:size}]});
+  assert.deepEqual(Array.from(renderer.compareTypeSizes(layout(50,25),layout(40,19)), issue => issue.field), ['feature-2']);
+  const paint = title => renderer.render(fakeCanvas().canvas, { title, format:'square', template:'editorial' });
+  assert.ok(renderer.compareTypeSizes(paint('Шар'), paint('Ш'.repeat(60))).some(issue => issue.field === 'product-name'));
+});
+
 test('normalizes imported or restored settings without mutating them', () => {
   const input = {
     title: '  Длинный товар '.repeat(12), description: 'я'.repeat(250), subtitle: 'я'.repeat(130), badge: 'я'.repeat(40),

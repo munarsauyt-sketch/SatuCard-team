@@ -1,4 +1,4 @@
-import { TEMPLATES, layer, uid, clone, clamp, templateProject } from './video-model.js';
+import { TEMPLATES, layer, uid, clone, clamp, templateProject, emptyProject, MAX_DURATION, validateProject } from './video-model.js';
 import { scenes, reorderScene, duplicateScene, removeScene, openingVariant, adaptFormat, parseCatalog, catalogProject } from './video-workflow.js';
 import { exportVideo } from './video-export.js';
 import { inspectFile } from './video-media.js';
@@ -7,17 +7,63 @@ import { speechRequest, wavBlob } from './video-speech.js';
 import { checkImportQuota } from './video-file-safety.js';
 import { listVideoDrafts, saveVideoDraft, loadVideoDraft, deleteVideoDraft } from './video-storage.js';
 
-const CARD_FONT_TO_VIDEO = { golos: 'Golos Text', manrope: 'Manrope', inter: 'Golos Text', serif: 'Noto Serif', mono: 'IBM Plex Mono' };
+const CARD_FONT_TO_VIDEO = { golos: 'Golos Text', manrope: 'Manrope', noto: 'Noto Serif', plex: 'IBM Plex Mono', dejavu: 'Golos Text', inter: 'Golos Text', serif: 'Noto Serif', mono: 'IBM Plex Mono' };
 
 const $=selector=>document.querySelector(selector);
 function element(tag,text,className){const node=document.createElement(tag);if(text!==undefined)node.textContent=text;if(className)node.className=className;return node;}
 function fileDownload(blob,name){const url=URL.createObjectURL(blob),a=element('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);}
 function dataBlob(source){const [header,encoded]=source.split(',');return new Blob([Uint8Array.from(atob(encoded),c=>c.charCodeAt(0))],{type:header.slice(5).split(';')[0]});}
+function cardProduct(s) {
+  const features = [...s.features];
+  while (features.length < 3) features.push('');
+  return { title: s.title, price: s.showPrice === false ? '' : s.price == null ? 'Цена по запросу' : new Intl.NumberFormat('ru').format(s.price) + ' ₸',
+    brand: s.showBrand === false ? '' : s.brandName, cta: s.description?.slice(0, 120) || 'Узнайте больше', features };
+}
+
+export function videoFromSet(data) {
+  const next = emptyProject(), files = new Map(), bySource = new Map();
+  const photos = new Map((data.photos || []).map(p => [p.id, p.source]));
+  const first = data.views[0];
+  next.assets = [];
+  next.product = cardProduct(first.settings); next.name = first.settings.title || first.label;
+  next.duration = Math.min(MAX_DURATION, data.views.length * 4);
+  next.transition = 'fade'; next.background = first.settings.background;
+  function asset(source, name) {
+    if (bySource.has(source)) return bySource.get(source);
+    const id = uid();
+    bySource.set(source, id); files.set(id, dataBlob(source));
+    next.assets.push({ id, kind: 'image', name, duration: 0 });
+    return id;
+  }
+  data.views.forEach((view, index) => {
+    const s = view.settings, info = cardProduct(s);
+    const common = { scene: 'scene-' + index, start: index * next.duration / data.views.length, end: (index + 1) * next.duration / data.views.length };
+    const add = (type, item) => next.layers.push(layer(type, { ...common, ...item }));
+    const typography = { font: CARD_FONT_TO_VIDEO[s.font] || 'Golos Text', color: s.textColor };
+    add('shape', { role: 'card-background', name: view.label, x: 0, y: 0, w: 1, h: 1, radius: 0, color: s.background, entrance: 'none', exit: 'none' });
+    add('text', { ...typography, name: 'Заголовок', text: s.title || view.label, x: .07, y: .085, w: .86, h: .16, fontSize: .089, entrance: 'rise' });
+    const sources = view.photoIds ? view.photoIds.map(id => photos.get(id)).filter(Boolean) : data.photo ? [data.photo] : [];
+    const gallery = sources.length > 1;
+    sources.forEach((source, i) => {
+      const rect = !gallery ? { x:.07, y:.25, w:.86, h:.40 } : i === 0 ? { x:.07, y:.25, w:.56, h:.40 }
+        : { x:.65, y: i === 1 ? .25 : .46, w:.28, h:sources.length === 2 ? .40 : .19 };
+      add('image', { ...rect, role: 'product', name: view.label + ' · фото ' + (i + 1),
+        assetId: asset(source, view.label + ' · фото ' + (i + 1)), fit:'contain', entrance:'rise' });
+    });
+    const details = s.features.length ? s.features.map(f => '• ' + f).join('\n') : s.description || s.subtitle;
+    if (details) add('text', { ...typography, name:'Пункты карточки', text:details, x:.07, y:sources.length ? .68 : .32, w:.86, h:sources.length ? .18 : .45, fontSize:.044, weight:600 });
+    if (info.price || info.brand) add('text', { ...typography, name:'Подпись карточки', text:[info.brand, info.price].filter(Boolean).join(' · '), x:.07, y:.9, w:.86, h:.07, fontSize:.04 });
+    if (data.logo && s.showBrand) add('image', { role:'logo', name:'Логотип', assetId:asset(data.logo, 'Логотип карточки'), x:.78, y:.015, w:.15, h:.055, fit:'contain' });
+  });
+  validateProject(next);
+  return { project: next, files };
+}
+
 export async function installVideoPlus(api){
   const run=fn=>async event=>{try{await fn(event);}catch(error){api.toast(error.message);}};
   const button=(text,fn)=>{const b=element('button',text,'full subtle');b.type='button';b.addEventListener('click',run(fn));return b;};
   const panel=element('section');panel.dataset.library='workflow';panel.hidden=true;
-  panel.innerHTML='<div class="panel-heading"><h1>От товара к истории</h1><span>✦</span></div><p class="muted">Карточка, сцены и готовые варианты рекламы.</p><div class="workflow-tabs"><button data-workflow-tab="scenes">Сцены</button><button data-workflow-tab="cards">Карточки</button><button data-workflow-tab="batch">Каталог</button></div><section data-workflow-page="scenes"><div id="scene-list"></div><label>Переход между сценами<select id="scene-transition"><option value="none">Склейка</option><option value="fade">Растворение</option><option value="slide">Сдвиг</option><option value="wipe">Шторка</option></select></label><h2>Первые секунды</h2><p class="muted">Три подачи одного товара. Изменяется первая сцена.</p><div id="opening-options"></div><h2>Версии для площадок</h2><p class="muted">Адаптация переставляет товар, цену и заголовки. Проверьте композицию перед экспортом.</p><div id="adapt-options"></div></section><section data-workflow-page="cards" hidden><h2>Мои видеочерновики</h2><p class="muted">Сохраняйте несколько версий роликов в этом браузере.</p><div id="video-draft-actions" class="button-row"></div><div id="video-draft-list"></div><h2>Из сохранённой карточки</h2><p class="muted">Локальные карточки из этого браузера. Фото и данные переносятся в выбранный шаблон.</p><select id="card-template" aria-label="Шаблон для карточки"></select><div id="card-list"></div></section><section data-workflow-page="batch" hidden><h2>Ролики для каталога</h2><p class="muted">До 10 товаров. В поле image укажите точное имя загруженного фото.</p><textarea id="catalog-csv" rows="7" aria-label="Каталог CSV" placeholder="title;price;image;brand&#10;Наушники;24990 ₸;headphones.jpg;Магазин"></textarea><div id="batch-actions"></div><div id="batch-review"></div></section>';
+  panel.innerHTML='<div class="panel-heading"><h1>От товара к истории</h1><span>✦</span></div><p class="muted">Карточка, сцены и готовые варианты рекламы.</p><div class="workflow-tabs"><button data-workflow-tab="scenes">Сцены</button><button data-workflow-tab="cards">Карточки</button><button data-workflow-tab="batch">Каталог</button></div><section data-workflow-page="scenes"><div id="scene-list"></div><label>Переход между сценами<select id="scene-transition"><option value="none">Склейка</option><option value="fade">Растворение</option><option value="slide">Сдвиг</option><option value="wipe">Шторка</option></select></label><h2>Первые секунды</h2><p class="muted">Три подачи одного товара. Изменяется первая сцена.</p><div id="opening-options"></div><h2>Версии для площадок</h2><p class="muted">Адаптация переставляет товар, цену и заголовки. Проверьте композицию перед экспортом.</p><div id="adapt-options"></div></section><section data-workflow-page="cards" hidden><h2>Мои видеочерновики</h2><p class="muted">Сохраняйте несколько версий роликов в этом браузере.</p><div id="video-draft-actions" class="button-row"></div><div id="video-draft-list"></div><h2>Из сохранённой карточки</h2><p class="muted">Одна карточка откроется в выбранном шаблоне. Комплект превратится в ролик с отдельной сценой для каждого слайда.</p><select id="card-template" aria-label="Шаблон для карточки"></select><div id="card-list"></div></section><section data-workflow-page="batch" hidden><h2>Ролики для каталога</h2><p class="muted">До 10 товаров. В поле image укажите точное имя загруженного фото.</p><textarea id="catalog-csv" rows="7" aria-label="Каталог CSV" placeholder="title;price;image;brand&#10;Наушники;24990 ₸;headphones.jpg;Магазин"></textarea><div id="batch-actions"></div><div id="batch-review"></div></section>';
   $('.library').prepend(panel);
   const nav=element('button');nav.dataset.panel='workflow';nav.setAttribute('aria-label','Проекты');nav.innerHTML='<span aria-hidden="true">✦</span>Проекты';$('.rail').prepend(nav);nav.addEventListener('click',()=>api.showPanel('workflow'));
   panel.querySelectorAll('[data-workflow-tab]').forEach(tab=>tab.addEventListener('click',()=>panel.querySelectorAll('[data-workflow-page]').forEach(page=>page.hidden=page.dataset.workflowPage!==tab.dataset.workflowTab)));
@@ -47,8 +93,14 @@ export async function installVideoPlus(api){
   // Real card data is parsed by the existing validated card project parser.
   async function fromCard(raw){
     const data=window.SATUCARD_PROJECT.parseProject(raw,window.SATUCARD_RENDERER.normalize),s=data.settings;
-    const product={title:s.title,price:s.showPrice===false?'':s.price==null?'Цена по запросу':new Intl.NumberFormat('ru').format(s.price)+' ₸',brand:s.showBrand===false?'':s.brandName||'',cta:s.description?.slice(0,120)||'Узнайте больше',features:[...(s.features||[])]};
-    while(product.features.length<3)product.features.push('');
+    if (data.views?.length > 1) {
+      if (!api.confirmReplace()) return;
+      const { project, files } = videoFromSet(data);
+      await api.switchProject(project, files);
+      api.toast('Комплект перенесён: ' + data.views.length + ' сцен.');
+      return;
+    }
+    const product=cardProduct(s);
     const activeView=data.views?.find(v=>v.id===data.activeViewId);
     const photoIds=activeView?.photoIds?.length?activeView.photoIds:[];
     const photos=photoIds.map(id=>data.photos?.find(p=>p.id===id)?.source).filter(Boolean);
@@ -113,7 +165,14 @@ export async function installVideoPlus(api){
   }
   $('#card-list').before(button('Обновить список',loadCards));await loadCards();
   const sourceDraft=new URLSearchParams(location.search).get('fromCard');
-  if(sourceDraft){const raw=await window.SATUCARD_PROJECT.draftAction('get',undefined,sourceDraft);if(raw)await fromCard(raw);history.replaceState(null,'',location.pathname);}
+  if (sourceDraft) {
+    try {
+      const raw = await window.SATUCARD_PROJECT.draftAction('get', undefined, sourceDraft);
+      if (!raw) throw new Error('Черновик карточки не найден в этом браузере.');
+      await fromCard(raw);
+    } catch (error) { api.toast(error.message); }
+    history.replaceState(null, '', location.pathname);
+  }
 
   let batch=[];
   $('#batch-actions').append(button('Проверить каталог',async()=>{

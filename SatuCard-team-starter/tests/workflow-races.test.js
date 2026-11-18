@@ -49,6 +49,64 @@ test('local import does not overwrite edits made while file text is reading', as
   } finally { app.dom.window.close(); }
 });
 
+test('a pending sample decode cannot replace a newly added card', async () => {
+  const app = await setup();
+  try {
+    let finish;
+    app.w.Image = class {
+      naturalWidth = 10; naturalHeight = 10;
+      set src(value) { finish = () => this.onload(); }
+    };
+    app.w.document.querySelector('[data-sample="ceramics"]').click();
+    assert.equal(typeof finish, 'function');
+    app.$('add-view').click();
+    const before = app.w.SATUCARD_EDITOR.snapshot().model;
+    finish();
+    await sleep(10);
+    const after = app.w.SATUCARD_EDITOR.snapshot().model;
+    assert.equal(after.activeViewId, before.activeViewId);
+    assert.equal(after.photoId, before.photoId);
+    assert.equal(after.settings.title, before.settings.title);
+  } finally { app.dom.window.close(); }
+});
+
+test('a failed cloud save from a signed-out account cannot replace the new account status', async () => {
+  const app = await setup();
+  try {
+    let rejectSave;
+    app.w.SATUCARD_CLOUD.save = () => new Promise((_, reject) => { rejectSave = reject; });
+    app.$('cloud-save').click();
+    assert.equal(typeof rejectSave, 'function');
+    app.authChange(null);
+    const detached = app.$('cloud-status').textContent;
+    rejectSave(new Error('Old account request failed'));
+    await until(() => !app.$('cloud-save').disabled);
+    assert.equal(app.$('cloud-status').textContent, detached);
+  } finally { app.dom.window.close(); }
+});
+
+test('annotations and the RU/KZ pair survive the local and cloud project formats and undo', async () => {
+  const app = await setup();
+  try {
+    const editor = app.w.SATUCARD_EDITOR;
+    app.$('macro-enabled').click(); app.$('dimension-enabled').click();
+    app.input('macro-x', '73'); app.input('dimension-label', '24 см');
+    app.$('create-kz').click();
+    app.input('product-name', 'Құлаққап');
+    const raw = editor.snapshot(true).serialized, payload = validateProject(JSON.parse(raw));
+    assert.equal(payload.views[1].settings.translationOf, payload.views[0].id);
+    assert.equal(payload.settings.annotations.x, 73);
+    assert.equal(payload.settings.annotations.label, '24 см');
+    assert.equal(app.$('language-compare').open, true);
+    await editor.restoreProject(raw, editor.revision);
+    assert.equal(editor.snapshot().model.settings.translationOf, payload.views[0].id);
+    app.$('macro-enabled').click(); app.$('undo-button').click();
+    assert.equal(app.$('macro-enabled').checked, true);
+    payload.settings.annotations.x = 101;
+    assert.throws(() => validateProject(payload));
+  } finally { app.dom.window.close(); }
+});
+
 test('a slower earlier local import cannot replace the later selected file', async () => {
   const app = await setup();
   try {

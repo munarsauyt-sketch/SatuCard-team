@@ -28,7 +28,16 @@
     function enqueue(p) {
       if (seen[p]) return;
       seen[p] = 1;
-      if (data[p * 4 + 3] <= 24 || distance(p) <= tolerance) queue[tail++] = p;
+      const d = distance(p);
+      if (data[p * 4 + 3] <= 24 || d <= tolerance) { queue[tail++] = p; return; }
+      // Soften only the first foreground pixel adjacent to the connected mask.
+      // Unmix the border colour before compositing on a different card colour.
+      const coverage = Math.min(1, (d - tolerance) / Math.max(1, Math.min(20, tolerance * .45)));
+      if (coverage < 1) {
+        const i = p * 4;
+        for (let c = 0; c < 3; c++) data[i + c] = background[c] + (data[i + c] - background[c]) / coverage;
+        data[i + 3] = Math.round(data[i + 3] * coverage);
+      }
     }
     border.forEach(enqueue);
     while (head < tail) {

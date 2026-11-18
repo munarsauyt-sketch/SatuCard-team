@@ -3,7 +3,8 @@ import { clone, uid, clamp, layer, validateProject, templateProject } from './vi
 export function scenes(project) {
   return [...new Set(project.layers.map(item=>item.scene).filter(Boolean))].map(id=>{
     const items=project.layers.filter(item=>item.scene===id);
-    return {id,start:Math.min(...items.map(i=>i.start)),end:Math.max(...items.map(i=>i.end)),name:items.find(i=>i.name==='Заголовок')?.text||'Сцена',items};
+    const name=items.find(i=>i.role==='card-background')?.name || items.find(i=>i.name==='Заголовок')?.text || 'Сцена';
+    return {id,start:Math.min(...items.map(i=>i.start)),end:Math.max(...items.map(i=>i.end)),name,items};
   }).sort((a,b)=>a.start-b.start);
 }
 function shift(item,delta){item.start+=delta;item.end+=delta;if(item.cues)item.cues=item.cues.map(c=>({...c,start:c.start+delta,end:c.end+delta}));}

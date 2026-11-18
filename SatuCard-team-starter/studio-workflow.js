@@ -140,7 +140,7 @@
           button.addEventListener('click', () => openCloud(project.id)); row.append(label, button); $('cloud-project-list').append(row);
         }
         message('cloud-status', projects.length ? 'Последние 50 проектов. Открытие можно отменить кнопкой ↶ в редакторе.' : 'Облачных проектов пока нет. Сохраните текущий комплект.');
-      } catch (error) { message('cloud-status', error.message, true); } finally { setBusy(false); }
+      } catch (error) { if (generation === cloudGeneration) message('cloud-status', error.message, true); } finally { setBusy(false); }
     }
     async function openCloud(id) {
       if (cloudBusy) return; setBusy(true); const revision = editor.revision, generation = ++cloudGeneration;
@@ -151,7 +151,7 @@
         if (generation !== cloudGeneration) return;
         cloudIdentity = { id: project.id, version: project.version, title: project.title };
         message('cloud-status', `Открыт «${project.title}». Дальнейшие изменения сохраняйте кнопкой «Сохранить в облаке».`);
-      } catch (error) { message('cloud-status', error.message, true); } finally { setBusy(false); }
+      } catch (error) { if (generation === cloudGeneration) message('cloud-status', error.message, true); } finally { setBusy(false); }
     }
     function cloudThumbnail() {
       const state = editor.snapshot();
@@ -183,6 +183,7 @@
         cloudIdentity = { id: project.id, version: project.version, title: project.title };
         message('cloud-status', revision === editor.revision ? `«${project.title}» сохранён приватно. Можно открыть на другом устройстве в личном кабинете.` : 'Сохранена версия на момент нажатия. Есть новые правки: сохраните ещё раз.');
       } catch (error) {
+        if (generation !== cloudGeneration) return;
         message('cloud-status', error.code === 'version_conflict' ? 'Проект изменён на другом устройстве. Ваши правки здесь сохранены. Скачайте локальный файл или «Сохранить новую копию», затем откройте свежую версию из списка.' : error.message, true);
       } finally { setBusy(false); }
     }

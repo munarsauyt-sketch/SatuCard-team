@@ -11,6 +11,7 @@ import { installVideoHelp } from './video-help.js';
 const $=selector=>document.querySelector(selector);
 const canvas=$('#preview'),dialog=$('#export-dialog');
 let project=templateProject('launch'),media=new MediaStore(),time=.7,selected=null,activeFrame=null;
+const welcomeProject = project;
 let history=[],future=[],playing=false,playStart=0,audioNode=null,audioBuffer=null,audioRevision=-1;
 let revision=0,savedRevision=-1,saveTimer,saveQueue=Promise.resolve(),toastTimer,beats=[],busy=false,exporting=false,controller=null,resultUrl=null,projectOperation=0;
 let pixels=55,trackLabel=matchMedia('(max-width:620px)').matches?105:145;
@@ -82,7 +83,7 @@ async function switchProject(next,files=new Map(media.files),expectedRevision=re
   media.dispose();media=replacement;project=next;selected=null;activeFrame=null;time=Math.min(.7,project.duration/2);history=[];future=[];beats=[];
   productForm();changed({library:true});await persist();
 }
-function confirmReplace(){return !project.layers.length||confirm('Заменить текущий ролик? Черновик будет перезаписан. Чтобы сохранить его отдельно, сначала скачайте файл проекта.');}
+function confirmReplace(){return !project.layers.length || (project===welcomeProject && revision===0) || confirm('Заменить текущий ролик? Черновик будет перезаписан. Чтобы сохранить его отдельно, сначала скачайте файл проекта.');}
 async function chooseTemplate(id){
   if(!confirmReplace())return;
   const next=templateProject(id,project.product);
@@ -144,18 +145,22 @@ function renderMedia(){
   }
 }
 async function importFiles(files,logo=false){
-  const projectId=project.id;
+  const target=project, panel=document.querySelector('[data-panel].active')?.dataset.panel;
   for(const file of files){
     checkImportQuota(project,media.files,file);
     const asset=await inspectFile(file);if(logo&&asset.kind!=='image')throw new Error('Для логотипа выберите изображение.');
     if(asset.kind==='image'){const check=new Image(),url=URL.createObjectURL(file);try{check.src=url;await check.decode();if(check.naturalWidth*check.naturalHeight>40e6)throw new Error('Изображение слишком большое: до 40 мегапикселей.');}finally{URL.revokeObjectURL(url);}}
-    if(project.id!==projectId)throw new Error('Ролик изменился во время загрузки. Добавьте файлы в текущий проект заново.');
+    if(project!==target)throw new Error('Ролик изменился во время загрузки. Добавьте файлы в текущий проект заново.');
     // Decoding yields to other imports; re-read both limits immediately at commit.
     checkImportQuota(project,media.files,file);
     snapshot();media.files.set(asset.id,file);project.assets.push(asset);
-    changed({library:true});await persist();if(logo)insertAsset(asset,{logo:true});
+    changed({library:true});
+    if(logo)insertAsset(asset,{logo:true});
+    await persist();
+    if(project!==target)return;
   }
-  showPanel('media');toast(logo?'Логотип добавлен.':'Медиа загружены. Добавьте их в ролик или замените товар.');
+  if(document.querySelector('[data-panel].active')?.dataset.panel===panel)showPanel('media');
+  toast(logo?'Логотип добавлен.':'Медиа загружены. Добавьте их в ролик или замените товар.');
 }
 on('#import-media','click',()=>$('#media-input').click());on('#import-audio','click',()=>$('#media-input').click());
 on('#media-input','change',async event=>{try{await importFiles([...event.target.files]);}finally{event.target.value='';}});
@@ -363,7 +368,17 @@ on('#split','click',()=>{
   item.end=time;item.exit='none';right.entrance='none';cut(item,item.start,time);cut(right,time,right.end);project.layers.splice(project.layers.indexOf(item)+1,0,right);selected=right.id;changed();media.prepare(project).then(draw).catch(handle);
 });
 for(const [id,delta]of [['layer-up',1],['layer-down',-1]])on('#'+id,'click',()=>{const index=project.layers.findIndex(item=>item.id===selected),next=index+delta;if(index<0||next<0||next>=project.layers.length)return;snapshot();[project.layers[index],project.layers[next]]=[project.layers[next],project.layers[index]];changed();});
-async function undo(redo=false){const stack=redo?future:history;if(!stack.length)return;stop();(redo?history:future).push(clone(project));project=stack.pop();selected=null;activeFrame=null;time=clamp(time,0,project.duration);await media.prepare(project);productForm();changed({library:true});}
+async function undo(redo=false){
+  const stack=redo?future:history;
+  if(!stack.length)return;
+  stop();++projectOperation;
+  (redo?history:future).push(clone(project));
+  const restored=stack.pop();
+  project=restored;selected=null;activeFrame=null;time=clamp(time,0,project.duration);
+  productForm();changed({library:true});
+  await media.prepare(restored);
+  if(project===restored)draw();
+}
 on('#undo','click',()=>undo());on('#redo','click',()=>undo(true));
 on('#project-name','change',()=>{snapshot();project.name=$('#project-name').value.trim().slice(0,100)||'Новый ролик';changed();});
 on('#format','change',()=>{snapshot();project.format=$('#format').value;changed();});

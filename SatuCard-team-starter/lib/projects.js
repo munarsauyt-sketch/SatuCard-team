@@ -13,9 +13,21 @@ export const newTemplates = ['showcase', 'blueprint', 'matcha', 'pop', 'graphite
 export const newFonts = ['golos', 'noto', 'plex'];
 const enums = { template: ['studio', 'accent', 'minimal', 'noir', 'neon', 'editorial', 'bloom', 'bold', ...newTemplates], format: ['portrait', 'portrait34', 'square', 'story'], purpose: ['cover', 'advantages', 'dimensions', 'specifications', 'contents', 'instructions'], category: ['generic', 'electronics', 'clothing', 'beauty', 'home'], font: ['manrope', 'dejavu', ...newFonts], textAlign: ['left', 'center'] };
 const photoRanges = { zoom: [0.7, 2.5], x: [0, 100], y: [0, 100], rotation: [-180, 180], brightness: [50, 150], contrast: [50, 150], saturation: [0, 180], radius: [0, 50], warmth: [0, 60], blur: [0, 12] };
+function annotations(value) {
+  if (!keys(value, ['lens', 'dimension', 'vertical', 'x', 'y', 'offset', 'span', 'label'])) return false;
+  return Object.entries(value).every(([key, v]) => {
+    if (['lens', 'dimension', 'vertical'].includes(key)) return typeof v === 'boolean';
+    if (key === 'label') return string(v, 32);
+    if (key === 'span') return number(v, 15, 95);
+    if (key === 'offset') return number(v, 10, 90);
+    return number(v, 0, 100);
+  });
+}
 function settings(value) {
-  if (!keys(value, [...Object.keys(textFields), ...Object.keys(enums), 'price', 'oldPrice', 'features', 'customColors', 'background', 'accent', 'textColor', 'textScale', 'showPrice', 'showBrand', 'photo'])) return false;
+  if (!keys(value, [...Object.keys(textFields), ...Object.keys(enums), 'price', 'oldPrice', 'features', 'customColors', 'background', 'accent', 'textColor', 'textScale', 'showPrice', 'showBrand', 'photo', 'annotations', 'translationOf'])) return false;
   return Object.entries(value).every(([key, field]) => {
+    if (key === 'annotations') return annotations(field);
+    if (key === 'translationOf') return typeof field === 'string' && /^[\w-]{1,64}$/.test(field);
     if (key in textFields) return string(field, textFields[key]);
     if (key in enums) return enums[key].includes(field);
     if (['price', 'oldPrice'].includes(key)) return field === null || number(field, 0, 999999999.99);

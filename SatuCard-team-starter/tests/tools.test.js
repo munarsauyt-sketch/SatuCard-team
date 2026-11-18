@@ -31,6 +31,15 @@ test('existing alpha is preserved inside object; transparent border is traversed
   assert.equal(result.data[(3 * 7 + 3) * 4 + 3], 99);
   assert.equal(result.removedPixels, 39);
 });
+
+test('edge feathering removes the matte only next to the exterior flood', () => {
+  const input = fixture(), edge = (2 * 7 + 3) * 4;
+  input.set([217,217,217,255], edge);
+  const { data } = tools.removeBackground(input, 7, 7, 32);
+  assert.ok(data[edge + 3] > 0 && data[edge + 3] < 255);
+  assert.ok(data[edge] < 217);
+  assert.equal(data[(3 * 7 + 3) * 4 + 3], 255);
+});
 test('unsuitable backgrounds and dimensions fail helpfully without mutation', () => {
   assert.throws(() => tools.removeBackground(new Uint8Array(4), 1, 1), /RGBA/);
   assert.throws(() => tools.removeBackground(new Uint8Array(196), 7, 7), /прозрачные/);

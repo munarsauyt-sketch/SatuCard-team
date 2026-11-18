@@ -3,6 +3,29 @@ import assert from 'node:assert/strict';
 import {templateProject,validateProject,TEMPLATES,layer} from '../video-model.js';
 import {scenes,reorderScene,duplicateScene,removeScene,openingVariant,adaptFormat,parseCatalog,snapTime,catalogProject} from '../video-workflow.js';
 import {POST} from '../api/video-speech.js';
+import {videoFromSet} from '../video-plus.js';
+
+test('card set becomes ordered editable scenes with per-view photos and bullets within all editor limits', () => {
+  const sources = ['YQ==','Yg==','Yw=='].map((bytes,i) => ({ id:'p'+i, source:'data:image/png;base64,'+bytes }));
+  const views = Array.from({length:8}, (_,i) => ({ id:'v'+i, label:'Макет '+i,
+    photoIds:i===6 ? [] : [sources[i%3].id,sources[(i+1)%3].id,sources[(i+2)%3].id],
+    settings:{ title:'Товар '+i, features:['Факт '+i, 'Второй пункт'], description:'', showPrice:i!==1, price:24, showBrand:true, brandName:'Магазин', textColor:'#202020', background:'#fafafa' } }));
+  const {project, files} = videoFromSet({views, activeViewId:'v5', photos:sources, logo:sources[0].source});
+  validateProject(project); assert.equal(files.size, 3);
+  const list=scenes(project); assert.equal(list.length,8);
+  assert.equal(list.at(-1).end,project.duration); assert.ok(project.duration <= 30 && project.layers.length <= 64);
+  for (const [i, scene] of list.entries()) {
+    assert.equal(scene.start, i ? list[i-1].end : 0);
+    assert.equal(scene.name, views[i].label);
+    assert.ok(scene.items.some(item => item.text === '• Факт '+i+'\n• Второй пункт'));
+    assert.equal(scene.items.filter(item => item.role==='product').length,views[i].photoIds.length);
+    if (i !== 6) assert.equal(scene.items.find(item=>item.role==='product').assetId,project.assets[i%3].id);
+  }
+  assert.ok(!list[1].items.some(item => item.text.includes('₸')));
+  const legacy = videoFromSet({views:views.slice(0,2).map(({photoIds,...v})=>v), photo:sources[0].source});
+  assert.equal(legacy.files.size,1);
+  assert.ok(scenes(legacy.project).every(scene=>scene.items.some(item=>item.role==='product')));
+});
 
 test('scene reorder preserves relative timing and a duplicate can be removed without changing total coverage',()=>{
   const p=templateProject('launch'),list=scenes(p),first=list[0].id;

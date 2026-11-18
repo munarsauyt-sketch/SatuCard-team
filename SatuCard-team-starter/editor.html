@@ -108,6 +108,13 @@
             <button id="fullscreen-button" class="studio-icon-button" type="button" title="Открыть крупно" aria-label="Развернуть предварительный просмотр"><svg class="studio-icon" aria-hidden="true"><use href="#i-expand"/></svg></button>
           </div></details>
         </div>
+        <details id="language-compare" hidden><summary>Сравнить RU / KZ</summary>
+          <div class="language-pair">
+            <figure><figcaption>RU · Оригинал</figcaption><canvas id="compare-ru" aria-label="Карточка на русском"></canvas></figure>
+            <figure><figcaption>KZ · Қазақша</figcaption><canvas id="compare-kz" aria-label="Карточка на казахском"></canvas></figure>
+          </div>
+          <p id="compare-status" role="status"></p>
+        </details>
         <div id="preview-stage" class="studio-stage"><div class="stage-corner stage-corner-top" aria-hidden="true"></div><div class="stage-corner stage-corner-bottom" aria-hidden="true"></div><figure id="canvas-frame" class="studio-canvas-frame"><canvas id="product-canvas" width="900" height="1125" role="img" aria-label="Предварительный просмотр карточки товара">Предварительный просмотр карточки товара</canvas><div id="safe-zone-overlay" class="safe-zone-overlay" hidden aria-hidden="true"><span class="safe-zone-label"></span></div><figcaption id="preview-caption" class="sr-only" aria-live="polite"></figcaption></figure></div>
         <div class="workspace-bottom-bar"><p id="preview-hint"><svg class="studio-icon"><use href="#i-image"/></svg>Кадрируйте фото или откройте тексты</p><button id="open-ai-chat" class="ai-floating-launch" type="button" data-open-ai aria-controls="ai-chat" aria-expanded="false" aria-label="Открыть чат sAI"><svg class="studio-icon" aria-hidden="true"><use href="#i-spark"/></svg>sAI</button><div class="workspace-zoom"><button id="preview-fit-button" type="button" class="studio-icon-button" aria-label="Вписать карточку в окно" title="Вписать в окно"><svg class="studio-icon"><use href="#i-fit"/></svg></button><label for="preview-zoom" class="sr-only">Масштаб просмотра</label><input id="preview-zoom" type="range" min="50" max="200" value="100"><output id="preview-zoom-value" for="preview-zoom">Вписано</output></div></div>
       </section>
@@ -119,6 +126,21 @@
             <div class="tool-group tool-library"><div id="drop-zone" class="studio-upload"><input type="file" id="photo-input" multiple accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" aria-describedby="upload-help file-status"><label for="photo-input"><span class="upload-symbol"><svg class="studio-icon"><use href="#i-upload"/></svg></span><strong>Загрузить фотографии</strong><span>Перетащите сюда или выберите файлы</span><small id="upload-help">JPG, PNG, WebP, HEIC · до 10 МБ<br>Вставить фото: Ctrl+V или Cmd+V</small></label></div>
             <p id="file-status" class="studio-help" role="status">Сейчас используется фото из примера.</p>
             <section class="photo-manager" aria-label="Фотографии проекта" data-workflow-control><div class="control-section-heading"><h3>Фото этой карточки</h3></div><p id="photo-count" class="studio-help"></p><div id="photo-library" class="photo-library"></div><div id="selected-photos" class="selected-photos"></div><p class="studio-help">Выберите до трёх фото. Стрелки меняют порядок. Обработка применяется к главному фото.</p></section>
+            <details class="studio-accordion"><summary>Лупа и размер на фото</summary><div class="accordion-content">
+              <label class="studio-switch"><input id="macro-enabled" type="checkbox"><span>Акцент-лупа · 2×</span></label>
+              <div id="macro-controls" hidden>
+                <button type="button" id="pick-macro" class="studio-small-button" aria-pressed="false">Выбрать деталь на холсте</button>
+                <label for="macro-x">Центр по горизонтали</label><input id="macro-x" type="range" min="0" max="100" value="50">
+                <label for="macro-y">Центр по вертикали</label><input id="macro-y" type="range" min="0" max="100" value="50">
+              </div>
+              <label class="studio-switch"><input id="dimension-enabled" type="checkbox"><span>Линия размера</span></label>
+              <div id="dimension-controls" hidden>
+                <label for="dimension-label">Подпись размера</label><input id="dimension-label" type="text" maxlength="32" placeholder="Например, 24 см">
+                <label for="dimension-axis">Направление</label><select id="dimension-axis"><option value="horizontal">Горизонтально</option><option value="vertical">Вертикально</option></select>
+                <label for="dimension-span">Длина стрелки</label><input id="dimension-span" type="range" min="15" max="95" value="70">
+                <label for="dimension-offset">Положение стрелки</label><input id="dimension-offset" type="range" min="10" max="90" value="78">
+              </div>
+            </div></details>
             <details class="studio-accordion" data-workflow-control><summary>Удалить однотонный фон</summary><div class="accordion-content">
               <p class="studio-help">Подходит для однотонного фона. Создаёт обработанную копию главного фото.</p>
               <label for="background-tolerance">Допуск цвета <output id="background-tolerance-value">32</output></label><input id="background-tolerance" type="range" min="5" max="90" value="32">
@@ -189,6 +211,7 @@
         <div class="workflow-set"><div class="workflow-set-heading"><strong>Комплект</strong><span>До 8 карточек</span></div><div id="product-views" class="workflow-view-tabs" aria-label="Карточки комплекта"></div>
           <div class="workflow-actions"><button id="make-set" type="button" class="studio-small-button" disabled>+ Карточки с деталями</button><button id="add-view" type="button" class="studio-quiet-button" disabled>Дублировать</button><button id="view-earlier" type="button" class="studio-quiet-button" aria-label="Переместить карточку раньше">← Раньше</button><button id="view-later" type="button" class="studio-quiet-button" aria-label="Переместить карточку позже">Позже →</button><button id="apply-brand" type="button" class="studio-quiet-button">Применить бренд ко всем</button><button id="remove-view" type="button" class="studio-text-button" disabled>Удалить карточку</button></div>
           <div class="studio-view-name"><label for="view-label">Имя карточки</label><input id="view-label" type="text" maxlength="60"></div><p id="set-status" role="status"></p>
+          <button id="create-kz" type="button" class="studio-quiet-button">Создать копию для перевода на қазақша</button>
         </div>
       <div class="studio-project-secondary">
         <div class="studio-project-files">

@@ -181,6 +181,9 @@
     for (const [id, key] of Object.entries(checkFields)) settings[key] = $(id).checked;
     for (const [id, key] of Object.entries(photoRanges)) settings.photo[key] = Number($(id).value) / (key === 'zoom' ? 100 : 1);
     settings.photo.flip = $('photo-flip').checked;
+    settings.annotations = { lens: $('macro-enabled').checked, x: +$('macro-x').value, y: +$('macro-y').value,
+      dimension: $('dimension-enabled').checked, vertical: $('dimension-axis').value === 'vertical',
+      span: +$('dimension-span').value, offset: +$('dimension-offset').value, label: $('dimension-label').value };
     settings.photo.fit = form.querySelector('[name="photo-fit"]:checked')?.value || 'contain';
     settings.textScale = Number($('text-scale').value);
     settings.features = [1, 2, 3].map(index => $('feature-' + index).value);
@@ -194,6 +197,11 @@
     for (const [id, key] of Object.entries(checkFields)) $(id).checked = settings[key];
     for (const [id, key] of Object.entries(photoRanges)) $(id).value = settings.photo[key] * (key === 'zoom' ? 100 : 1);
     $('photo-flip').checked = settings.photo.flip;
+    const a = settings.annotations || {};
+    $('macro-enabled').checked = !!a.lens; $('macro-x').value = a.x ?? 50; $('macro-y').value = a.y ?? 50;
+    $('dimension-enabled').checked = !!a.dimension; $('dimension-axis').value = a.vertical ? 'vertical' : 'horizontal';
+    $('dimension-span').value = a.span ?? 70; $('dimension-offset').value = a.offset ?? 78; $('dimension-label').value = a.label || '';
+    setPickingDetail(false);
     form.querySelector('[name="photo-fit"][value="' + settings.photo.fit + '"]').checked = true;
     $('text-scale').value = settings.textScale;
     [1, 2, 3].forEach(index => { $('feature-' + index).value = settings.features[index - 1] || ''; });
@@ -202,6 +210,10 @@
     $('brand-logo-remove').disabled = !model.logoId; updateOutputs(); renderPhotoLibrary(); updateContentHints();
   }
   function updateOutputs() {
+    $('macro-controls').hidden = !$('macro-enabled').checked;
+    $('dimension-controls').hidden = !$('dimension-enabled').checked;
+    if ($('macro-controls').hidden) setPickingDetail(false);
+    $('pick-macro').disabled = !model.photoId;
     $('name-count').textContent = `${$('product-name').value.length} / 60`;
     const units = { rotation: '°', radius: ' px', blur: ' px' };
     for (const [id, key] of Object.entries(photoRanges)) $(id + '-value').value = $(id).value + (units[key] || '%');
@@ -251,6 +263,28 @@
     if (visible && !miniPicture.hidden && (redraw || justShown)) drawMiniPreview();
     if (justShown) layoutMiniPreview();
   }
+  let comparisonFonts;
+  function renderComparison() {
+    if (!model.views) return;
+    const view = activeView(), panel = $('language-compare');
+    const kz = view?.settings.translationOf ? view : model.views.find(v => v.settings.translationOf === view?.id);
+    const ru = kz && model.views.find(v => v.id === kz.settings.translationOf && v !== kz);
+    panel.hidden = !ru;
+    $('create-kz').disabled = model.views.length >= 8 || !!view?.settings.translationOf;
+    if (!ru || !panel.open) return;
+    const fontPair = ru.settings.font + '/' + kz.settings.font;
+    if (comparisonFonts !== fontPair) {
+      comparisonFonts = fontPair;
+      Promise.all([readyFonts(ru.settings), readyFonts(kz.settings)]).then(() => requestRender()).catch(() => {});
+    }
+    const paint = (target, v) => renderer.render($(target), v.settings, imageAssets(v), { scale: .5 });
+    const issues = renderer.compareTypeSizes(paint('compare-ru', ru), paint('compare-kz', kz));
+    $('compare-status').textContent = issues.length ? issues.map(({field, reduction}) =>
+      'Сократите ' + (field === 'product-name' ? 'заголовок' : 'пункт ' + field.slice(-1)) + ' в KZ: кегль меньше на ' + reduction + '%.').join(' ')
+      : 'Заголовок и пункты KZ укладываются в допуск 20% относительно RU.';
+  }
+  $('language-compare').addEventListener('toggle', () => { if (initialized) { if (!$('language-compare').open) fitPreview(false); requestRender(); } });
+  document.fonts?.addEventListener?.('loadingdone', () => requestRender());
   function renderNow() {
     framePending = false; geometry = renderer.render(canvas, model.settings, imageAssets());
     if (previewFont !== model.settings.font) {
@@ -264,6 +298,9 @@
     $('preview-caption').textContent = cardName + '. Шаблон ' + renderer.templates[model.settings.template].label + '.';
     canvas.setAttribute('aria-label', $('preview-caption').textContent);
     updateMiniPreview(true);
+    renderComparison();
+    const count = model.views?.length || 1;
+    $('make-video-button').textContent = count > 1 ? 'Создать видео · ' + count + ' ' + (count <= 4 ? 'сцены' : 'сцен') + ' ↗' : 'Создать видео ↗';
     $('download-button').querySelector('span').textContent = 'Скачать ' + selectedExportFormat().label;
     document.querySelectorAll('[data-template]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.template === model.settings.template)));
     document.querySelectorAll('[data-sample]').forEach(button => button.setAttribute('aria-pressed', String(model.photoId === 'sample-' + button.dataset.sample)));
@@ -431,7 +468,10 @@
     finally { added.forEach(id => pendingAssets.delete(id)); releaseUnusedAssets(); }
   }
   async function loadSample(key, initialize = false) {
-    if (!Object.hasOwn(samples, key)) return; const version = ++photoVersion; status('file-status', 'Загружаем пример…');
+    if (!Object.hasOwn(samples, key)) return;
+    const version = ++photoVersion, viewId = model.activeViewId;
+    const isCurrent = () => version === photoVersion && viewId === model.activeViewId;
+    status('file-status', 'Загружаем пример…');
     try {
       const id = 'sample-' + key; if (!assets.has(id)) {
         let source = window.SATUCARD_DEMO_IMAGES?.[key];
@@ -443,14 +483,14 @@
         await registerAsset(source, id);
         assets.get(id).sampleKey = key;
       }
-      pendingAssets.delete(id); if (version !== photoVersion) return; if (!initialize) commit();
+      pendingAssets.delete(id); if (!isCurrent()) return; if (!initialize) commit();
       if (!model.libraryIds.includes(id)) { if (model.libraryIds.length >= 12) throw new Error('В проекте до 12 фото. Удалите ненужный снимок.'); model.libraryIds.push(id); }
       setPhotoIds([id]);
       model.settings = renderer.normalize({ ...model.settings, ...samples[key], oldPrice: null, photo: { ...renderer.normalize({}).photo, ...samples[key].photo } });
       syncActiveView(); activeView().sampleKey = key; changeProductContext(); syncForm();
       status('file-status', 'Демонстрационный товар. Загрузите своё фото и укажите его данные.');
       if (initialize) { syncActiveView(); initialModel = clone(model); history = project.createHistory(model); initialized = true; updateHistory(); requestRender(true); } else edited(true);
-    } catch (error) { status('file-status', error.message, true); if (initialize) { initialized = true; syncActiveView(); initialModel = clone(model); history = project.createHistory(model); updateHistory(); requestRender(true); } }
+    } catch (error) { if (isCurrent()) status('file-status', error.message, true); if (initialize) { initialized = true; syncActiveView(); initialModel = clone(model); history = project.createHistory(model); updateHistory(); requestRender(true); } }
   }
   async function restoreProject(value, expectedRevision, cancelled = () => false) {
     const parsed = project.parseProject(value, renderer.normalize), version = ++projectVersion, started = revision;
@@ -908,11 +948,31 @@
     $('product-name').focus();
     $('product-name').scrollIntoView({ block: 'center' });
   });
+  function setPickingDetail(active) {
+    $('pick-macro').setAttribute('aria-pressed', String(active));
+    canvas.classList.toggle('is-picking-detail', active);
+  }
+  $('pick-macro').addEventListener('click', () => {
+    const active = !canvas.classList.contains('is-picking-detail');
+    setPickingDetail(active);
+    if (active) { $('language-compare').open = false; canvas.scrollIntoView?.({ block: 'center' }); }
+  });
   canvas.addEventListener('pointerdown', event => {
-    if (event.pointerType === 'touch' && $('crop-photo')?.getAttribute('aria-pressed') !== 'true') return;
+    const picking = canvas.classList.contains('is-picking-detail');
+    if (!picking && event.pointerType === 'touch' && $('crop-photo')?.getAttribute('aria-pressed') !== 'true') return;
     if (!model.photoId || !geometry?.photoRect || event.button > 0) return;
     const box = canvas.getBoundingClientRect(), scale = 900 / box.width, point = { x: (event.clientX - box.left) * scale, y: (event.clientY - box.top) * scale }, rect = geometry.photoRect;
     if (point.x < rect.x || point.x > rect.x + rect.width || point.y < rect.y || point.y > rect.y + rect.height) return;
+    if (picking) {
+      const image = assets.get(model.photoId)?.image;
+      if (!image) return;
+      const { u, v } = renderer.photoPlacement(model.settings.photo, image, rect).toImage(point.x, point.y);
+      if (u < 0 || u > 1 || v < 0 || v > 1) return;
+      event.preventDefault(); commit();
+      $('macro-x').value = Math.round(u * 100);
+      $('macro-y').value = Math.round(v * 100);
+      readForm(); setPickingDetail(false); edited(true); return;
+    }
     event.preventDefault(); commit(); revision++; canvas.setPointerCapture(event.pointerId);
     dragging = { id: event.pointerId, x: event.clientX, y: event.clientY, startX: model.settings.photo.x, startY: model.settings.photo.y, scale, rect }; canvas.classList.add('is-dragging');
   });
@@ -1073,6 +1133,7 @@
       readForm(); commit(); if (model.views.length >= 8) throw new Error('В комплекте не больше 8 карточек.');
       if (format && !Object.hasOwn(renderer.formats, format)) throw new Error('Выберите формат карточки.');
       const id = crypto.randomUUID(), settings = clone(model.settings);
+      delete settings.translationOf;
       let label = 'Карточка ' + (model.views.length + 1);
       if (format) {
         const suffix = ' · ' + renderer.formats[format].file.replace('x', ':');
@@ -1085,13 +1146,20 @@
     },
     removeView() {
       cancelDrag(); commit(); if (model.views.length <= 1) return;
-      model.views = model.views.filter(view => view.id !== model.activeViewId); model.activeViewId = model.views[0].id; model.settings = clone(model.views[0].settings); setPhotoIds(model.views[0].photoIds);
+      const removedId = model.activeViewId;
+      model.views = model.views.filter(view => view.id !== removedId);
+      for (const view of model.views) {
+        if (view.settings.translationOf === removedId) delete view.settings.translationOf;
+      }
+      model.activeViewId = model.views[0].id;
+      model.settings = clone(model.views[0].settings); setPhotoIds(model.views[0].photoIds);
       syncForm(); edited(true); fitPreview();
     },
     renameView(label) { commit(); const view = model.views.find(item => item.id === model.activeViewId); view.label = label.trim().slice(0, 60) || 'Карточка'; edited(); },
     makeSet() {
       readForm(); commit(); if (model.views.length > 6) throw new Error('Для двух новых карточек нужно освободить место в комплекте.');
       const base = clone(model.settings);
+      delete base.translationOf;
       for (const [label, changes] of [
         ['Преимущества', { purpose: 'advantages', subtitle: 'Преимущества', description: '', showPrice: false, badge: '' }],
         ['Подробности', { purpose: 'specifications', subtitle: 'Подробности о товаре', features: [], showPrice: false, badge: '' }]
@@ -1127,6 +1195,8 @@
         photo: photoIds[0] !== model.photoIds[0] ? renderer.normalize({}).photo : base.photo });
       cancelDrag(); commit();
       if (options.duplicate) {
+        settings.translationOf = source.settings.translationOf || source.id;
+        $('language-compare').open = true;
         const suffix = ' · Қазақша';
         const id = crypto.randomUUID(), label = source.label.slice(0, 60 - suffix.length) + suffix;
         model.views.push({ id, label, settings, photoIds, sampleKey: startingProduct ? undefined : source.sampleKey });
@@ -1151,5 +1221,10 @@
       model.libraryIds.push(id); setPhotoIds([id, ...model.photoIds.slice(1)]); syncForm(); edited(true); status('file-status', 'Однотонный фон удалён локально. Результат можно отменить.');
     }
   };
+  $('create-kz').addEventListener('click', () => {
+    window.SATUCARD_EDITOR.applyCopy({}, revision, { duplicate: true, fields: [] });
+    activateTab('content'); $('product-name').focus();
+    status('set-status', 'Копия создана. Введите казахский текст в разделе «Тексты».');
+  });
   initialize();
 })();

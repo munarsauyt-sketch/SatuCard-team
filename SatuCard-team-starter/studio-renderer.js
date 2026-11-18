@@ -1,7 +1,7 @@
 'use strict';
 
 // One renderer is shared by the live canvas, PNG export, and template thumbnails.
-// Photos stay intact: these tools change framing and colour, not their background.
+// Annotations and shadows are composited without changing the photo asset.
 (() => {
   const root = typeof window === 'undefined' ? globalThis : window;
   const templates = {
@@ -52,7 +52,14 @@
     const photo = source.photo && typeof source.photo === 'object' ? source.photo : {};
     const price = amount(source.price);
     const old = amount(source.oldPrice);
+    const overlay = source.annotations || {};
     return {
+      ...(overlay.lens === true || overlay.dimension === true ? { annotations: {
+        lens: overlay.lens === true, x: clamp(overlay.x, 0, 100, 50), y: clamp(overlay.y, 0, 100, 50),
+        dimension: overlay.dimension === true, vertical: overlay.vertical === true,
+        span: clamp(overlay.span, 15, 95, 70), offset: clamp(overlay.offset, 10, 90, 78), label: text(overlay.label, 32)
+      } } : {}),
+      ...(typeof source.translationOf === 'string' && /^[\w-]{1,64}$/.test(source.translationOf) ? { translationOf: source.translationOf } : {}),
       title: source.title == null ? 'Название вашего товара' : text(source.title, 60),
       subtitle: text(source.subtitle, 90), description: text(source.description, 180),
       price, oldPrice: price !== null && old !== null && old > price ? old : null,
@@ -258,7 +265,104 @@
     }
   }
 
-  function photo(ctx, state, image, rect) {
+  // Keep a small outline per decoded image. It also works for re-opened PNGs.
+  const outlines = new WeakMap();
+  function silhouette(image, width, height) {
+    if (outlines.has(image)) return outlines.get(image);
+    let points = null;
+    if (root.document && !image.src?.startsWith?.('data:image/jpeg')) {
+      const surface = root.document.createElement('canvas'), ratio = Math.min(1, 160 / Math.max(width, height));
+      const w = surface.width = Math.max(1, Math.round(width * ratio));
+      const h = surface.height = Math.max(1, Math.round(height * ratio));
+      try {
+        const scan = surface.getContext('2d', { willReadFrequently: true });
+        scan.drawImage(image, 0, 0, w, h);
+        const pixels = scan.getImageData(0, 0, w, h).data;
+        let clear = 0;
+        const edges = [];
+        for (let y = 0; y < h; y++) {
+          let left = w, right = -1;
+          for (let x = 0; x < w; x++) {
+            const alpha = pixels[(y * w + x) * 4 + 3];
+            if (alpha <= 24) clear++;
+            if (alpha >= 128) { left = Math.min(left, x); right = x; }
+          }
+          if (right >= left) for (const x of [left, right + 1]) {
+            edges.push([x / w - .5, y / h - .5], [x / w - .5, (y + 1) / h - .5]);
+          }
+        }
+        if (clear >= w * h * .01 && edges.length) points = edges;
+      } catch { /* Images without readable pixels can still be displayed. */ }
+    }
+    outlines.set(image, points);
+    return points;
+  }
+
+  function contactShadow(ctx, outline, cx, cy, width, height, angle, flip) {
+    if (!outline) return;
+    const cos = Math.cos(angle), sin = Math.sin(angle);
+    const points = outline.map(([u, v]) => {
+      const x = u * width * (flip ? -1 : 1), y = v * height;
+      return [cx + x * cos - y * sin, cy + x * sin + y * cos];
+    });
+    const base = Math.max(...points.map(p => p[1]));
+    const band = Math.max(2, Math.min(width, height) * .035);
+    const feet = points.filter(p => p[1] >= base - band).map(p => p[0]);
+    const left = Math.min(...feet), right = Math.max(...feet);
+    const radius = Math.max(band * 2, (right - left) * .64);
+    ctx.save(); ctx.translate((left + right) / 2, base - band * .15);
+    ctx.scale(radius, Math.max(3, Math.min(radius * .21, band * 1.3)));
+    const fade = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+    fade.addColorStop(0, 'rgba(24,19,16,.38)'); fade.addColorStop(.5, 'rgba(24,19,16,.18)'); fade.addColorStop(1, 'rgba(24,19,16,0)');
+    circle(ctx, 0, 0, 1, fade); ctx.restore();
+  }
+
+  function dimensionLine(ctx, state, rect, a) {
+    const length = (a.vertical ? rect.height : rect.width) * a.span / 100;
+    const cx = rect.x + rect.width * (a.vertical ? a.offset / 100 : .5);
+    const cy = rect.y + rect.height * (a.vertical ? .5 : a.offset / 100);
+    ctx.save(); ctx.translate(cx, cy);
+    if (a.vertical) ctx.rotate(-Math.PI / 2);
+    const half = length / 2, arrow = Math.min(12, length / 5);
+    for (const [color, thickness] of [['#ffffff', 7], ['#19212a', 3]]) {
+      line(ctx, -half, 0, half, 0, color, thickness);
+      for (const side of [-1, 1]) for (const dy of [-1, 1]) {
+        line(ctx, side * half, 0, side * (half - arrow), dy * arrow * .58, color, thickness);
+      }
+    }
+    if (a.label) {
+      const available = Math.max(20, (a.vertical ? rect.height : rect.width) - 12);
+      font(ctx, state, 19, 750);
+      const w = Math.min(available, ctx.measureText(a.label).width + 18);
+      box(ctx, -w / 2, -34, w, 29, 8, '#19212a');
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ffffff';
+      ctx.fillText(a.label, 0, -19, Math.max(1, w - 10));
+    }
+    ctx.restore();
+  }
+
+  function photoPlacement(settings, image, rect) {
+    const width = image.naturalWidth || image.width, height = image.naturalHeight || image.height;
+    const angle = settings.rotation * Math.PI / 180;
+    const cos = Math.cos(angle), sin = Math.sin(angle), c = Math.abs(cos), s = Math.abs(sin);
+    const base = settings.fit === 'cover' ? Math.max((rect.width*c + rect.height*s)/width, (rect.width*s + rect.height*c)/height)
+      : Math.min(rect.width/(width*c + height*s), rect.height/(width*s + height*c));
+    const scale = base * settings.zoom, flip = settings.flip ? -1 : 1;
+    const centerX = rect.x + rect.width * (.5 + (settings.x - 50) * .007);
+    const centerY = rect.y + rect.height * (.5 + (settings.y - 50) * .007);
+    return { centerX, centerY, scale, angle,
+      toFrame(u, v) {
+        const x = (u - .5) * width * scale * flip, y = (v - .5) * height * scale;
+        return { x:centerX + x*cos - y*sin, y:centerY + x*sin + y*cos };
+      },
+      toImage(x, y) {
+        const dx = x - centerX, dy = y - centerY;
+        return { u:.5 + flip * (dx*cos + dy*sin)/(width*scale), v:.5 + (dy*cos - dx*sin)/(height*scale) };
+      }
+    };
+  }
+
+  function photo(ctx, state, image, rect, primary = false) {
     let radius = state.photo.radius;
     if (state.template === 'bloom') radius = Math.max(radius, 42);
     if (state.template === 'editorial') radius = Math.min(radius, 8);
@@ -275,29 +379,39 @@
     let photoScale;
     if (image && (image.naturalWidth || image.width) > 0 && (image.naturalHeight || image.height) > 0) {
       const width = image.naturalWidth || image.width, height = image.naturalHeight || image.height;
-      const radians = state.photo.rotation * Math.PI / 180;
-      const cos = Math.abs(Math.cos(radians)), sin = Math.abs(Math.sin(radians));
-      const rotatedWidth = width * cos + height * sin, rotatedHeight = width * sin + height * cos;
-      // contain fits the rotated photo; cover covers the frame even after rotation.
-      const base = state.photo.fit === 'cover' ? Math.max((rect.width * cos + rect.height * sin) / width, (rect.width * sin + rect.height * cos) / height)
-        : Math.min(rect.width / rotatedWidth, rect.height / rotatedHeight);
-      photoScale = base * state.photo.zoom;
-      const centerX = rect.x + rect.width / 2 + (state.photo.x - 50) / 50 * rect.width * 0.35;
-      const centerY = rect.y + rect.height / 2 + (state.photo.y - 50) / 50 * rect.height * 0.35;
-      ctx.translate(centerX, centerY); ctx.rotate(radians); ctx.scale(state.photo.flip ? -1 : 1, 1);
+      const placement = photoPlacement(state.photo, image, rect);
+      const { centerX, centerY, angle: radians } = placement;
+      photoScale = placement.scale;
       const { brightness, contrast, saturation, warmth, blur } = state.photo;
       let filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%)`;
       if (warmth) filter += ` sepia(${warmth}%)`;
       // Canvas filters operate in output pixels, independently of the drawing transform.
       if (blur) filter += ` blur(${blur * ctx.canvas.width / formats[state.format].width}px)`;
-      ctx.filter = filter;
       const drawnWidth = width * photoScale, drawnHeight = height * photoScale;
-      ctx.drawImage(image, -drawnWidth / 2, -drawnHeight / 2, drawnWidth, drawnHeight);
+      const drawProduct = () => {
+        ctx.save(); ctx.translate(centerX, centerY); ctx.rotate(radians); ctx.scale(state.photo.flip ? -1 : 1, 1);
+        ctx.filter = filter; ctx.drawImage(image, -drawnWidth / 2, -drawnHeight / 2, drawnWidth, drawnHeight); ctx.restore();
+      };
+      contactShadow(ctx, silhouette(image, width, height), centerX, centerY, drawnWidth, drawnHeight, radians, state.photo.flip);
+      drawProduct();
+      const a = primary && state.annotations;
+      if (a?.lens) {
+        const r = Math.min(rect.width, rect.height) * .18, pad = r + 3;
+        const { x, y } = placement.toFrame(a.x / 100, a.y / 100);
+        const cx = Math.min(rect.x + rect.width - pad, Math.max(rect.x + pad, x));
+        const cy = Math.min(rect.y + rect.height - pad, Math.max(rect.y + pad, y));
+        ctx.save(); circle(ctx, cx, cy, r, state.background); ctx.clip();
+        ctx.translate(cx, cy); ctx.scale(2, 2); ctx.translate(-x, -y); drawProduct(); ctx.restore();
+        ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 6; ctx.stroke();
+        ctx.strokeStyle = state.accent; ctx.lineWidth = 2; ctx.stroke();
+      }
     } else {
       circle(ctx, rect.x + rect.width / 2, rect.y + rect.height / 2 - 25, 30, rgba(state.accent, 0.15));
       label(ctx, state, '+', rect.x + rect.width / 2 - 13, rect.y + rect.height / 2 - 45, state.accent, 38);
       fitText(ctx, state, 'Добавьте фотографию товара', { x: rect.x + 20, y: rect.y + rect.height / 2 + 20, width: rect.width - 40, height: 58 }, { size: 24, align: 'center', color: rgba(state.textColor, 0.6) });
     }
+    if (primary && state.annotations?.dimension) dimensionLine(ctx, state, rect, state.annotations);
     ctx.restore();
     if (['neon', 'noir', 'bold'].includes(state.template)) {
       ctx.lineWidth = state.template === 'bold' ? 3 : 1.5;
@@ -328,7 +442,7 @@
         extra.forEach((image, index) => secondary.push({ x: frame.x + mainWidth + gap + index * (width + gap), y: frame.y, width, height: frame.height }));
       }
     }
-    const photoScale = photo(ctx, state, primary, main);
+    const photoScale = photo(ctx, state, primary, main, true);
     badge(ctx, state, main);
     const neutral = { ...state, photo: { ...state.photo, zoom: 1, x: 50, y: 50, rotation: 0, flip: false, warmth: 0, blur: 0 } };
     extra.forEach((image, index) => photo(ctx, neutral, image, secondary[index]));
@@ -505,7 +619,7 @@
       }
       const photoState = main ? state : { ...state, photo: { ...state.photo, zoom: 1, x: 50, y: 50, rotation: 0, flip: false, warmth: 0, blur: 0 } };
       const frame = snugFrame(image, rect, photoState.photo);
-      const scale = photo(ctx, photoState, image, frame);
+      const scale = photo(ctx, photoState, image, frame, main);
       photoRects.push(frame);
       if (main) {
         photoScale = scale;
@@ -605,5 +719,12 @@
     }
     return { ...layout, photoRects: layout.photoRects || [layout.photoRect], hitAreas: layout.hitAreas || [], width: format.width, height: format.height, titleContrast };
   }
-  root.SATUCARD_RENDERER = { templates, fonts, formats, purposes, categories, normalize, render };
+  function compareTypeSizes(original, translation) {
+    const metrics = layout => new Map([['product-name', layout.titleFontSize],
+      ...layout.hitAreas.filter(area => /^feature-[1-3]$/.test(area.field)).map(area => [area.field, area.fontSize])]);
+    const ru = metrics(original);
+    return [...metrics(translation)].filter(([field, size]) => size > 0 && size < ru.get(field) * .8)
+      .map(([field, size]) => ({ field, reduction: Math.round((1 - size / ru.get(field)) * 100) }));
+  }
+  root.SATUCARD_RENDERER = { templates, fonts, formats, purposes, categories, normalize, render, compareTypeSizes, photoPlacement };
 })();
