@@ -8,7 +8,11 @@ const templates = {
   studio: 'soft natural green', accent: 'warm terracotta', minimal: 'neutral catalog', noir: 'dark and gold',
   neon: 'dark cyan', editorial: 'magazine typography', bloom: 'soft pastel', bold: 'high-contrast poster',
   showcase: 'warm storefront frame', blueprint: 'indigo drafting grid', matcha: 'olive arches',
-  pop: 'cobalt and lime geometry', graphite: 'charcoal editorial', cloud: 'pale blue gradient'
+  pop: 'cobalt and lime geometry', graphite: 'charcoal editorial', cloud: 'pale blue gradient',
+  porcelain: 'cream paper, photo on top', espresso: 'warm coffee tones, photo on the left',
+  cobalt: 'blue with diagonal bands', citrus: 'yellow blocks, photo on top', mineral: 'cool gray grid',
+  blush: 'muted rose gradient and a photo mat', midnight: 'violet rings, photo on top',
+  linen: 'natural paper, photo on the left', jade: 'deep green editorial', cherry: 'saturated cherry and peach blocks'
 };
 export const TEMPLATE_IDS = Object.freeze(Object.keys(templates));
 export const TEMPLATE_HINTS = Object.entries(templates).map(([key, hint]) => `${key} (${hint})`).join(', ');

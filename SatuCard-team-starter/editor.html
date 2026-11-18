@@ -198,10 +198,47 @@
 
             </div>
             <div class="studio-control-section"><div class="studio-field"><label for="card-format">Формат карточки</label><select id="card-format"><option value="portrait">Лента · 4:5</option><option value="portrait34">Маркетплейс · 3:4</option><option value="square">Квадрат · 1:1</option><option value="story">История · 9:16</option></select></div><div class="studio-field" data-workflow-control><label for="duplicate-format">Копия карточки</label><select id="duplicate-format"><option value="">Копия в другом формате</option><option value="portrait">Лента · 4:5</option><option value="portrait34">Маркетплейс · 3:4</option><option value="square">Квадрат · 1:1</option><option value="story">История · 9:16</option></select></div><div class="studio-two-columns"><div class="studio-field"><label for="font-family">Шрифт</label><select id="font-family"></select></div><div class="studio-field"><label for="text-align">Выравнивание</label><select id="text-align"><option value="left">По левому краю</option><option value="center">По центру</option></select></div></div><div class="studio-range"><label for="text-scale">Размер текста <output id="text-scale-value" for="text-scale">100%</output></label><input id="text-scale" type="range" min="80" max="120" value="100"></div></div>
-            <div class="studio-control-section"><div class="control-section-heading"><h3>Палитра</h3><button id="photo-palette" class="studio-quiet-button studio-photo-palette" type="button" disabled>Палитра из фото</button></div><div class="studio-palettes" aria-label="Готовые палитры"><button type="button" data-palette="forest" title="Шалфей" aria-label="Палитра Шалфей"><i style="--palette-a:#e4e8db;--palette-b:#3c5143;--palette-c:#232b24"></i><span>Шалфей</span></button><button type="button" data-palette="orange" title="Терракота" aria-label="Палитра Терракота"><i style="--palette-a:#fbe3d3;--palette-b:#e85d35;--palette-c:#3c2820"></i><span>Терракота</span></button><button type="button" data-palette="ocean" title="Океан" aria-label="Палитра Океан"><i style="--palette-a:#daeafa;--palette-b:#2879cb;--palette-c:#152f4b"></i><span>Океан</span></button><button type="button" data-palette="violet" title="Лаванда" aria-label="Палитра Лаванда"><i style="--palette-a:#ece3fa;--palette-b:#8661cc;--palette-c:#302042"></i><span>Лаванда</span></button><button type="button" data-palette="rose" title="Роза" aria-label="Палитра Роза"><i style="--palette-a:#f8dfe8;--palette-b:#ce668b;--palette-c:#442635"></i><span>Роза</span></button></div><label class="studio-switch"><input id="custom-colors" type="checkbox"><span>Настроить свои цвета</span><i aria-hidden="true"></i></label><div class="studio-color-row"><label for="background-color"><input id="background-color" type="color" value="#e4e8db"><span>Фон</span></label><label for="accent-color"><input id="accent-color" type="color" value="#e85d35"><span>Акцент</span></label><label for="text-color"><input id="text-color" type="color" value="#242522"><span>Текст</span></label></div></div>
+            <div class="studio-control-section">
+              <div class="control-section-heading"><h3>Палитра</h3><button id="photo-palette" class="studio-quiet-button studio-photo-palette" type="button" disabled>Палитра из фото</button></div>
+              <div class="studio-field"><label for="palette-filter">Готовые палитры</label><select id="palette-filter" data-workflow-control><option value="all">Все палитры</option><option value="light">Светлые</option><option value="dark">Тёмные</option></select></div>
+              <div id="palette-grid" class="studio-palettes" role="group" aria-label="Готовые палитры"></div>
+              <label class="studio-switch"><input id="custom-colors" type="checkbox"><span>Настроить свои цвета</span><i aria-hidden="true"></i></label>
+              <div class="studio-color-row">
+                <label for="background-color"><input id="background-color" type="color" value="#e4e8db"><span>Фон</span></label>
+                <label for="accent-color"><input id="accent-color" type="color" value="#e85d35"><span>Акцент</span></label>
+                <label for="text-color"><input id="text-color" type="color" value="#242522"><span>Текст</span></label>
+              </div>
+            </div>
+            <div class="studio-control-section">
+              <div class="control-section-heading"><h3>Композиция и фон</h3></div>
+              <div class="studio-two-columns">
+                <div class="studio-field"><label for="design-layout">Компоновка обложки</label><select id="design-layout"><option value="template">Как в шаблоне</option><option value="stacked">Название сверху</option><option value="photo-first">Фото сверху</option><option value="editorial">Фото справа</option><option value="photo-left">Фото слева</option></select></div>
+                <div class="studio-field"><label for="design-border">Рамка карточки</label><select id="design-border"><option value="none">Без рамки</option><option value="line">Тонкая</option><option value="double">Двойная</option></select></div>
+              </div>
+              <p id="design-layout-help" class="studio-help" hidden>Для этой карточки расположение определяет её задача.</p>
+              <div class="studio-field">
+                <label for="design-backdrop">Фактура фона</label>
+                <select id="design-backdrop"><option value="template">Как в шаблоне</option><option value="solid">Однотонный</option><option value="gradient">Градиент</option><option value="spotlight">Мягкое свечение</option><option value="grid">Сетка</option><option value="paper">Бумага</option></select>
+              </div>
+              <div id="design-texture-control" class="studio-range" hidden><label for="design-texture">Интенсивность фона <output id="design-texture-value" for="design-texture">50%</output></label><input id="design-texture" type="range" min="0" max="100" value="50"></div>
+            </div>
+            <div class="studio-control-section">
+              <div class="control-section-heading"><h3>Фото и текст</h3></div>
+              <div class="studio-two-columns">
+                <div class="studio-field"><label for="design-frame">Рамка фото</label><select id="design-frame"><option value="template">Как в шаблоне</option><option value="none">Без рамки</option><option value="line">Контур</option><option value="mat">Паспарту</option></select></div>
+                <div class="studio-field"><label for="design-shadow">Тень фото</label><select id="design-shadow"><option value="template">Как в шаблоне</option><option value="none">Без тени</option><option value="soft">Мягкая</option><option value="deep">Глубокая</option></select></div>
+                <div class="studio-field"><label for="design-title-weight">Жирность заголовка</label><select id="design-title-weight"><option value="template">Как в шаблоне</option><option value="medium">Средняя</option><option value="bold">Жирная</option><option value="heavy">Очень жирная</option></select></div>
+                <div class="studio-field"><label for="design-title-case">Регистр заголовка</label><select id="design-title-case"><option value="template">Как в шаблоне</option><option value="original">Как введено</option><option value="upper">Заглавные буквы</option></select></div>
+                <div class="studio-field"><label for="design-features">Оформление пунктов</label><select id="design-features"><option value="template">Как в шаблоне</option><option value="plain">Только текст</option><option value="numbered">С номерами</option><option value="chips">На плашках</option></select></div>
+                <div class="studio-field"><label for="design-price">Оформление цены</label><select id="design-price"><option value="template">Как в шаблоне</option><option value="plain">Только текст</option><option value="filled">Цветная плашка</option><option value="outline">Контурная плашка</option></select></div>
+              </div>
+              <div class="design-reset-row"><button type="button" id="reset-design" class="studio-quiet-button">Сбросить оформление</button><p id="design-status" class="studio-help" role="status"></p></div>
+            </div>
           </section>
           <section id="panel-templates" data-editor-panel="templates" role="tabpanel" aria-labelledby="tab-templates" tabindex="0" hidden>
-            <div class="control-section-heading"><h3>Коллекция шаблонов</h3><span id="template-count" class="studio-mini-label"></span></div><div id="template-grid" class="studio-template-grid" aria-label="Шаблоны карточки"></div>
+            <div class="control-section-heading"><h3>Коллекция шаблонов</h3><span id="template-count" class="studio-mini-label" aria-live="polite"></span></div>
+            <div class="studio-field"><label for="template-filter">Показать шаблоны</label><select id="template-filter" data-workflow-control><option value="all">Все шаблоны</option><option value="new">Новые</option><option value="light">Светлые</option><option value="dark">Тёмные</option></select></div>
+            <div id="template-grid" class="studio-template-grid" aria-label="Шаблоны карточки"></div>
           </section>
         </form>
 

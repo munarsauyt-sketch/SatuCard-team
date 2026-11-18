@@ -74,10 +74,6 @@ body { font-family: var(--folio-sans); }
 .cover-art[data-product=headphones] > img { object-position:center; }
 .cover-art[data-mode=card] { background:#c9bda5; }
 .cover-art > canvas { width:100%; height:100%; object-fit:contain; padding:26px; }
-#cover-zoom { position:absolute; left:14px; bottom:14px; min-height:42px; border:1px solid #faf6ed80; border-radius:3px; padding:6px 14px; background:#26251fe8; color:#fff8ef; font:550 13px var(--folio-sans); }
-#cover-zoom[aria-pressed=true] { background:#fff7e9; color:#28231c; }
-.cover-art.magnified > img { transform:scale(2); cursor:crosshair; }
-@media(prefers-reduced-motion:no-preference) { .cover-art > img { transition:transform .25s ease-out; } }
 .cover-switch { position:absolute; right:12px; top:12px; display:flex; padding:3px; background:#282723; border-radius:5px; }
 .cover-switch button { border:0; background:transparent; color:#f6f1e4; padding:6px 12px; min-height:38px; font:600 13px var(--folio-sans); border-radius:3px; }
 .cover-switch button[aria-pressed=true] { color:#27251f; background:#faf5e8; }

@@ -58,6 +58,9 @@ export async function POST(request) {
     if (process.env.VERCEL_ENV === 'preview') {
       // Preview and Production can share storage. Older versions cannot read these settings.
       const settings = [payload.settings, ...(payload.views || []).map(view => view.settings)];
+      if (settings.some(entry => entry.design && Object.keys(entry.design).length)) {
+        throw new AccountError('Скачайте файл проекта, чтобы сохранить новые настройки оформления черновика.', 409, 'preview_design_local');
+      }
       if (settings.some(entry => newFonts.includes(entry.font) || newTemplates.includes(entry.template))) {
         throw new AccountError('Скачайте файл проекта, чтобы сохранить новые шрифты и шаблоны черновика.', 409, 'preview_design_local');
       }

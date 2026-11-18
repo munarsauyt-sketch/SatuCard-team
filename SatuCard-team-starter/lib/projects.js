@@ -9,10 +9,24 @@ const string = (value, max) => typeof value === 'string' && value.length <= max;
 const number = (value, min, max) => typeof value === 'number' && Number.isFinite(value) && value >= min && value <= max;
 const invalid = () => new AccountError('Неверный формат проекта SatuCard.', 400, 'invalid_project');
 const textFields = { title: 60, subtitle: 90, description: 180, badge: 24, brandName: 28 };
-export const newTemplates = ['showcase', 'blueprint', 'matcha', 'pop', 'graphite', 'cloud'];
+export const newTemplates = [
+  'showcase', 'blueprint', 'matcha', 'pop', 'graphite', 'cloud',
+  'porcelain', 'espresso', 'cobalt', 'citrus', 'mineral', 'blush', 'midnight', 'linen', 'jade', 'cherry'
+];
 export const newFonts = ['golos', 'noto', 'plex'];
 const enums = { template: ['studio', 'accent', 'minimal', 'noir', 'neon', 'editorial', 'bloom', 'bold', ...newTemplates], format: ['portrait', 'portrait34', 'square', 'story'], purpose: ['cover', 'advantages', 'dimensions', 'specifications', 'contents', 'instructions'], category: ['generic', 'electronics', 'clothing', 'beauty', 'home'], font: ['manrope', 'dejavu', ...newFonts], textAlign: ['left', 'center'] };
 const photoRanges = { zoom: [0.7, 2.5], x: [0, 100], y: [0, 100], rotation: [-180, 180], brightness: [50, 150], contrast: [50, 150], saturation: [0, 180], radius: [0, 50], warmth: [0, 60], blur: [0, 12] };
+const designOptions = {
+  layout: ['stacked', 'photo-first', 'editorial', 'photo-left'],
+  backdrop: ['solid', 'gradient', 'spotlight', 'grid', 'paper'],
+  border: ['line', 'double'],
+  photoFrame: ['none', 'line', 'mat'],
+  shadow: ['none', 'soft', 'deep'],
+  titleWeight: ['medium', 'bold', 'heavy'],
+  titleCase: ['original', 'upper'],
+  featureStyle: ['plain', 'numbered', 'chips'],
+  priceStyle: ['plain', 'filled', 'outline']
+};
 function annotations(value) {
   if (!keys(value, ['lens', 'dimension', 'vertical', 'x', 'y', 'offset', 'span', 'label'])) return false;
   return Object.entries(value).every(([key, v]) => {
@@ -24,9 +38,11 @@ function annotations(value) {
   });
 }
 function settings(value) {
-  if (!keys(value, [...Object.keys(textFields), ...Object.keys(enums), 'price', 'oldPrice', 'features', 'customColors', 'background', 'accent', 'textColor', 'textScale', 'showPrice', 'showBrand', 'photo', 'annotations', 'translationOf'])) return false;
+  if (!keys(value, [...Object.keys(textFields), ...Object.keys(enums), 'price', 'oldPrice', 'features', 'customColors', 'background', 'accent', 'textColor', 'textScale', 'showPrice', 'showBrand', 'photo', 'annotations', 'translationOf', 'design'])) return false;
   return Object.entries(value).every(([key, field]) => {
     if (key === 'annotations') return annotations(field);
+    if (key === 'design') return keys(field, [...Object.keys(designOptions), 'texture']) &&
+      Object.entries(field).every(([name, option]) => name === 'texture' ? number(option, 0, 100) : designOptions[name].includes(option));
     if (key === 'translationOf') return typeof field === 'string' && /^[\w-]{1,64}$/.test(field);
     if (key in textFields) return string(field, textFields[key]);
     if (key in enums) return enums[key].includes(field);

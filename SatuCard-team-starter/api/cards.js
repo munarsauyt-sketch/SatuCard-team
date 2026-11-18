@@ -5,12 +5,13 @@ import { ownedCard, contactUrl } from '../lib/publication.js';
 import { readBoundedBody } from '../lib/request-body.js';
 
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
-const STYLES = new Set([
-  'studio', 'accent', 'minimal', 'noir', 'neon', 'editorial', 'bloom', 'bold',
-  'showcase', 'blueprint', 'matcha', 'pop', 'graphite', 'cloud'
-]);
-// Legacy 8-style fallback map in case an older database instance has not run security-and-styles-upgrade.sql yet.
-const styleAliases = { showcase: 'studio', blueprint: 'minimal', matcha: 'bloom', pop: 'bold', graphite: 'noir', cloud: 'editorial' };
+// Older instances may have a narrower CHECK constraint. The rendered JPEG already contains the design.
+const styleAliases = {
+  showcase: 'studio', blueprint: 'minimal', matcha: 'bloom', pop: 'bold', graphite: 'noir', cloud: 'editorial',
+  porcelain: 'minimal', espresso: 'noir', cobalt: 'neon', citrus: 'bold', mineral: 'editorial',
+  blush: 'bloom', midnight: 'noir', linen: 'editorial', jade: 'studio', cherry: 'accent'
+};
+const STYLES = new Set(['studio', 'accent', 'minimal', 'noir', 'neon', 'editorial', 'bloom', 'bold', ...Object.keys(styleAliases)]);
 const FORMATS = new Set(['portrait', 'portrait34', 'square', 'story']);
 
 function json(data, status = 200) {

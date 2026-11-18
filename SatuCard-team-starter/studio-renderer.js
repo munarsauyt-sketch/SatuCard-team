@@ -18,7 +18,17 @@
     matcha: { label: 'Матча', description: 'Оливковый фон с мягкими арками', background: '#e8edcb', accent: '#486134', textColor: '#25351d' },
     pop: { label: 'Поп-арт', description: 'Кобальт, лайм и крупная геометрия', background: '#2937b8', accent: '#e9fc78', textColor: '#ffffff' },
     graphite: { label: 'Графит', description: 'Монохромный разворот с холодным акцентом', background: '#212427', accent: '#a8ccdb', textColor: '#f3f4f4', layout: 'editorial' },
-    cloud: { label: 'Облако', description: 'Ледяной градиент и воздушные кольца', background: '#e8f7ff', accent: '#24619a', textColor: '#183858' }
+    cloud: { label: 'Облако', description: 'Ледяной градиент и воздушные кольца', background: '#e8f7ff', accent: '#24619a', textColor: '#183858' },
+    porcelain: { label: 'Фарфор', description: 'Фото сверху и тонкая окантовка', background: '#f8f3e9', accent: '#695a46', textColor: '#302920', layout: 'photo-first', surface: 'paper', frame: 'line' },
+    espresso: { label: 'Эспрессо', description: 'Фото слева на кофейном фоне', background: '#2c211d', accent: '#e0a779', textColor: '#fff2e6', layout: 'photo-left', surface: 'spotlight', frame: 'mat' },
+    cobalt: { label: 'Кобальт', description: 'Яркий фон и световые полосы', background: '#192e85', accent: '#a9c7ff', textColor: '#f6f8ff', surface: 'rays', frame: 'line' },
+    citrus: { label: 'Цитрус', description: 'Солнечный акцент и крупное фото', background: '#fff2aa', accent: '#c25c20', textColor: '#392a23', layout: 'photo-first', surface: 'blocks' },
+    mineral: { label: 'Минерал', description: 'Крупная сетка и холодный разворот', background: '#dfe7e9', accent: '#4c6478', textColor: '#22313d', layout: 'editorial', surface: 'grid' },
+    blush: { label: 'Румянец', description: 'Розовый градиент и широкое паспарту', background: '#f7e1e8', accent: '#a23c61', textColor: '#512b40', surface: 'gradient', frame: 'mat' },
+    midnight: { label: 'Полночь', description: 'Тёмная обложка с кругами света', background: '#1b162a', accent: '#cda4ff', textColor: '#f8f1ff', layout: 'photo-first', surface: 'rings', frame: 'none' },
+    linen: { label: 'Лён', description: 'Фото слева и фактура бумаги', background: '#ece4d3', accent: '#7c632f', textColor: '#332d21', layout: 'photo-left', surface: 'paper', frame: 'none' },
+    jade: { label: 'Нефрит', description: 'Зелёный разворот с мягким свечением', background: '#173d35', accent: '#a0d5b6', textColor: '#edf7ec', layout: 'editorial', surface: 'spotlight', frame: 'line' },
+    cherry: { label: 'Вишня', description: 'Цветные блоки и контрастный ценник', background: '#871e39', accent: '#ffc7a8', textColor: '#fff5ee', surface: 'blocks', frame: 'mat' }
   };
   const fonts = {
     manrope: { label: 'Manrope', family: 'Manrope' },
@@ -35,6 +45,17 @@
   };
   const purposes = { cover: { label: 'Обложка' }, advantages: { label: 'Преимущества' }, specifications: { label: 'Характеристики' }, dimensions: { label: 'Размеры' }, contents: { label: 'Комплектация' }, instructions: { label: 'Инструкция' } };
   const categories = { generic: { label: 'Любой товар' }, electronics: { label: 'Электроника' }, clothing: { label: 'Одежда' }, beauty: { label: 'Красота' }, home: { label: 'Дом' } };
+  const designChoices = {
+    layout: ['template', 'stacked', 'photo-first', 'editorial', 'photo-left'],
+    backdrop: ['template', 'solid', 'gradient', 'spotlight', 'grid', 'paper'],
+    border: ['none', 'line', 'double'],
+    photoFrame: ['template', 'none', 'line', 'mat'],
+    shadow: ['template', 'none', 'soft', 'deep'],
+    titleWeight: ['template', 'medium', 'bold', 'heavy'],
+    titleCase: ['template', 'original', 'upper'],
+    featureStyle: ['template', 'plain', 'numbered', 'chips'],
+    priceStyle: ['template', 'plain', 'filled', 'outline']
+  };
   const clamp = (value, min, max, fallback) => {
     if (value === null || value === undefined || value === '') return fallback;
     const number = Number(value);
@@ -53,7 +74,15 @@
     const price = amount(source.price);
     const old = amount(source.oldPrice);
     const overlay = source.annotations || {};
+    const design = {};
+    for (const [key, [defaultValue, ...choices]] of Object.entries(designChoices)) {
+      const value = source.design?.[key] ?? defaultValue;
+      if (choices.includes(value)) design[key] = value;
+    }
+    const texture = clamp(source.design?.texture, 0, 100, 50);
+    if (texture !== 50) design.texture = texture;
     return {
+      ...(Object.keys(design).length ? { design } : {}),
       ...(overlay.lens === true || overlay.dimension === true ? { annotations: {
         lens: overlay.lens === true, x: clamp(overlay.x, 0, 100, 50), y: clamp(overlay.y, 0, 100, 50),
         dimension: overlay.dimension === true, vertical: overlay.vertical === true,
@@ -138,6 +167,11 @@
     const minSize = options.minSize || 14;
     const weight = options.weight || 600;
     const spacing = options.spacing || 1.18;
+    if (options.wholeWords) {
+      font(ctx, state, size, weight);
+      const widestWord = Math.max(...value.split(' ').map(word => ctx.measureText(word).width));
+      if (widestWord > rect.width) size = Math.max(size * .7, Math.floor(size * rect.width / widestWord));
+    }
     let wrapped;
     // Long words, Cyrillic titles and every supplied feature must stay inside their box.
     for (;;) {
@@ -147,6 +181,7 @@
       size -= size > minSize ? 0.5 : 0.25;
     }
     const height = wrapped.length * size * spacing;
+    if (options.measureOnly) return { height, fontSize: size };
     ctx.fillStyle = options.color || state.textColor;
     const align = options.align || state.textAlign;
     ctx.textAlign = align; ctx.textBaseline = 'top';
@@ -192,7 +227,36 @@
   function background(ctx, state, height) {
     ctx.fillStyle = state.background; ctx.fillRect(0, 0, 900, height);
     const accent = state.accent;
-    if (state.template === 'showcase') {
+    const surface = state.design?.backdrop || templates[state.template].surface;
+    if (surface) {
+      const intensity = (state.design?.texture ?? 50) / 50;
+      const shade = (alpha, color = accent) => rgba(color, Math.min(1, alpha * intensity));
+      if (surface === 'gradient' || surface === 'spotlight') {
+        const gradient = surface === 'gradient' ? ctx.createLinearGradient(60, 0, 840, height)
+          : ctx.createRadialGradient(540, height * .47, 30, 540, height * .47, 690);
+        gradient.addColorStop(0, shade(surface === 'gradient' ? .24 : .46));
+        gradient.addColorStop(1, shade(0));
+        ctx.fillStyle = gradient; ctx.fillRect(0, 0, 900, height);
+      } else if (surface === 'grid') {
+        for (let x = 27; x < 900; x += 47) line(ctx, x, 0, x, height, shade(.17));
+        for (let y = 27; y < height; y += 47) line(ctx, 0, y, 900, y, shade(.17));
+      } else if (surface === 'paper') {
+        for (let y = 6; y < height; y += 9) line(ctx, 0, y, 900, y, shade(y % 5 ? .035 : .07));
+        line(ctx, 54, 89, 846, 89, shade(.46));
+      } else if (surface === 'rays') {
+        ctx.save(); ctx.translate(450, height / 2); ctx.rotate(-.24);
+        for (let x = -600; x < 650; x += 125) box(ctx, x, -height, 40, height * 2, 0, shade(.15));
+        ctx.restore();
+      } else if (surface === 'blocks') {
+        box(ctx, 0, height * .37, 900, height * .4, 0, shade(.22));
+        box(ctx, 0, height * .77, 11, height * .23, 0, shade(.8));
+      } else if (surface === 'rings') {
+        for (const radius of [310, 375, 440]) {
+          ctx.beginPath(); ctx.arc(470, height * .35, radius, 0, Math.PI * 2);
+          ctx.strokeStyle = shade(.29); ctx.lineWidth = 3; ctx.stroke();
+        }
+      }
+    } else if (state.template === 'showcase') {
       box(ctx, 24, 24, 852, height - 48, 8, null, rgba(accent, 0.42));
       box(ctx, 54, 89, 110, 4, 2, accent);
       box(ctx, 750, height - 30, 96, 5, 2, accent);
@@ -262,6 +326,11 @@
       ctx.fillStyle = rgba(state.textColor, 0.08); ctx.fillRect(-500, -30, 850, 170); ctx.restore();
       ctx.fillStyle = state.textColor; ctx.fillRect(0, 0, 16, height);
       line(ctx, 54, 88, 846, 88, state.textColor, 3);
+    }
+    if (state.design?.border) {
+      ctx.lineWidth = 2;
+      box(ctx, 22, 22, 856, height - 44, 4, null, rgba(accent, .75));
+      if (state.design.border === 'double') box(ctx, 32, 32, 836, height - 64, 3, null, rgba(accent, .43));
     }
   }
 
@@ -368,11 +437,18 @@
     if (state.template === 'editorial') radius = Math.min(radius, 8);
     const dark = !lightColor(state.background);
     const baseFill = dark ? rgba('#ffffff', 0.065) : rgba('#ffffff', state.template === 'minimal' ? 0.38 : 0.56);
+    const frame = state.design?.photoFrame || templates[state.template].frame;
+    const shadow = state.design?.shadow;
     ctx.save();
-    if (state.template === 'noir' || state.template === 'neon') {
+    if (shadow === 'deep' || shadow === 'soft') {
+      ctx.shadowColor = rgba('#000000', shadow === 'deep' ? .34 : .16);
+      ctx.shadowBlur = shadow === 'deep' ? 42 : 22;
+      ctx.shadowOffsetY = shadow === 'deep' ? 18 : 8;
+    } else if (!shadow && (state.template === 'noir' || state.template === 'neon')) {
       ctx.shadowColor = rgba(state.accent, state.template === 'neon' ? 0.3 : 0.15);
       ctx.shadowBlur = state.template === 'neon' ? 30 : 20;
-    } else { ctx.shadowColor = rgba(state.textColor, 0.11); ctx.shadowBlur = 24; ctx.shadowOffsetY = 10; }
+    } else if (!shadow) { ctx.shadowColor = rgba(state.textColor, 0.11); ctx.shadowBlur = 24; ctx.shadowOffsetY = 10; }
+    if (frame === 'mat') box(ctx, rect.x - 9, rect.y - 9, rect.width + 18, rect.height + 18, radius + 7, dark ? '#fff7e9' : '#ffffff');
     box(ctx, rect.x, rect.y, rect.width, rect.height, radius, baseFill);
     ctx.restore();
     ctx.save(); path(ctx, rect.x, rect.y, rect.width, rect.height, radius); ctx.clip();
@@ -392,7 +468,7 @@
         ctx.save(); ctx.translate(centerX, centerY); ctx.rotate(radians); ctx.scale(state.photo.flip ? -1 : 1, 1);
         ctx.filter = filter; ctx.drawImage(image, -drawnWidth / 2, -drawnHeight / 2, drawnWidth, drawnHeight); ctx.restore();
       };
-      contactShadow(ctx, silhouette(image, width, height), centerX, centerY, drawnWidth, drawnHeight, radians, state.photo.flip);
+      if (shadow !== 'none') contactShadow(ctx, silhouette(image, width, height), centerX, centerY, drawnWidth, drawnHeight, radians, state.photo.flip);
       drawProduct();
       const a = primary && state.annotations;
       if (a?.lens) {
@@ -413,7 +489,10 @@
     }
     if (primary && state.annotations?.dimension) dimensionLine(ctx, state, rect, state.annotations);
     ctx.restore();
-    if (['neon', 'noir', 'bold'].includes(state.template)) {
+    if (frame === 'line') {
+      ctx.lineWidth = 2;
+      box(ctx, rect.x - 3, rect.y - 3, rect.width + 6, rect.height + 6, radius + 3, null, rgba(state.accent, .78));
+    } else if (!frame && ['neon', 'noir', 'bold'].includes(state.template)) {
       ctx.lineWidth = state.template === 'bold' ? 3 : 1.5;
       box(ctx, rect.x - 6, rect.y - 6, rect.width + 12, rect.height + 12, radius + 4, null, rgba(state.template === 'bold' ? state.textColor : state.accent, 0.68));
     }
@@ -453,10 +532,15 @@
   function price(ctx, state, rect, options = {}) {
     if (!state.showPrice) return;
     const value = state.price === null ? 'Цена по запросу' : money(state.price);
-    const fill = options.plain ? null : state.template === 'bold' || state.template === 'minimal' ? state.textColor : state.accent;
+    const style = state.design?.priceStyle || (options.plain ? 'plain' : 'filled');
+    const fill = style === 'filled' ? (['bold', 'minimal'].includes(state.template) ? state.textColor : state.accent) : null;
     const color = fill ? (lightColor(fill) ? '#17231b' : '#ffffff') : state.textColor;
     if (fill) box(ctx, rect.x, rect.y, rect.width, rect.height, state.template === 'bold' ? 8 : 18, fill);
-    const inset = fill ? 20 : 0;
+    if (style === 'outline') {
+      ctx.lineWidth = 2;
+      box(ctx, rect.x, rect.y, rect.width, rect.height, 14, null, state.accent);
+    }
+    const inset = style === 'plain' ? 0 : 20;
     const oldHeight = state.oldPrice !== null ? 26 : 0;
     if (state.oldPrice !== null) {
       let oldSize = 18;
@@ -468,28 +552,27 @@
       ctx.fillStyle = rgba(color, 0.72); ctx.textBaseline = 'top'; ctx.fillText(old, x, y);
       line(ctx, x, y + oldSize * 0.55, x + oldWidth, y + oldSize * 0.55, rgba(color, 0.8), 1.4);
     }
-    fitText(ctx, state, value, { x: rect.x + inset, y: rect.y + oldHeight + (fill ? 11 : 4), width: rect.width - inset * 2, height: rect.height - oldHeight - (fill ? 20 : 6) }, { size: options.size || 38, minSize: 17, weight: 850, align: 'left', color, verticalCenter: true });
+    fitText(ctx, state, value, { x: rect.x + inset, y: rect.y + oldHeight + (inset ? 11 : 4), width: rect.width - inset * 2, height: rect.height - oldHeight - (inset ? 20 : 6) }, { size: options.size || 38, minSize: 17, weight: 850, align: 'left', color, verticalCenter: true });
   }
-  function features(ctx, state, rect, vertical = false, hitAreas = []) {
+  function features(ctx, state, rect, vertical = false, hitAreas = [], size = 19) {
     if (!state.features.length) return;
-    if (vertical) {
-      const step = rect.height / state.features.length;
-      state.features.forEach((feature, index) => {
-        const area = { x: rect.x + 22, y: rect.y + index * step + 3, width: rect.width - 22, height: step - 7 };
-        circle(ctx, rect.x + 7, rect.y + index * step + 15, 4, state.accent);
-        const { fontSize } = fitText(ctx, state, feature, area, { size: 19, minSize: 13, weight: 650, align: 'left' });
-        hitAreas.push({ field: 'feature-' + (index + 1), ...area, fontSize });
-      });
-    } else {
-      const gap = 10, width = (rect.width - gap * (state.features.length - 1)) / state.features.length;
-      state.features.forEach((feature, index) => {
-        const x = rect.x + index * (width + gap);
-        const area = { x: x + 15, y: rect.y + 9, width: width - 30, height: rect.height - 18 };
-        box(ctx, x, rect.y, width, rect.height, 12, rgba(state.textColor, lightColor(state.background) ? 0.055 : 0.075));
-        const { fontSize } = fitText(ctx, state, feature, area, { size: 19, minSize: 12, weight: 650, align: 'center', verticalCenter: true });
-        hitAreas.push({ field: 'feature-' + (index + 1), ...area, fontSize });
-      });
-    }
+    const style = state.design?.featureStyle || (vertical ? 'bullets' : 'chips');
+    const count = state.features.length, gap = 10;
+    const width = vertical ? rect.width : (rect.width - gap * (count - 1)) / count;
+    const step = vertical ? rect.height / count : rect.height;
+    state.features.forEach((feature, index) => {
+      const x = rect.x + (vertical ? 0 : index * (width + gap));
+      const y = rect.y + (vertical ? index * step : 0);
+      const marker = style === 'numbered' ? 33 : style === 'bullets' ? 22 : 0;
+      const inset = style === 'chips' ? 15 : 0;
+      const pad = style === 'chips' ? Math.min(9, step * .18) : Math.min(3, step * .1);
+      if (style === 'chips') box(ctx, x, y, width, step - (vertical ? 4 : 0), 12, rgba(state.textColor, lightColor(state.background) ? .055 : .075));
+      if (style === 'bullets') circle(ctx, x + 7, y + 15, 4, state.accent);
+      if (style === 'numbered') label(ctx, state, String(index + 1).padStart(2, '0'), x + 1, y + 8, state.accent, 16);
+      const area = { x: x + inset + marker, y: y + pad, width: width - 2 * inset - marker, height: step - 2 * pad - (vertical ? 1 : 0) };
+      const { fontSize } = fitText(ctx, state, feature, area, { size, minSize: vertical ? 13 : 12, weight: 650, align: vertical || marker ? 'left' : 'center', verticalCenter: style !== 'bullets' });
+      hitAreas.push({ field: 'feature-' + (index + 1), ...area, fontSize });
+    });
   }
   function badge(ctx, state, rect) {
     const discount = state.showPrice && state.oldPrice !== null ? `−${Math.max(1, Math.round((1 - state.price / state.oldPrice) * 100))}%` : '';
@@ -503,26 +586,42 @@
     if (state.badge) pill(ctx, state, state.badge, x, y, rect.width - (x - rect.x) - 18, state.textColor, lightColor(state.textColor) ? '#17231b' : '#ffffff', 16);
   }
 
-  function stackedLayout(ctx, state, assets, height) {
+  const titleWeight = (state, fallback) => ({ medium: 550, bold: 750, heavy: 900 })[state.design?.titleWeight] || fallback;
+  function titleText(state, defaultUpper = false) {
+    const upper = state.design?.titleCase ? state.design.titleCase === 'upper' : defaultUpper;
+    return upper ? state.title.toLocaleUpperCase('ru-RU') : state.title;
+  }
+  function stackedLayout(ctx, state, assets, height, photoFirst = false) {
     const hitAreas = [];
     const isSquare = height === 900, isStory = height === 1600;
     const padding = 54, width = 792;
-    const titleY = 115;
     const titleHeight = isSquare ? 139 : isStory ? 214 : 173;
-    const titleSize = state.template === 'bold' ? (isSquare ? 59 : 78) : state.template === 'minimal' ? 56 : isStory ? 75 : 64;
-    const title = state.template === 'bold' || state.template === 'neon' ? state.title.toLocaleUpperCase('ru-RU') : state.title;
-    const { height: titleUsed, fontSize: titleFontSize } = fitText(ctx, state, title, { x: padding, y: titleY, width, height: titleHeight }, { size: titleSize, minSize: 30, weight: state.template === 'bold' ? 900 : 800, spacing: 1.08 });
-    hitAreas.push({ field: 'product-name', x: padding, y: titleY, width, height: titleUsed });
-    const subtitleY = titleY + titleUsed + 13;
-    const subtitleUsed = fitText(ctx, state, state.subtitle, { x: padding, y: subtitleY, width, height: isSquare ? 52 : 69 }, { size: 23, minSize: 17, weight: 500, color: rgba(state.textColor, 0.76) }).height;
-    if (state.subtitle) hitAreas.push({ field: 'product-subtitle', x: padding, y: subtitleY, width, height: subtitleUsed });
-    const top = subtitleY + subtitleUsed + 22;
+    const subtitleHeight = isSquare ? 52 : 69;
     const descHeight = state.description ? (isSquare ? 72 : 78) : 0;
     const featureHeight = state.features.length ? (isSquare ? 66 : 68) : 0;
     const priceHeight = state.showPrice ? (state.oldPrice !== null ? 91 : 72) : 0;
     const footerHeight = descHeight + featureHeight + priceHeight + (state.description ? 16 : 0) + (state.features.length ? 16 : 0);
     const photoBottom = height - 54 - footerHeight - 20;
-    let photoRect = { x: padding, y: top, width, height: Math.max(140, photoBottom - top) };
+    const titleSize = state.template === 'bold' ? (isSquare ? 59 : 78) : state.template === 'minimal' ? 56 : isStory ? 75 : 64;
+    const title = titleText(state, ['bold', 'neon'].includes(state.template));
+    const titleOptions = { size: titleSize, minSize: 30, weight: titleWeight(state, state.template === 'bold' ? 900 : 800), spacing: 1.08 };
+    const subtitleOptions = { size: 23, minSize: 17, weight: 500, color: rgba(state.textColor, 0.76) };
+    const titleBox = { x: padding, y: 115, width, height: titleHeight };
+    const subtitleBox = { x: padding, y: 0, width, height: subtitleHeight };
+    if (photoFirst) {
+      const titleUsed = fitText(ctx, state, title, titleBox, { ...titleOptions, measureOnly: true }).height;
+      const subtitleUsed = fitText(ctx, state, state.subtitle, subtitleBox, { ...subtitleOptions, measureOnly: true }).height;
+      titleBox.y = photoBottom - titleUsed - (subtitleUsed ? subtitleUsed + 13 : 0);
+    }
+    const titleY = titleBox.y;
+    const { height: titleUsed, fontSize: titleFontSize } = fitText(ctx, state, title, titleBox, titleOptions);
+    hitAreas.push({ field: 'product-name', x: padding, y: titleY, width, height: titleUsed });
+    const subtitleY = titleY + titleUsed + 13;
+    const subtitleUsed = fitText(ctx, state, state.subtitle, { ...subtitleBox, y: subtitleY }, subtitleOptions).height;
+    if (state.subtitle) hitAreas.push({ field: 'product-subtitle', x: padding, y: subtitleY, width, height: subtitleUsed });
+    const top = photoFirst ? 109 : subtitleY + subtitleUsed + 22;
+    const frameBottom = photoFirst ? titleY - 24 : photoBottom;
+    let photoRect = { x: padding, y: top, width, height: Math.max(140, frameBottom - top) };
     if (state.template === 'minimal') photoRect = { ...photoRect, x: 82, width: 736 };
     if (state.template === 'bloom') photoRect = { ...photoRect, x: 70, width: 760 };
     if (state.template === 'accent') {
@@ -547,12 +646,13 @@
     return { ...gallery, hitAreas, titleFontSize };
   }
 
-  function editorialLayout(ctx, state, assets, height) {
+  function editorialLayout(ctx, state, assets, height, photoLeft = false) {
     const hitAreas = [];
     const square = height === 900, story = height === 1600;
-    const x = 54, leftWidth = 350, rightX = 444, rightWidth = 402;
+    const x = photoLeft ? 496 : 54, leftWidth = 350;
+    const photoX = photoLeft ? 54 : 444, photoWidth = 402;
     const titleY = 122, titleHeight = square ? 221 : story ? 345 : 285;
-    const { height: titleUsed, fontSize: titleFontSize } = fitText(ctx, state, state.title, { x, y: titleY, width: leftWidth, height: titleHeight }, { size: story ? 68 : 60, minSize: 27, weight: 850, spacing: 1.08 });
+    const { height: titleUsed, fontSize: titleFontSize } = fitText(ctx, state, titleText(state), { x, y: titleY, width: leftWidth, height: titleHeight }, { size: story ? 68 : 60, minSize: 27, weight: titleWeight(state, 850), spacing: 1.08, wholeWords: true });
     hitAreas.push({ field: 'product-name', x, y: titleY, width: leftWidth, height: titleUsed });
     let y = titleY + titleUsed + 23;
     if (state.subtitle) {
@@ -579,7 +679,7 @@
     if (state.features.length) features(ctx, state, { x, y, width: leftWidth, height: featureHeight * compression }, true, hitAreas);
     if (state.showPrice) hitAreas.push({ field: 'product-price', x, y: footerY, width: leftWidth, height: priceHeight });
     if (state.showPrice) price(ctx, state, { x, y: footerY, width: leftWidth, height: priceHeight }, { plain: true, size: 39 });
-    const photoRect = { x: rightX, y: 122, width: rightWidth, height: height - 182 };
+    const photoRect = { x: photoX, y: 122, width: photoWidth, height: height - 182 };
     const gallery = photoGallery(ctx, state, assets, photoRect);
     return { ...gallery, hitAreas, titleFontSize };
   }
@@ -596,8 +696,8 @@
       return metrics;
     };
     label(ctx, state, purposes[state.purpose].label.toLocaleUpperCase('ru-RU'), 54, 103, state.accent, 19);
-    const title = area('product-name', state.title, { x: 54, y: 135, width: 792, height: 120 },
-      { size: 57, weight: 850, spacing: 1.08, compact: true });
+    const title = area('product-name', titleText(state), { x: 54, y: 135, width: 792, height: 120 },
+      { size: 57, weight: titleWeight(state, 850), spacing: 1.08, compact: true });
     const subtitleY = 135 + title.height + 13;
     const subtitle = area('product-subtitle', state.subtitle, { x: 54, y: subtitleY, width: 792, height: 62 },
       { size: 27, weight: 500, compact: true });
@@ -627,6 +727,10 @@
       }
     };
     const rows = (rect, mode) => {
+      if (state.design?.featureStyle) {
+        features(ctx, state, rect, true, hitAreas, 29);
+        return;
+      }
       const count = Math.max(1, state.features.length);
       const step = rect.height / count;
       state.features.forEach((value, index) => {
@@ -649,13 +753,16 @@
       extra.forEach((image, index) => drawPhoto(image, { x: 588, y: top + index * (collageHeight + 18) / extra.length, width: 258, height: (collageHeight - 18 * (extra.length - 1)) / extra.length }));
       if (state.features.length) {
         const y = top + collageHeight + 18;
-        const width = (792 - (state.features.length - 1) * 18) / state.features.length;
-        state.features.forEach((value, index) => {
-          const x = 54 + index * (width + 18);
-          box(ctx, x, y, width, rowHeight, 14, rgba(state.textColor, 0.07));
-          area('feature-' + (index + 1), value, { x: x + 14, y: y + 8, width: width - 28, height: rowHeight - 16 },
-            { size: 29, minSize: 17, align: 'left', verticalCenter: true });
-        });
+        if (state.design?.featureStyle) features(ctx, state, { x: 54, y, width: 792, height: rowHeight }, false, hitAreas, 29);
+        else {
+          const width = (792 - (state.features.length - 1) * 18) / state.features.length;
+          state.features.forEach((value, index) => {
+            const x = 54 + index * (width + 18);
+            box(ctx, x, y, width, rowHeight, 14, rgba(state.textColor, 0.07));
+            area('feature-' + (index + 1), value, { x: x + 14, y: y + 8, width: width - 28, height: rowHeight - 16 },
+              { size: 29, minSize: 17, align: 'left', verticalCenter: true });
+          });
+        }
       }
     } else if (!state.features.length) {
       drawPhoto(primary, { x: 54, y: top, width: 792, height: bodyHeight }, true);
@@ -706,14 +813,16 @@
     ctx.save();
     background(ctx, state, format.height);
     brand(ctx, state, assets);
+    const composition = state.design?.layout || templates[state.template].layout || (state.template === 'editorial' ? 'editorial' : 'stacked');
     const layout = state.purpose === 'cover'
-      ? (state.template === 'editorial' || templates[state.template].layout === 'editorial'
-        ? editorialLayout(ctx, state, assets, format.height) : stackedLayout(ctx, state, assets, format.height))
+      ? (['editorial', 'photo-left'].includes(composition)
+        ? editorialLayout(ctx, state, assets, format.height, composition === 'photo-left')
+        : stackedLayout(ctx, state, assets, format.height, composition === 'photo-first'))
       : purposeLayout(ctx, state, assets, format.height);
     ctx.restore();
     let titleContrast;
     // Measure Minimal's solid title background. Other templates can vary under the letters.
-    if (state.template === 'minimal') {
+    if (state.design?.backdrop === 'solid' || (state.template === 'minimal' && !state.design?.backdrop)) {
       const foreground = luminance(state.textColor), background = luminance(state.background);
       titleContrast = (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05);
     }
@@ -726,5 +835,6 @@
     return [...metrics(translation)].filter(([field, size]) => size > 0 && size < ru.get(field) * .8)
       .map(([field, size]) => ({ field, reduction: Math.round((1 - size / ru.get(field)) * 100) }));
   }
-  root.SATUCARD_RENDERER = { templates, fonts, formats, purposes, categories, normalize, render, compareTypeSizes, photoPlacement };
+  const templateTone = key => lightColor(templates[key].background) ? 'light' : 'dark';
+  root.SATUCARD_RENDERER = { templates, fonts, formats, purposes, categories, designChoices, templateTone, normalize, render, compareTypeSizes, photoPlacement };
 })();

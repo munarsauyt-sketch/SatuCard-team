@@ -176,6 +176,12 @@ html[data-theme=dark] .studio-page .field-error,html[data-theme=dark] .studio-he
 .studio-palettes button[aria-pressed=true] { border-color:var(--studio-accent); box-shadow:0 0 0 1px var(--studio-accent); }
 .studio-palettes i { display:block; height:36px; width:100%; border-radius:4px; background:linear-gradient(100deg,var(--palette-a) 0 48%,var(--palette-b) 48% 75%,var(--palette-c) 75% 100%); }
 .studio-palettes span { display:block; font-size:12px; padding:8px 0 4px; }
+#panel-design .studio-field { min-width:0; }
+#panel-design .studio-field select { width:100%; }
+#panel-design .studio-two-columns { align-items:end; }
+.design-reset-row { display:flex; align-items:center; flex-wrap:wrap; gap:8px 16px; margin-top:10px; }
+.design-reset-row p { flex:1 1 160px; margin:0; }
+#panel-templates .studio-field { margin-bottom:18px; }
 .studio-color-row { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:12px; }
 .studio-color-row label { display:flex; align-items:center; gap:7px; padding:8px; min-height:45px; border:1px solid var(--line); border-radius:7px; font-size:12px; cursor:pointer; }
 .studio-color-row input { width:25px; height:25px; flex:0 0 auto; border:0; padding:0; background:transparent; cursor:pointer; }
@@ -381,6 +387,7 @@ html[data-theme=dark] .studio-page .field-error,html[data-theme=dark] .studio-he
   .studio-form { padding:25px 22px; }
   .studio-template-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .studio-palettes { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  #panel-design .studio-two-columns { grid-template-columns:1fr; gap:0; }
   .studio-stage { height:510px; padding:28px; }
   .workspace-heading { padding-inline:17px; }
   .workspace-heading>div { flex-wrap:wrap; gap:7px 9px; }

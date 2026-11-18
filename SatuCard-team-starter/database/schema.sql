@@ -4,7 +4,7 @@ create table if not exists public.cards (
   title varchar(60) not null check (length(trim(title)) > 0),
   price_kzt numeric(11, 2) not null check (price_kzt >= 0 and price_kzt <= 999999999.99),
   old_price_kzt numeric(11, 2) check (old_price_kzt is null or old_price_kzt > price_kzt),
-  style text not null constraint cards_style_check check (style in ('studio', 'accent', 'minimal', 'noir', 'neon', 'editorial', 'bloom', 'bold', 'showcase', 'blueprint', 'matcha', 'pop', 'graphite', 'cloud')),
+  style text not null constraint cards_style_check check (style in ('studio', 'accent', 'minimal', 'noir', 'neon', 'editorial', 'bloom', 'bold', 'showcase', 'blueprint', 'matcha', 'pop', 'graphite', 'cloud', 'porcelain', 'espresso', 'cobalt', 'citrus', 'mineral', 'blush', 'midnight', 'linen', 'jade', 'cherry')),
   format text not null constraint cards_format_check check (format in ('portrait', 'portrait34', 'square', 'story')),
   brand_name varchar(28) not null default '',
   image_path text not null,
@@ -16,7 +16,7 @@ create table if not exists public.cards (
 alter table public.cards
   drop constraint if exists cards_style_check,
   drop constraint if exists cards_format_check,
-  add constraint cards_style_check check (style in ('studio', 'accent', 'minimal', 'noir', 'neon', 'editorial', 'bloom', 'bold', 'showcase', 'blueprint', 'matcha', 'pop', 'graphite', 'cloud')),
+  add constraint cards_style_check check (style in ('studio', 'accent', 'minimal', 'noir', 'neon', 'editorial', 'bloom', 'bold', 'showcase', 'blueprint', 'matcha', 'pop', 'graphite', 'cloud', 'porcelain', 'espresso', 'cobalt', 'citrus', 'mineral', 'blush', 'midnight', 'linen', 'jade', 'cherry')),
   add constraint cards_format_check check (format in ('portrait', 'portrait34', 'square', 'story'));
 
 create index if not exists cards_created_at_idx on public.cards (created_at desc);

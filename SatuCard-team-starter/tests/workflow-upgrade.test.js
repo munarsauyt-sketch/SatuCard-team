@@ -6,6 +6,7 @@ import { JSDOM } from 'jsdom';
 import { POST, DELETE } from '../api/cards.js';
 import { GET as share } from '../api/share.js';
 import { GET as myCards } from '../api/my-cards.js';
+import { TEMPLATE_IDS } from '../lib/copy.js';
 
 const uid = 'aaac8be7-1386-45b8-8d49-3f9d7f5c9fb6';
 const id = '22222222-2222-4222-8222-222222222222';
@@ -104,7 +105,7 @@ test('workflow migration is repeatable and preserves legacy rows', async () => {
     await db.exec('update cards set price_kzt=null,show_price=false');
   } finally { await db.close(); }
 });
-test('security-and-styles-upgrade SQL is repeatable and accepts all 14 styles + portrait34', async () => {
+test('security-and-styles-upgrade SQL is repeatable and accepts every card style and portrait34', async () => {
   const db = new PGlite();
   try {
     await db.exec(`
@@ -128,16 +129,16 @@ test('security-and-styles-upgrade SQL is repeatable and accepts all 14 styles + 
     const sql = await readFile(new URL('../database/security-and-styles-upgrade.sql', import.meta.url), 'utf8');
     await db.exec(sql);
     await db.exec(sql);
-    for (const style of ['studio', 'showcase', 'blueprint', 'matcha', 'pop', 'graphite', 'cloud']) {
+    for (const style of TEMPLATE_IDS) {
       await db.query('insert into public.cards (id, style, format) values (gen_random_uuid(), $1, $2)', [style, 'portrait34']);
     }
     const { rows } = await db.query('select count(*)::int as cnt from public.cards');
-    assert.equal(rows[0].cnt, 7);
+    assert.equal(rows[0].cnt, TEMPLATE_IDS.length);
   } finally {
     await db.close();
   }
 });
-test('api/cards sends all 14 styles cleanly without unnecessary fallback retry', async () => {
+test('api/cards sends every card style without unnecessary fallback retry', async () => {
   const posted = [];
   setup(async (url, options) => {
     if (options.method === 'POST' && String(url).includes('/storage/v1/object/cards/')) return new Response('{}', { status: 200 });
@@ -147,11 +148,11 @@ test('api/cards sends all 14 styles cleanly without unnecessary fallback retry',
     }
     return new Response('{}', { status: 200 });
   });
-  for (const style of ['showcase', 'blueprint', 'matcha', 'pop', 'graphite', 'cloud']) {
+  for (const style of TEMPLATE_IDS) {
     const response = await POST(publication({ style, format: 'portrait34' }));
     assert.equal(response.status, 201);
   }
-  assert.deepEqual(posted.map(row => row.style), ['showcase', 'blueprint', 'matcha', 'pop', 'graphite', 'cloud']);
+  assert.deepEqual(posted.map(row => row.style), TEMPLATE_IDS);
 });
 test('api/my-cards returns paginated results with nextOffset and nosniff header', async () => {
   const rows = Array.from({ length: 30 }, (_, i) => ({

@@ -9,34 +9,9 @@
   const link = document.getElementById('cover-open'), status = document.getElementById('cover-status');
   const products = [...document.querySelectorAll('[data-cover-product]')];
   const modes = [...art.querySelectorAll('[data-cover-mode]')];
-  const zoom = document.getElementById('cover-zoom');
   const reduce = matchMedia('(prefers-reduced-motion: reduce)');
   const prices = new Intl.NumberFormat('ru-RU');
   let selected = products[0], mode = 'photo', version = 0, animation;
-  let focalX = 50, focalY = 60;
-  function focusAt(x, y) {
-    focalX = Math.max(0, Math.min(100,x)); focalY = Math.max(0, Math.min(100,y));
-    photo.style.transformOrigin = focalX + '% ' + focalY + '%';
-  }
-  function magnify(active) {
-    animation?.cancel(); focusAt(50,60);
-    zoom.setAttribute('aria-pressed', String(active)); art.classList.toggle('magnified',active);
-  }
-  zoom.hidden = false;
-  zoom.addEventListener('click', () => magnify(!art.classList.contains('magnified')));
-  function inspect(event) {
-    if (!art.classList.contains('magnified') || event.target !== photo) return;
-    const rect = art.getBoundingClientRect();
-    focusAt((event.clientX-rect.left)/rect.width*100, (event.clientY-rect.top)/rect.height*100);
-  }
-  art.addEventListener('pointerdown', inspect);
-  art.addEventListener('pointermove', event => { if (event.pointerType === 'mouse') inspect(event); });
-  zoom.addEventListener('keydown', event => {
-    if (!art.classList.contains('magnified')) return;
-    const move = {ArrowLeft:[-10,0], ArrowRight:[10,0], ArrowUp:[0,-10], ArrowDown:[0,10]}[event.key];
-    if (move) { event.preventDefault(); focusAt(focalX+move[0],focalY+move[1]); }
-    if (event.key === 'Escape') magnify(false);
-  });
 
   async function display(button, nextMode) {
     const request = ++version, key = button.dataset.coverProduct, sample = samples[key];
@@ -51,7 +26,6 @@
       if (nextMode === 'card') {
         renderer.render(card, { ...sample, template: button.dataset.style, format: 'portrait' }, { photo:img }, { scale:.8 });
       }
-      magnify(false); zoom.hidden = nextMode !== 'photo';
       photo.src = img.src; photo.alt = sample.title;
       photo.hidden = nextMode !== 'photo'; card.hidden = !photo.hidden;
       art.dataset.product = key; art.dataset.mode = nextMode;

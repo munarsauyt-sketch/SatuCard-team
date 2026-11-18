@@ -16,8 +16,36 @@
   const mobileNavigation = document.querySelector('.studio-mobile-view');
   const previewStage = $('preview-stage'), toolbar = document.querySelector('.studio-project-bar');
   const palettes = {
-    forest: ['#e1e8d9', '#466343', '#233126'], orange: ['#fff0e5', '#f06435', '#35251f'],
-    ocean: ['#dcedf5', '#087da1', '#112c3d'], violet: ['#ece5ff', '#8053df', '#2a2041'], rose: ['#fce5ed', '#c34f7a', '#462232']
+    light: {
+      'Шалфей': ['#e1e8d9', '#466343', '#233126'],
+      'Терракота': ['#fff0e5', '#f06435', '#35251f'],
+      'Океан': ['#dcedf5', '#087da1', '#112c3d'],
+      'Лаванда': ['#ece5ff', '#8053df', '#2a2041'],
+      'Роза': ['#fce5ed', '#c34f7a', '#462232'],
+      'Песок': ['#f3e6ce', '#a77326', '#352619'],
+      'Мята': ['#def5ed', '#277a64', '#153e34'],
+      'Лимон': ['#fff5ab', '#945500', '#3e2c0a'],
+      'Персик': ['#ffe7d6', '#b44b29', '#44271c'],
+      'Пудра': ['#faeae8', '#a53c67', '#49263e'],
+      'Лёд': ['#e7f4ff', '#31699f', '#19334a'],
+      'Фисташка': ['#edf3d7', '#5f762f', '#2c3819'],
+      'Какао с молоком': ['#f4e3d5', '#87503b', '#3c2a23'],
+      'Монохром': ['#f3f0e9', '#56544d', '#272622']
+    },
+    dark: {
+      'Чернила': ['#1a2140', '#b0c2ff', '#f4f5ff'],
+      'Малахит': ['#15372e', '#a6d4a4', '#f2faeb'],
+      'Бордо': ['#502239', '#f3a1b9', '#fff0f5'],
+      'Уголь': ['#252622', '#f5c97d', '#faf4e6'],
+      'Слива': ['#382143', '#d9b1f4', '#fcf1ff'],
+      'Кофе': ['#372721', '#e5ac86', '#fff2e5']
+    }
+  };
+  const paletteColors = { ...palettes.light, ...palettes.dark };
+  const designFields = {
+    'design-layout': 'layout', 'design-backdrop': 'backdrop', 'design-border': 'border', 'design-frame': 'photoFrame',
+    'design-shadow': 'shadow', 'design-title-weight': 'titleWeight', 'design-title-case': 'titleCase',
+    'design-features': 'featureStyle', 'design-price': 'priceStyle'
   };
   const samples = window.SATUCARD_SAMPLES;
   const textFields = { 'product-name': 'title', 'product-subtitle': 'subtitle', 'product-description': 'description', 'product-badge': 'badge', 'brand-name': 'brandName' };
@@ -179,6 +207,8 @@
     for (const [id, key] of Object.entries(selectFields)) settings[key] = $(id).value;
     for (const [id, key] of Object.entries(colorFields)) settings[key] = $(id).value;
     for (const [id, key] of Object.entries(checkFields)) settings[key] = $(id).checked;
+    settings.design = { texture: Number($('design-texture').value) };
+    for (const [id, key] of Object.entries(designFields)) settings.design[key] = $(id).value;
     for (const [id, key] of Object.entries(photoRanges)) settings.photo[key] = Number($(id).value) / (key === 'zoom' ? 100 : 1);
     settings.photo.flip = $('photo-flip').checked;
     settings.annotations = { lens: $('macro-enabled').checked, x: +$('macro-x').value, y: +$('macro-y').value,
@@ -195,6 +225,8 @@
     const settings = model.settings;
     for (const [id, key] of Object.entries({ ...textFields, ...selectFields, ...colorFields })) $(id).value = settings[key];
     for (const [id, key] of Object.entries(checkFields)) $(id).checked = settings[key];
+    for (const [id, key] of Object.entries(designFields)) $(id).value = settings.design?.[key] ?? renderer.designChoices[key][0];
+    $('design-texture').value = settings.design?.texture ?? 50;
     for (const [id, key] of Object.entries(photoRanges)) $(id).value = settings.photo[key] * (key === 'zoom' ? 100 : 1);
     $('photo-flip').checked = settings.photo.flip;
     const a = settings.annotations || {};
@@ -218,6 +250,12 @@
     const units = { rotation: '°', radius: ' px', blur: ' px' };
     for (const [id, key] of Object.entries(photoRanges)) $(id + '-value').value = $(id).value + (units[key] || '%');
     $('text-scale-value').value = $('text-scale').value + '%';
+    const cover = model.settings.purpose === 'cover';
+    $('design-layout').disabled = !cover;
+    $('design-layout-help').hidden = cover;
+    const backdrop = $('design-backdrop').value;
+    $('design-texture-control').hidden = backdrop === 'solid' || (backdrop === 'template' && !renderer.templates[model.settings.template].surface);
+    $('design-texture-value').value = $('design-texture').value + '%';
     for (const id of Object.keys(colorFields)) $(id).disabled = !$('custom-colors').checked;
     const autoBadge = $('auto-discount-badge');
     if (autoBadge) {
@@ -308,7 +346,7 @@
     const { brightness, contrast, saturation, warmth, blur } = model.settings.photo;
     document.querySelectorAll('[data-photo-filter]').forEach(button => button.setAttribute('aria-pressed',
       String(!warmth && !blur && filters[button.dataset.photoFilter].every((value, index) => value === [brightness, contrast, saturation][index]))));
-    document.querySelectorAll('[data-palette]').forEach(button => button.setAttribute('aria-pressed', String(model.settings.customColors && palettes[button.dataset.palette].every((value, index) => value === model.settings[['background', 'accent', 'textColor'][index]]))));
+    document.querySelectorAll('[data-palette]').forEach(button => button.setAttribute('aria-pressed', String(model.settings.customColors && paletteColors[button.dataset.palette].every((value, index) => value === model.settings[['background', 'accent', 'textColor'][index]]))));
     $('photo-palette').disabled = !model.photoId;
     if ($('fullscreen-dialog').open) renderer.render($('fullscreen-canvas'), model.settings, imageAssets());
     if ($('phone-dialog').open) renderer.render($('phone-canvas'), model.settings, imageAssets());
@@ -319,18 +357,42 @@
   }
   function renderThumbnails() {
     if ($('panel-templates').hidden) return;
-    document.querySelectorAll('[data-template]').forEach(button => renderer.render(button.querySelector('canvas'), { ...model.settings, template: button.dataset.template, customColors: false, format: 'portrait' }, imageAssets(), { scale: 0.16 }));
+    const assets = imageAssets();
+    document.querySelectorAll('#template-grid [data-template]:not([hidden])').forEach(button => renderer.render(button.querySelector('canvas'), { ...model.settings, template: button.dataset.template, customColors: false, format: 'portrait' }, assets, { scale: 0.16 }));
   }
   function buildDesignOptions() {
-    $('template-count').textContent = `${Object.keys(renderer.templates).length} стилей`;
     for (const [key, font] of Object.entries(renderer.fonts)) $('font-family').add(new Option(font.label, key));
     for (const [key, template] of Object.entries(renderer.templates)) {
       const button = document.createElement('button'); button.type = 'button'; button.className = 'template-card'; button.dataset.template = key;
+      button.dataset.tone = renderer.templateTone(key);
+      if (template.surface) button.dataset.newTemplate = '';
       button.setAttribute('aria-label', template.label + '. ' + template.description); button.setAttribute('aria-pressed', 'false');
       const thumb = document.createElement('canvas'); thumb.className = 'template-thumb'; thumb.setAttribute('aria-hidden', 'true');
       const label = document.createElement('span'); label.className = 'template-label'; label.textContent = template.label;
       button.append(thumb, label); $('template-grid').append(button);
     }
+    applyTemplateFilter();
+    for (const [tone, group] of Object.entries(palettes)) {
+      for (const [label, colors] of Object.entries(group)) {
+        const button = document.createElement('button');
+        button.type = 'button'; button.dataset.palette = label; button.dataset.tone = tone;
+        button.setAttribute('aria-pressed', 'false');
+        const swatch = document.createElement('i');
+        colors.forEach((color, index) => swatch.style.setProperty('--palette-' + ['a', 'b', 'c'][index], color));
+        const name = document.createElement('span'); name.textContent = label;
+        button.append(swatch, name); $('palette-grid').append(button);
+      }
+    }
+  }
+  function applyTemplateFilter() {
+    const filter = $('template-filter').value;
+    let count = 0;
+    for (const button of $('template-grid').children) {
+      button.hidden = filter === 'new' ? !button.hasAttribute('data-new-template') : filter !== 'all' && button.dataset.tone !== filter;
+      if (!button.hidden) count++;
+    }
+    $('template-count').textContent = String(count);
+    renderThumbnails();
   }
   function updateHistory() { $('undo-button').disabled = !history?.canUndo; $('redo-button').disabled = !history?.canRedo; }
   function commit() {
@@ -707,7 +769,24 @@
     const button = event.target.closest('[data-template]'); if (!button) return; commit(); const template = renderer.templates[button.dataset.template];
     model.settings = renderer.normalize({ ...model.settings, template: button.dataset.template, customColors: false, background: template.background, accent: template.accent, textColor: template.textColor }); syncForm(); edited(true);
   });
-  document.querySelectorAll('[data-palette]').forEach(button => button.addEventListener('click', () => { commit(); const [background, accent, textColor] = palettes[button.dataset.palette]; model.settings = renderer.normalize({ ...model.settings, customColors: true, background, accent, textColor }); syncForm(); edited(true); }));
+  $('template-filter').addEventListener('change', applyTemplateFilter);
+  $('palette-filter').addEventListener('change', event => {
+    for (const button of $('palette-grid').children) button.hidden = event.target.value !== 'all' && button.dataset.tone !== event.target.value;
+  });
+  $('palette-grid').addEventListener('click', event => {
+    const button = event.target.closest('[data-palette]');
+    if (!button) return;
+    commit();
+    const [background, accent, textColor] = paletteColors[button.dataset.palette];
+    model.settings = renderer.normalize({ ...model.settings, customColors: true, background, accent, textColor });
+    syncForm(); edited(true);
+  });
+  $('reset-design').addEventListener('click', () => {
+    commit();
+    model.settings = renderer.normalize({ ...model.settings, design: undefined, customColors: false, font: 'manrope', textScale: 100, textAlign: 'left' });
+    syncForm(); edited(true);
+    status('design-status', 'Оформление сброшено. Действие можно отменить.');
+  });
   $('photo-palette').addEventListener('click', applyPhotoPalette);
   document.querySelectorAll('[data-photo-filter]').forEach(button => button.addEventListener('click', () => {
     const filters = { original: [100, 100, 100], mono: [100, 110, 0], vivid: [103, 115, 130], soft: [110, 90, 85] }; commit();
@@ -1047,7 +1126,6 @@
   async function initialize() {
     await draftClaim;
     buildDesignOptions(); activateTab('photo'); syncForm(); fitPreview(); const params = new URLSearchParams(location.search);
-    document.querySelectorAll('[data-palette]').forEach(button => { const chip = button.querySelector('i'); palettes[button.dataset.palette].forEach((color, index) => chip.style.setProperty('--palette-' + ['a', 'b', 'c'][index], color)); });
     if (renderer.templates[params.get('style')]) model.settings.template = params.get('style'); if (renderer.formats[params.get('format')]) model.settings.format = params.get('format');
     await loadSample(Object.hasOwn(samples, params.get('photo')) ? params.get('photo') : 'headphones', true);
     if (!initialized) { syncActiveView(); initialModel = clone(model); history = project.createHistory(model); initialized = true; updateHistory(); requestRender(true); }

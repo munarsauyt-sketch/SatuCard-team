@@ -72,7 +72,7 @@ test('stale updates and foreign IDs cannot overwrite a project', async () => {
 test('new draft designs cannot enter the older shared cloud project format', async () => {
   const calls = setup();
   process.env.VERCEL_ENV = 'preview';
-  for (const settings of [{ font: 'golos' }, { template: 'blueprint' }]) {
+  for (const settings of [{ font: 'golos' }, { template: 'blueprint' }, { template: 'porcelain' }, { design: { shadow: 'deep' } }]) {
     const p = payload();
     p.views = [{ id: 'draft', label: 'Черновик', settings }];
     p.activeViewId = 'draft';
@@ -81,6 +81,20 @@ test('new draft designs cannot enter the older shared cloud project format', asy
     assert.equal((await response.json()).code, 'preview_design_local');
   }
   assert.equal(calls.length, 0);
+});
+
+test('project validation preserves supported design options and rejects invalid settings', async () => {
+  process.env.VERCEL_ENV = 'production';
+  const calls = setup();
+  const p = payload();
+  Object.assign(p.settings, { template: 'linen', design: { layout: 'photo-left', backdrop: 'grid', texture: 68, priceStyle: 'outline' } });
+  assert.equal((await POST(req({ title: 'Test', payload: p }))).status, 201);
+  assert.deepEqual(JSON.parse(calls[0].body).payload.settings, p.settings);
+  for (const design of [{ texture: 101 }, { layout: 'unknown' }, { extra: true }, null]) {
+    p.settings.design = design;
+    assert.equal((await POST(req({ title: 'Test', payload: p }))).status, 400);
+  }
+  assert.equal(calls.length, 1);
 });
 
 test('preview preserves shared-project compatibility when saving new photo settings', async () => {

@@ -21,7 +21,8 @@
       if (existing.has(key)) continue;
       const article = document.querySelector('[data-template-item]').cloneNode(true);
       article.dataset.templateItem = key;
-      article.dataset.category = ['blueprint', 'graphite'].includes(key) ? 'dark' : key === 'pop' ? 'expressive' : 'light';
+      const tone = renderer.templateTone(key);
+      article.dataset.category = ['rays', 'blocks', 'rings'].includes(template.surface) ? tone + ' expressive' : tone;
       article.querySelector('h2').textContent = template.label;
       const link = article.querySelector('[data-editor-template]');
       link.dataset.editorTemplate = key;

@@ -43,7 +43,8 @@ alter table public.cards
   add constraint cards_style_check check (
     style in (
       'studio', 'accent', 'minimal', 'noir', 'neon', 'editorial', 'bloom', 'bold',
-      'showcase', 'blueprint', 'matcha', 'pop', 'graphite', 'cloud'
+      'showcase', 'blueprint', 'matcha', 'pop', 'graphite', 'cloud',
+      'porcelain', 'espresso', 'cobalt', 'citrus', 'mineral', 'blush', 'midnight', 'linen', 'jade', 'cherry'
     )
   ),
   add constraint cards_format_check check (

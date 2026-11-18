@@ -69,14 +69,19 @@ try {
     await page.locator('#product-price').fill('4900');
     const download = page.waitForEvent('download');
     await page.locator('#download-button').click();
+    await page.waitForFunction(() => !document.querySelector('#download-button').disabled);
     if (await page.locator('#export-review').isVisible()) await page.locator('#export-review-download').click();
     assert.equal(await (await download).failure(), null);
+    await page.goto(origin + '/index.html');
+    assert.equal(await page.locator('#cover-zoom').count(), 0);
+    await page.locator('[data-cover-mode=card]').click();
+    await page.locator('#cover-card:visible').waitFor();
     for (const path of ['examples.html', 'pricing.html']) {
       await page.goto(origin + '/' + path);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width);
     }
     await page.goto(origin + '/examples.html');
-    await page.waitForFunction(() => document.querySelectorAll('[data-template-item]').length === 14);
+    await page.waitForFunction(() => document.querySelectorAll('[data-template-item]').length === Object.keys(window.SATUCARD_RENDERER?.templates || {}).length && document.querySelector('[data-template-item=cherry]'));
     assert.equal(await page.locator('[data-demo-product]').inputValue(), 'headphones');
     assert.deepEqual(errors, []);
     console.log('Browser workflow passed at ' + width + 'px');
