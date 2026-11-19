@@ -4,12 +4,33 @@
   const $ = id => document.getElementById(id);
   let initialized = false;
   function parseCatalogCsv(text) {
-    const rawLines = String(text || '').replace(/^\uFEFF/, '').split(/\r?\n/).map(line => line.trim()).filter(Boolean);
-    if (!rawLines.length) return [];
-    const first = rawLines[0];
-    const delimiter = (first.match(/;/g)?.length || 0) >= (first.match(/,/g)?.length || 0) ? ';' : ',';
-    const splitRow = line => line.split(delimiter).map(cell => cell.trim().replace(/^"|"$/g, '').trim());
-    const firstCols = splitRow(first).map(col => col.toLowerCase());
+    const source = String(text || '').replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
+    let quoted = false, semicolons = 0, commas = 0;
+    for (let i = 0; i < source.length; i++) {
+      const char = source[i];
+      if (char === '"') { if (quoted && source[i + 1] === '"') i++; else quoted = !quoted; }
+      else if (!quoted) { if (char === '\n') break; if (char === ';') semicolons++; if (char === ',') commas++; }
+    }
+    const delimiter = semicolons >= commas ? ';' : ',';
+    const records = []; let cells = [], cell = '', closed = false;
+    quoted = false;
+    function finishCell() { cells.push(cell.trim()); cell = ''; closed = false; }
+    function finishRow() { finishCell(); if (cells.some(Boolean)) records.push(cells); cells = []; }
+    for (let i = 0; i < source.length; i++) {
+      const char = source[i];
+      if (quoted) {
+        if (char === '"') { if (source[i + 1] === '"') { cell += '"'; i++; } else { quoted = false; closed = true; } }
+        else cell += char;
+      } else if (char === delimiter) finishCell();
+      else if (char === '\n') finishRow();
+      else if (char === '"' && !cell.trim() && !closed) { quoted = true; cell = ''; }
+      else if ((closed && !/\s/.test(char)) || char === '"') throw new Error('CSV: проверьте кавычки и разделители столбцов.');
+      else if (!closed) cell += char;
+    }
+    if (quoted) throw new Error('CSV: закройте кавычки в последней строке.');
+    finishRow();
+    if (!records.length) return [];
+    const firstCols = records[0].map(col => col.toLowerCase());
     const aliases = {
       title: ['title', 'name', 'product', 'название', 'товар', 'имя'],
       subtitle: ['subtitle', 'desc', 'description', 'подзаголовок', 'описание'],
@@ -22,9 +43,9 @@
       const idx = firstCols.findIndex(col => names.includes(col));
       if (idx !== -1) { colIndex[field] = idx; hasHeader = true; }
     }
-    const rows = (hasHeader ? rawLines.slice(1) : rawLines).slice(0, 20);
-    return rows.map(line => {
-      const cols = splitRow(line);
+    const rows = hasHeader ? records.slice(1) : records;
+    if (rows.length > 20) throw new Error('CSV: добавьте не более 20 товаров за один экспорт.');
+    return rows.map((cols, index) => {
       const get = (field, fallbackIdx) => {
         const idx = Object.hasOwn(colIndex, field) ? colIndex[field] : (hasHeader ? -1 : fallbackIdx);
         return idx >= 0 && idx < cols.length ? cols[idx] : '';
@@ -32,8 +53,11 @@
       const title = get('title', 0).slice(0, 60);
       if (!title) return null;
       const subtitle = get('subtitle', 1).slice(0, 80);
-      const rawPrice = get('price', 2).replace(/[^\d]/g, '');
-      const price = rawPrice ? Number(rawPrice) : null;
+      const rawPrice = get('price', 2).replace(/\s*(?:₸|KZT|тенге)\s*$/iu, '').replace(/[\s\u00a0\u202f]/g, '');
+      if (rawPrice && (!/^\d+(?:[.,]\d{1,2})?$/.test(rawPrice) || Number(rawPrice.replace(',', '.')) > 999999999.99)) {
+        throw new Error(`CSV, товар ${index + 1}: укажите неотрицательную цену числом, до двух знаков после запятой.`);
+      }
+      const price = rawPrice ? Number(rawPrice.replace(',', '.')) : null;
       const badge = get('badge', 3).slice(0, 24);
       return { title, subtitle, price: Number.isFinite(price) ? price : null, badge };
     }).filter(Boolean);
@@ -176,6 +200,13 @@
       message('cloud-status', 'Сохраняем приватный проект…');
       try {
         const { model, serialized } = editor.snapshot(true);
+        const capabilities = await window.SATUCARD_CLOUD.capabilities?.();
+        if (generation !== cloudGeneration) return;
+        const payload = JSON.parse(serialized);
+        const settings = [payload.settings, ...(payload.views || []).map(view => view.settings)];
+        if (capabilities?.preview && settings.some(s => Object.keys(s.design || {}).length || capabilities.newFonts?.includes(s.font) || capabilities.newTemplates?.includes(s.template) || s.photo?.warmth || s.photo?.blur)) {
+          throw new Error('В этой версии новые шрифты, шаблоны и эффекты сохраняются в файл проекта. Нажмите «Скачать проект» — все настройки останутся доступны при открытии файла.');
+        }
         const identity = asCopy ? null : cloudIdentity;
         const body = { thumbnail: cloudThumbnail(), title: model.settings.title || 'Новый товар', payload: JSON.parse(serialized), ...(identity ? { id: identity.id, version: identity.version } : {}) };
         if (new Blob([JSON.stringify(body)]).size > 3500000) throw new Error('Для облака проект должен быть меньше 3,5 МБ. Уменьшите фото или скачайте файл проекта, он сохранит всё без потерь.');
@@ -188,6 +219,12 @@
       } finally { setBusy(false); }
     }
     $('cloud-save').addEventListener('click', () => saveCloud(false)); $('cloud-copy').addEventListener('click', () => saveCloud(true)); $('cloud-refresh').addEventListener('click', listCloud);
+    const cloudInfo = document.createElement('p'); cloudInfo.className = 'studio-hint'; cloudInfo.id = 'cloud-capabilities';
+    cloudInfo.textContent = 'Облако: до 3,5 МБ. Файл проекта: до 17 МБ, со всеми настройками оформления.';
+    $('cloud-status').before(cloudInfo);
+    window.SATUCARD_CLOUD.capabilities?.().then(capabilities => {
+      if (capabilities.preview) cloudInfo.textContent += ' В этой версии новые шрифты, шаблоны и эффекты сохраняйте кнопкой «Скачать проект».';
+    }).catch(() => {});
     const detachCloud = () => { cloudIdentity = null; cloudGeneration++; message('cloud-status', 'Этот локальный проект будет сохранён в облаке как новый.'); };
     // Import/reset must never silently replace a previously opened cloud project.
     ['load-project-input', 'reset-button', 'restore-draft-button'].forEach(id => $(id).addEventListener(id === 'load-project-input' ? 'change' : 'click', detachCloud));
@@ -495,7 +532,9 @@
     });
     $('export-csv-zip')?.addEventListener('click', async () => {
       if (exportingSet) return;
-      const rows = parseCatalogCsv($('card-catalog-csv')?.value || '');
+      let rows;
+      try { rows = parseCatalogCsv($('card-catalog-csv')?.value || ''); }
+      catch (error) { message('csv-batch-status', error.message, true); return; }
       if (!rows.length) {
         message('csv-batch-status', 'Добавьте хотя бы одну строку вида title;subtitle;price;badge.', true);
         return;

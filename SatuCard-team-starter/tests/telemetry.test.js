@@ -80,7 +80,7 @@ test('POST and GET /api/telemetry enforce validation, bounds, and admin monitor 
   let rpcCall = null;
   globalThis.fetch = async (url, options = {}) => {
     rpcCall = { url: String(url), body: JSON.parse(options.body) };
-    if (String(url).includes('record_site_heartbeat')) return Response.json({ ok: true });
+    if (String(url).includes('record_limited_site_heartbeat')) return Response.json({ allowed: true });
     if (String(url).includes('get_site_telemetry_summary')) {
       if (rpcCall.body.p_token_hash !== hashMonitorToken(monitorKey)) {
         return Response.json({ authorized: false });
@@ -111,6 +111,19 @@ test('POST and GET /api/telemetry enforce validation, bounds, and admin monitor 
   }));
   assert.equal(okPost.status, 200);
   assert.equal(rpcCall.body.p_path, '/editor.html');
+  assert.match(rpcCall.body.p_client_key, /^[a-f0-9]{64}$/);
+  assert.ok(!JSON.stringify(rpcCall.body).includes('unknown'));
+  globalThis.fetch = async () => Response.json({ allowed: false });
+  const limitedPost = await POST(new Request('https://app.test/api/telemetry', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ sessionId: 'sess_12345678', visitorId: 'vis_12345678', path: '/editor.html', device: 'desktop' })
+  }));
+  assert.equal(limitedPost.status, 429);
+  const crossSite = await POST(new Request('https://app.test/api/telemetry', {
+    method: 'POST', headers: { origin: 'https://attacker.invalid', 'content-type': 'application/json' }, body: '{}'
+  }));
+  assert.equal(crossSite.status, 403);
+  globalThis.fetch = async (url, options) => Response.json({ authorized: JSON.parse(options.body).p_token_hash === hashMonitorToken(monitorKey), online: { total: 4 } });
 
   const unauthGet = await GET(new Request('https://app.test/api/telemetry'));
   assert.equal(unauthGet.status, 401);

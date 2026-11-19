@@ -1,6 +1,7 @@
 import { FORMATS } from './video-model.js';
 import { drawProject } from './video-renderer.js';
 import { mixAudio } from './video-media.js';
+import { loadProjectFonts } from './video-fonts.js';
 
 export async function exportVideo(project,store,{height=1280,signal,onProgress=()=>{}}={}) {
   const { Output,Mp4OutputFormat,BufferTarget,CanvasSource,AudioBufferSource,Quality,canEncodeVideo,canEncodeAudio }=await import('./assets/vendor/mediabunny/mediabunny.mjs');
@@ -12,6 +13,7 @@ export async function exportVideo(project,store,{height=1280,signal,onProgress=(
   const check=()=>{if(signal?.aborted)throw new DOMException('Экспорт отменён','AbortError');};
   check();onProgress(.01,'Подготавливаем медиа');
   await store.prepare(project);
+  await loadProjectFonts(project);
   const audio=await mixAudio(project,store);
   check();
   if(audio&&!await canEncodeAudio('aac',{numberOfChannels:2,sampleRate:48000}))throw new Error('Браузер не поддерживает AAC. Выключите звук или откройте студию в Chrome / Edge.');

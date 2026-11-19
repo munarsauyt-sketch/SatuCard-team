@@ -3,6 +3,7 @@ import { configuration } from '../lib/supabase.js';
 import { readAccount, AccountError, accountFailure } from '../lib/account.js';
 import { ownedCard, contactUrl } from '../lib/publication.js';
 import { readBoundedBody } from '../lib/request-body.js';
+import { journalUpload, forgetUpload, removeUpload, reconcileUpload } from '../lib/publication-uploads.js';
 
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 // Older instances may have a narrower CHECK constraint. The rendered JPEG already contains the design.
@@ -100,6 +101,11 @@ export async function POST(request) {
   const imagePath = previous ? `${id}-${randomUUID()}.jpg` : `${id}.jpg`;
   const storageUrl = `${config.base}/storage/v1/object/cards/${imagePath}`;
   const headers = { apikey: config.key };
+  const success = () => json({ id, imagePath, url: new URL(`/api/share?id=${id}`, request.url).href,
+    detailUrl: new URL(`/card.html?id=${id}`, request.url).href }, previous ? 200 : 201);
+  const attempt = { card_id: id, user_id: user.id, image_path: imagePath };
+  try { await journalUpload(config, previous ? [attempt, { ...attempt, image_path: previous.image_path }] : attempt); }
+  catch (_) { return json({ error: 'Публикация временно недоступна. Скачайте карточку и повторите позже.', code: 'publication_journal_unavailable' }, 503); }
 
   try {
     const upload = await fetch(storageUrl, {
@@ -141,19 +147,21 @@ export async function POST(request) {
     }
     if (!save.ok) {
       console.error('SatuCard database insert failed:', save.status);
-      await fetch(storageUrl, { method: 'DELETE', headers }).catch(() => {});
+      if (await reconcileUpload(config, id, user.id, imagePath) === 'committed') return success();
       return json({ error: 'Не удалось сохранить карточку. Попробуйте позже.' }, 502);
     }
     if (previous && !(await save.json()).length) {
-      await fetch(storageUrl, { method: 'DELETE', headers }).catch(() => {});
+      if (await reconcileUpload(config, id, user.id, imagePath) === 'committed') return success();
       return json({ error: 'Карточка уже изменена. Обновите кабинет.', code: 'version_conflict' }, 409);
     }
-    if (previous) await fetch(config.base + '/storage/v1/object/cards/' + encodeURIComponent(previous.image_path), { method: 'DELETE', headers }).catch(() => {});
+    if (previous) await removeUpload(config, previous.image_path);
 
-    return json({ id, imagePath, url: new URL(`/card.html?id=${id}`, request.url).href }, previous ? 200 : 201);
+    await forgetUpload(config, imagePath);
+    return success();
   } catch (error) {
     console.error('SatuCard publication failed:', error);
-    return json({ error: 'Сервер временно недоступен. Попробуйте позже.' }, 502);
+    if (await reconcileUpload(config, id, user.id, imagePath) === 'committed') return success();
+    return json({ error: 'Не удалось подтвердить публикацию. Обновите список карточек в кабинете перед повтором.', id, code: 'publication_uncertain' }, 502);
   }
 }
 
@@ -165,11 +173,12 @@ export async function DELETE(request) {
     const params = new URL(request.url).searchParams;
     const row = await ownedCard(config, user.id, params.get('id'));
     if (params.get('imagePath') !== row.image_path) throw new AccountError('Карточка изменена. Обновите кабинет.', 409, 'version_conflict');
+    await journalUpload(config, { card_id: row.id, user_id: user.id, image_path: row.image_path });
     const query = new URLSearchParams({ id: 'eq.' + row.id, user_id: 'eq.' + user.id, image_path: 'eq.' + row.image_path, select: 'id' });
     const response = await fetch(config.base + '/rest/v1/cards?' + query, { method: 'DELETE', headers: { apikey: config.key, prefer: 'return=representation' } });
     if (!response.ok) throw new Error('Delete failed');
     if (!(await response.json()).length) throw new AccountError('Карточка изменена. Обновите кабинет.', 409, 'version_conflict');
-    await fetch(config.base + '/storage/v1/object/cards/' + encodeURIComponent(row.image_path), { method: 'DELETE', headers: { apikey: config.key } }).catch(() => {});
+    await removeUpload(config, row.image_path);
     return json({ deleted: true });
   } catch (error) { return accountFailure(error); }
 }

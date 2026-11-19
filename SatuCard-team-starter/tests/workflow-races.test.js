@@ -76,7 +76,7 @@ test('a failed cloud save from a signed-out account cannot replace the new accou
     let rejectSave;
     app.w.SATUCARD_CLOUD.save = () => new Promise((_, reject) => { rejectSave = reject; });
     app.$('cloud-save').click();
-    assert.equal(typeof rejectSave, 'function');
+    await until(() => typeof rejectSave === 'function');
     app.authChange(null);
     const detached = app.$('cloud-status').textContent;
     rejectSave(new Error('Old account request failed'));

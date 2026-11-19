@@ -1,6 +1,13 @@
 'use strict';
 
 (() => {
+  let capabilitiesRequest;
+  function capabilities() {
+    if (!capabilitiesRequest) capabilitiesRequest = fetch('api/projects?capabilities=1', { cache: 'no-store', signal: AbortSignal.timeout(10000) })
+      .then(response => { if (!response.ok) throw new Error('Сведения об облаке недоступны. Скачайте файл проекта.'); return response.json(); })
+      .catch(error => { capabilitiesRequest = null; throw error; });
+    return capabilitiesRequest;
+  }
   async function request(id, body, method, params = {}) {
     if (location.protocol === 'file:') throw new Error('Облачные проекты доступны на сайте SatuCard. Локально скачайте файл проекта.');
     const session = await window.SATUCARD_AUTH?.getSession();
@@ -25,6 +32,7 @@
     } finally { clearTimeout(timer); }
   }
   window.SATUCARD_CLOUD = {
+    capabilities,
     list: params => request(null, null, 'GET', params),
     read: id => request(id),
     save: body => request(null, body),

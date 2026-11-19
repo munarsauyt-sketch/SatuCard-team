@@ -135,7 +135,9 @@
         } else request = objectStore.delete(id);
         tx.oncomplete = () => {
           const result = request.result;
-          resolve(action === 'get' ? (result?.payload || result) : result);
+          // The landing form's recovery snapshot is not a full editor working
+          // copy. Keep it out of project lists and the editor's "latest" picker.
+          resolve(action === 'get' ? (result?.payload || result) : action === 'list' ? result.filter(entry => entry.id !== 'home-quick') : result);
         };
         tx.onerror = () => reject(tx.error);
         tx.onabort = () => reject(tx.error || new Error('Сохранение прервано'));

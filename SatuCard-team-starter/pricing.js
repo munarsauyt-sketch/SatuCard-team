@@ -1,11 +1,11 @@
-import { ACCESS_DAYS, BILLING_PLANS, ONE_TIME_PACKS } from './billing-plans.js';
+import { ACCESS_DAYS, BILLING_PLANS } from './billing-plans.js';
 
 const money = value => new Intl.NumberFormat('ru-RU').format(value) + ' ₸';
 const purposes = {
-  basic: 'Видео Full HD 1080p, больше сцен и эффектов + базовый sAI.',
-  plus: 'Всё из Видео Pro + больше лимитов и моделей для сложных правок.',
-  max: 'Полный выбор старших моделей sAI + Видео Pro.',
-  max3: 'До 5 человек в одном пространстве: общие карточки, видео и ИИ-чат sAI.',
+  basic: 'Базовые модели sAI для текстов и перевода RU / KZ.',
+  plus: 'Больше лимитов и моделей для сложных правок.',
+  max: 'Полный выбор старших моделей sAI.',
+  max3: 'Тройной лимит sAI для одного аккаунта — 30 млн токенов.',
 };
 function accountUrl(plan) {
   const url = new URL('dashboard.html#billing-title', location.href);
@@ -43,37 +43,4 @@ for (const plan of BILLING_PLANS) {
   link.addEventListener('click', () => { link.href = accountUrl(plan); });
   card.append(title, price, period, purpose, models, link);
   document.getElementById('pricing-plans').append(card);
-}
-
-const packsBox = document.getElementById('pricing-packs');
-if (packsBox && typeof ONE_TIME_PACKS !== 'undefined') {
-  for (const pack of ONE_TIME_PACKS) {
-    const card = document.createElement('article');
-    card.className = 'pricing-pack-card';
-    card.dataset.pack = pack.id;
-    const info = document.createElement('div');
-    const badge = document.createElement('span');
-    badge.className = 'pricing-pack-badge';
-    badge.textContent = 'РАЗОВАЯ ПОКУПКА · НАВСЕГДА';
-    const title = document.createElement('h2');
-    title.textContent = pack.name;
-    const desc = document.createElement('p');
-    desc.textContent = pack.description;
-    info.append(badge, title, desc);
-
-    const action = document.createElement('div');
-    action.className = 'pricing-pack-action';
-    const price = document.createElement('p');
-    price.className = 'pricing-price';
-    price.textContent = money(pack.priceKzt);
-    const link = document.createElement('a');
-    link.className = 'pricing-button';
-    link.textContent = 'Открыть набор в кабинете';
-    link.href = accountUrl(pack);
-    link.addEventListener('click', () => { link.href = accountUrl(pack); });
-    action.append(price, link);
-
-    card.append(info, action);
-    packsBox.append(card);
-  }
 }

@@ -721,6 +721,7 @@ html[data-theme=dark] .studio-page .field-error,html[data-theme=dark] .studio-he
 }
 @media (max-width: 480px) {
   .product-ui.studio-page .studio-main { padding-inline: 12px; }
+  .product-ui.studio-page .studio-header-actions { gap: 6px; }
   .product-ui.studio-page .studio-project-title h1 { font-size: 22px; }
   .product-ui.studio-page .studio-project-tools { gap: 8px; }
   .product-ui.studio-page .export-controls { flex-wrap: wrap; gap: 6px; }

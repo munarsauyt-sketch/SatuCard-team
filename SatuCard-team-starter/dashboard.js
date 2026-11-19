@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       cards.forEach(card => {
         const link = document.createElement('a');
         link.className = 'my-card';
-        link.href = `card.html?id=${encodeURIComponent(card.id)}`;
+        link.href = `api/share?id=${encodeURIComponent(card.id)}`;
         link.setAttribute('aria-label', `Открыть карточку «${card.title}»`);
         const media = document.createElement('div');
         media.className = 'my-card-image-stage';

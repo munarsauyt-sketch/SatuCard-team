@@ -15,6 +15,7 @@ export async function GET(request) {
     });
   }
   const url = new URL(request.url);
+  url.search = new URLSearchParams({ id: card.id }).toString();
   const detail = new URL('/card.html', url);
   detail.searchParams.set('id', card.id);
   const price = card.showPrice && card.price !== null
@@ -38,6 +39,7 @@ export async function GET(request) {
   <meta property="og:image" content="${escape(card.imageUrl)}">
   <meta property="og:url" content="${escape(url.href)}">
   <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="${escape(url.href)}">
   <link rel="stylesheet" href="/brand.css">
   <link rel="stylesheet" href="/account-pages.css">
 </head>

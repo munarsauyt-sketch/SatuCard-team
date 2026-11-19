@@ -58,7 +58,17 @@ export function installVideoHelp({ showPanel, stop }) {
         { left: horizontal, top: rect.bottom + gap }, { left: horizontal, top: rect.top - height - gap },
       ];
       const fit = candidates.find(p => p.left >= margin && p.top >= margin && p.left + width <= innerWidth - margin && p.top + height <= innerHeight - margin);
-      const chosen = fit || { left: rect.left > innerWidth / 2 ? margin : innerWidth - width - margin, top: innerHeight - height - margin };
+      let chosen = fit;
+      if (!chosen) {
+        // On short desktop/tablet windows the target can leave just less room
+        // than the natural panel height. Scroll the instructions in that free
+        // area instead of covering the control the user is being asked to use.
+        const above = rect.top - gap - margin, below = innerHeight - rect.bottom - gap - margin;
+        if (Math.max(above, below) >= 120) {
+          tour.style.maxHeight = `${Math.floor(Math.max(above, below))}px`;
+          chosen = { left: horizontal, top: above >= below ? rect.top - gap - tour.offsetHeight : rect.bottom + gap };
+        } else chosen = { left: rect.left > innerWidth / 2 ? margin : innerWidth - width - margin, top: innerHeight - height - margin };
+      }
       tour.style.left = `${chosen.left}px`; tour.style.top = `${chosen.top}px`;
     } else { tour.style.removeProperty('left'); tour.style.removeProperty('top'); }
     const bottom = innerWidth <= 700 ? Math.min(rect.bottom, tour.getBoundingClientRect().top - 14) : rect.bottom;
@@ -83,6 +93,7 @@ export function installVideoHelp({ showPanel, stop }) {
     if (index === 7 && matchMedia('(max-width:900px)').matches) showPanel('media');
   }
   function showStep(nextIndex) {
+    tour.style.removeProperty('max-height');
     clearTarget(); index = nextIndex; const step = STEPS[index]; preparePanel();
     number.textContent = `ШАГ ${index + 1} ИЗ ${STEPS.length}`; progress.value = index + 1; title.textContent = step.title; description.textContent = step.text; back.disabled = index === 0;
     next.textContent = index === STEPS.length - 1 ? 'Завершить ✓' : 'Далее →'; title.focus({ preventScroll: true }); reveal();
@@ -106,7 +117,7 @@ export function installVideoHelp({ showPanel, stop }) {
     const nextIndex = STEPS.findIndex(step => step.panel === panel); if (nextIndex >= 0) showStep(nextIndex);
   });
   document.addEventListener('video:changed', schedulePosition); window.addEventListener('scroll', schedulePosition, true);
-  window.addEventListener('resize', () => { if (index >= 0) { clearTarget(); preparePanel(); reveal(); } }); new ResizeObserver(schedulePosition).observe(tour);
+  window.addEventListener('resize', () => { if (index >= 0) { tour.style.removeProperty('max-height'); clearTarget(); preparePanel(); reveal(); } }); new ResizeObserver(schedulePosition).observe(tour);
   const nav = create('button'); nav.id = 'video-help'; nav.setAttribute('aria-label', 'Помощь');
   const icon = create('span', '?'); icon.setAttribute('aria-hidden', 'true'); nav.append(icon, document.createTextNode('Помощь')); nav.addEventListener('click', start);
   const rail = document.querySelector('.rail'); rail.insertBefore(nav, rail.querySelector('a'));

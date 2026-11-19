@@ -105,7 +105,6 @@ begin
     when 'plus' then amount := 2990; allowance := 8000000; plan_tier := 2;
     when 'max' then amount := 4990; allowance := 10000000; plan_tier := 3;
     when 'max3' then amount := 9990; allowance := 30000000; plan_tier := 3;
-    when 'niche10' then amount := 490; allowance := 1; plan_tier := 1;
     else raise exception 'Unknown plan' using errcode = '22023';
   end case;
   insert into public.billing_accounts(user_id) values(p_user_id) on conflict do nothing;
@@ -143,6 +142,9 @@ begin
   if not found then raise exception 'Order not found' using errcode = 'P0002'; end if;
   perform 1 from public.billing_accounts where user_id = customer for update;
   select * into strict saved from public.billing_orders where id = p_order_id for update;
+  if saved.plan_id not in ('basic', 'plus', 'max', 'max3') then
+    raise exception 'Templates are free; this order cannot be confirmed' using errcode = '22023';
+  end if;
   if saved.amount_kzt <> p_received_amount then
     raise exception 'Payment amount does not match order' using errcode = '22023';
   end if;

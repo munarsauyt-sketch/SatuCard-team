@@ -21,7 +21,7 @@ function textLines(ctx,text,width) {
   }
   return output;
 }
-export function drawProject(canvas,project,store,time,{safe=false,selected=null,transitions=true}={}) {
+export function drawProject(canvas,project,store,time,{safe=false,selected=null,transitions=true,deferFonts=false}={}) {
   const ctx=canvas.getContext('2d');
   const dimensions=FORMATS[project.format],width=canvas.width,height=canvas.height;
   const ratio=width/dimensions.width;
@@ -54,12 +54,16 @@ export function drawProject(canvas,project,store,time,{safe=false,selected=null,
       if(item.type==='subtitles')text=item.cues.find(cue=>time>=cue.start&&time<cue.end)?.text||'';
       if(!text){ctx.restore();continue;}
       let size=state.fontSize*width;
-      ctx.font=state.weight+' '+size+'px "'+state.font+'"';
+      // Small library previews must not download every font in the catalogue.
+      // Hover/focus loads the exact face; the main canvas/export always use it.
+      const fallback=deferFonts && !document.fonts.check(state.weight+' 30px "'+state.font+'"',text);
+      const family=fallback?(state.font==='Noto Serif'?'serif':state.font==='IBM Plex Mono'?'monospace':'sans-serif'):'"'+state.font+'"';
+      ctx.font=state.weight+' '+size+'px '+family;
       let lines=textLines(ctx,text,w-16*ratio);
       const available=Math.max(1,Math.floor(h/(size*1.16)));
       if(lines.length>available){
         size=Math.max(width*.012,Math.min(size,h/(lines.length*1.16)));
-        ctx.font=state.weight+' '+size+'px "'+state.font+'"';
+        ctx.font=state.weight+' '+size+'px '+family;
         lines=textLines(ctx,text,w-16*ratio);
       }
       if(state.background!=='transparent'){
@@ -76,7 +80,7 @@ export function drawProject(canvas,project,store,time,{safe=false,selected=null,
     const boundary=starts.find(start=>start>0&&time>=start&&time<start+.35);
     if(boundary!==undefined){
       const outgoing=document.createElement('canvas');outgoing.width=width;outgoing.height=height;
-      drawProject(outgoing,project,store,Math.max(0,boundary-.35),{transitions:false});
+      drawProject(outgoing,project,store,Math.max(0,boundary-.35),{transitions:false,deferFonts});
       const progress=(time-boundary)/.35;
       ctx.save();if(project.transition==='fade')ctx.globalAlpha=1-progress;
       if(project.transition==='slide')ctx.translate(-width*progress,0);

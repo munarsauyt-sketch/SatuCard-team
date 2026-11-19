@@ -10,7 +10,7 @@ window.SATUCARD_AUTH = (() => {
   const googleFlowLifetime = 10 * 60 * 1000;
   const emailFlowKey = 'satucard-email-billing-v1';
   const accountQuery = new URLSearchParams(location.search);
-  const accountPlans = new Set(['basic', 'plus', 'max', 'max3', 'niche10']);
+  const accountPlans = new Set(['basic', 'plus', 'max', 'max3']);
   let accountContext = {
     plan: accountQuery.get('plan'),
     billing: accountQuery.get('billing') === '1' || location.hash === '#billing-title'
@@ -22,6 +22,8 @@ window.SATUCARD_AUTH = (() => {
   let googleCallbackPromise = null;
   let completedIntent = 'login';
   let currentProfile = null;
+  let profileRequest = null, profileFetchedAt = 0, profileGeneration = 0;
+  let sessionGeneration = 0;
 
   function accountTheme() {
     return document.documentElement?.dataset.theme || callbackTheme || accountQuery.get('theme');
@@ -66,12 +68,16 @@ window.SATUCARD_AUTH = (() => {
     // Browsers may disable local storage for local files or private sessions.
   }
 
-  function save(value) {
-    if (session?.user?.id !== value?.user?.id) currentProfile = null;
+  function save(value, persist = true) {
+    if (session?.user?.id !== value?.user?.id) {
+      currentProfile = null; profileRequest = null; profileFetchedAt = 0; profileGeneration++; sessionGeneration++;
+    }
     session = value;
     try {
-      if (value) localStorage.setItem(storageKey, JSON.stringify(value));
-      else localStorage.removeItem(storageKey);
+      if (persist) {
+        if (value) localStorage.setItem(storageKey, JSON.stringify(value));
+        else localStorage.removeItem(storageKey);
+      }
     } catch (_) {}
     document.dispatchEvent(new CustomEvent('satucard:authchange', { detail: { user: value?.user || null } }));
   }
@@ -318,28 +324,38 @@ window.SATUCARD_AUTH = (() => {
   async function getProfile() {
     const active = await getSession();
     if (!active) return null;
-    const data = await accountRequest('/api/profile');
-    if (session?.user?.id === active.user.id) {
-      currentProfile = data.profile;
-      updateAccountLinks();
-    }
-    return data.profile;
+    if (currentProfile && Date.now() - profileFetchedAt < 30000) return currentProfile;
+    if (profileRequest) return profileRequest;
+    const generation = profileGeneration;
+    const pending = accountRequest('/api/profile').then(data => {
+      if (session?.user?.id !== active.user.id || generation !== profileGeneration) throw new Error('Аккаунт изменился. Повторите действие.');
+      currentProfile = data.profile; profileFetchedAt = Date.now(); updateAccountLinks();
+      return data.profile;
+    }).finally(() => { if (profileRequest === pending) profileRequest = null; });
+    profileRequest = pending;
+    return pending;
   }
 
   async function accountRequest(path, options = {}) {
     const active = await getSession();
     if (!active) throw Object.assign(new Error('Войдите в аккаунт.'), { code: 'sign_in_required' });
-    let response;
-    try { response = await fetch(path, { ...options, headers: { 'content-type': 'application/json', Authorization: `Bearer ${active.access_token}` }, cache: 'no-store' }); }
-    catch { throw new Error('Нет соединения с сервером. Проверьте интернет.'); }
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw Object.assign(new Error(data.error || 'Не удалось выполнить действие.'), { code: data.code, status: response.status });
-    return data;
+    const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 20000);
+    const generation = sessionGeneration;
+    try {
+      let response;
+      try { response = await fetch(path, { ...options, headers: { 'content-type': 'application/json', Authorization: `Bearer ${active.access_token}` }, cache: 'no-store', signal: controller.signal }); }
+      catch (error) { throw new Error(error.name === 'AbortError' ? 'Сервер долго не отвечает. Повторите попытку.' : 'Нет соединения с сервером. Проверьте интернет.'); }
+      const data = await response.json().catch(error => { if (controller.signal.aborted) throw new Error('Сервер долго не отвечает. Повторите попытку.'); return {}; });
+      if (session?.user?.id !== active.user.id || generation !== sessionGeneration) throw new Error('Аккаунт изменился. Повторите действие.');
+      if (!response.ok) throw Object.assign(new Error(data.error || 'Не удалось выполнить действие.'), { code: data.code, status: response.status });
+      return data;
+    } finally { clearTimeout(timer); }
   }
 
   async function saveProfile(firstName, lastName) {
     const data = await accountRequest('/api/profile', { method: 'POST', body: JSON.stringify({ firstName, lastName }) });
     currentProfile = data.profile;
+    profileGeneration++; profileRequest = null; profileFetchedAt = Date.now();
     updateAccountLinks();
     return data.profile;
   }
@@ -347,16 +363,8 @@ window.SATUCARD_AUTH = (() => {
   async function getMyCardsPage(offset = 0) {
     const active = await getSession();
     if (!active) return { cards: [], nextOffset: null };
-    let response;
     const url = offset > 0 ? `/api/my-cards?offset=${encodeURIComponent(String(offset))}` : '/api/my-cards';
-    try {
-      response = await fetch(url, {
-        headers: { Authorization: `Bearer ${active.access_token}` },
-        cache: 'no-store'
-      });
-    } catch (_) { throw new Error('Нет соединения с сервером. Проверьте интернет.'); }
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || 'Не удалось загрузить карточки.');
+    const data = await accountRequest(url);
     return { cards: Array.isArray(data.cards) ? data.cards : [], nextOffset: data.nextOffset ?? null };
   }
 
@@ -436,9 +444,10 @@ window.SATUCARD_AUTH = (() => {
   });
   window.addEventListener('storage', event => {
     if (event.key !== storageKey) return;
-    try { session = event.newValue ? JSON.parse(event.newValue) : null; }
-    catch (_) { session = null; }
-    document.dispatchEvent(new CustomEvent('satucard:authchange', { detail: { user: session?.user || null } }));
+    let value;
+    try { value = event.newValue ? JSON.parse(event.newValue) : null; }
+    catch (_) { value = null; }
+    save(value, false);
   });
   window.addEventListener('pageshow', event => {
     if (event.persisted) googleSignInPending = false;

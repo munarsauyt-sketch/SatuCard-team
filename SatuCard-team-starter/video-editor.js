@@ -7,6 +7,7 @@ import { installVideoPlus } from './video-plus.js';
 import { snapTime } from './video-workflow.js';
 import { checkImportQuota } from './video-file-safety.js';
 import { installVideoHelp } from './video-help.js';
+import { loadProjectFonts } from './video-fonts.js';
 
 const $=selector=>document.querySelector(selector);
 const canvas=$('#preview'),dialog=$('#export-dialog');
@@ -17,7 +18,7 @@ let revision=0,savedRevision=-1,saveTimer,saveQueue=Promise.resolve(),toastTimer
 let pixels=55,trackLabel=matchMedia('(max-width:620px)').matches?105:145;
 
 function toast(message){$('#toast').textContent=message;$('#toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').classList.remove('visible'),4200);}
-function handle(error){console.error(error);toast(error.message||'Не удалось выполнить действие.');}
+function handle(error){if(!error.code?.startsWith('video_'))console.error(error);toast(error.message||'Не удалось выполнить действие.');}
 function safely(action){return event=>{try{return Promise.resolve(action(event)).catch(handle);}catch(error){handle(error);}};}
 const on=(selector,event,action)=>$(selector).addEventListener(event,safely(action));
 const current=()=>project.layers.find(item=>item.id===selected);
@@ -42,6 +43,7 @@ function changed({inspector=true,library=false}={}){
   time=clamp(time,0,project.duration);
   validateProject(project);scheduleSave();renderTimeline();if(inspector)renderInspector();if(library)renderMedia();renderControls();draw();
   document.dispatchEvent(new Event('video:changed'));
+  loadProjectFonts(project).then(draw).catch(error=>toast(error.message));
 }
 function draw(){
   const size=FORMATS[project.format],ratio=540/Math.max(size.width,size.height);
@@ -110,7 +112,7 @@ async function renderTemplates(filter=activeTemplateFilter,query=activeTemplateQ
     const paint=()=>{
       pending=0;
       if(generation!==templateGeneration)return;
-      drawProject(portrait,temp,templateMedia,previewTime);
+      drawProject(portrait,temp,templateMedia,previewTime,{deferFonts:true});
       thumb.getContext('2d').drawImage(portrait,0,0,216,384,0,-25,216,384);
     };
     const scrub=time=>{
@@ -118,6 +120,9 @@ async function renderTemplates(filter=activeTemplateFilter,query=activeTemplateQ
       if(!pending)pending=requestAnimationFrame(paint);
     };
     paint();
+    const exactFonts=()=>loadProjectFonts(temp).then(paint).catch(error=>toast(error.message));
+    button.addEventListener('pointerenter',exactFonts,{once:true});
+    button.addEventListener('focus',exactFonts,{once:true});
     button.addEventListener('pointermove',event=>{
       if(event.pointerType!=='mouse')return;
       const rect=thumb.getBoundingClientRect();
@@ -490,7 +495,7 @@ async function init(){
     $('#export').title='WebCodecs недоступен в этом браузере — для экспорта MP4 откройте Chrome или Edge';
   }
   try{const saved=await loadProject();if(saved){project=saved.project;media.files=saved.files;}}catch(error){handle(error);}
-  await Promise.all([document.fonts.load('750 30px "Golos Text"'),document.fonts.load('600 30px "Manrope"'),document.fonts.load('700 30px "Noto Serif"'),document.fonts.load('400 20px "IBM Plex Mono"')]);
+  await loadProjectFonts(project).catch(error=>toast(error.message));
   const brand=await loadBrand().catch(()=>null);if(brand){$('#brand-color').value=brand.color;$('#brand-font').value=brand.font;}
   await media.prepare(project);await media.seek(project,time,true);productForm();renderControls();renderInspector();renderTimeline();renderMedia();await renderTemplates();
   await installVideoPlus({project:()=>project,media:()=>media,current,time:()=>time,revision:()=>revision,snapshot,changed,seek,stop,draw,toast,showPanel,confirmReplace,switchProject,addLayer,searchTemplates:query=>renderTemplates(undefined,query),replace:replaceProject,edit:fn=>{const next=clone(project);fn(next);return replaceProject(next,true);}});

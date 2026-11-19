@@ -68,13 +68,15 @@ test('uploads the JPEG and stores card metadata with a secret key', async () => 
   assert.equal(response.status, 201);
   const result = await response.json();
   assert.match(result.id, /^[0-9a-f-]{36}$/);
-  assert.equal(result.url, `https://satucard.example/card.html?id=${result.id}`);
-  assert.equal(calls.length, 4);
-  assert.match(calls[2].url, new RegExp(`/storage/v1/object/cards/${result.id}\\.jpg$`));
-  assert.equal(calls[2].options.headers.apikey, 'sb_secret_test');
-  assert.equal(calls[3].url, 'https://example.supabase.co/rest/v1/cards');
+  assert.equal(result.url, `https://satucard.example/api/share?id=${result.id}`);
+  assert.equal(result.detailUrl, `https://satucard.example/card.html?id=${result.id}`);
+  assert.equal(calls.length, 6);
+  assert.match(calls[2].url, /\/rest\/v1\/card_publication_uploads$/);
+  assert.match(calls[3].url, new RegExp(`/storage/v1/object/cards/${result.id}\\.jpg$`));
   assert.equal(calls[3].options.headers.apikey, 'sb_secret_test');
-  const record = JSON.parse(calls[3].options.body);
+  assert.equal(calls[4].url, 'https://example.supabase.co/rest/v1/cards');
+  assert.equal(calls[4].options.headers.apikey, 'sb_secret_test');
+  const record = JSON.parse(calls[4].options.body);
   assert.equal(record.user_id, 'aaac8be7-1386-45b8-8d49-3f9d7f5c9fb6');
   assert.equal(record.price_kzt, '24990.00');
   assert.equal(record.old_price_kzt, '29990.00');
@@ -138,13 +140,14 @@ test('removes the uploaded image if saving metadata fails', async () => {
   globalThis.fetch = async (_url, options) => {
     if (String(_url).endsWith('/auth/v1/user')) return Response.json({ id: 'aaac8be7-1386-45b8-8d49-3f9d7f5c9fb6', email_confirmed_at: '2026-10-26T00:00:00Z' });
     if (String(_url).includes('/rest/v1/profiles?')) return Response.json([readyProfile]);
-    methods.push(options.method);
-    return new Response(null, { status: methods.length === 2 ? 500 : 200 });
+    methods.push(options.method || 'GET');
+    if (String(_url).includes('/rest/v1/cards?')) return Response.json([]);
+    return new Response(null, { status: String(_url).endsWith('/rest/v1/cards') ? 500 : 200 });
   };
 
   const response = await POST(uploadRequest());
   assert.equal(response.status, 502);
-  assert.deepEqual(methods, ['POST', 'POST', 'DELETE']);
+  assert.deepEqual(methods, ['POST', 'POST', 'POST', 'GET', 'DELETE', 'DELETE']);
 });
 
 test('refuses publication without a verified account', async () => {
@@ -152,6 +155,40 @@ test('refuses publication without a verified account', async () => {
   globalThis.fetch = () => { throw new Error('Unexpected database access'); };
   const response = await POST(uploadRequest({ authorized: false }));
   assert.equal(response.status, 401);
+});
+
+for (const outcome of ['committed', 'absent', 'unknown']) test('reconciles a lost publication response: ' + outcome, async () => {
+  configure();
+  let record, removed = false;
+  const journalDeletes = [];
+  globalThis.fetch = async (url, options = {}) => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: readyProfile.id, email_confirmed_at: 'today' });
+    if (url.includes('/rest/v1/profiles?')) return Response.json([readyProfile]);
+    if (url.endsWith('/rest/v1/cards')) { record = JSON.parse(options.body); throw new Error('Connection lost after sending metadata'); }
+    if (url.includes('/rest/v1/cards?')) {
+      if (outcome === 'unknown') throw new Error('Database unavailable');
+      return Response.json(outcome === 'committed' ? [record] : []);
+    }
+    if (url.includes('/storage/') && options.method === 'DELETE') removed = true;
+    if (url.includes('/card_publication_uploads?') && options.method === 'DELETE') journalDeletes.push(url);
+    return new Response(null, { status: 201 });
+  };
+  const response = await POST(uploadRequest());
+  assert.equal(response.status, outcome === 'committed' ? 201 : 502);
+  assert.equal(removed, outcome === 'absent');
+  assert.equal(journalDeletes.length, outcome === 'unknown' ? 0 : 1);
+});
+
+test('publication never uploads an image if its durable journal is unavailable', async () => {
+  configure(); let uploaded = false;
+  globalThis.fetch = async (url) => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: readyProfile.id, email_confirmed_at: 'today' });
+    if (url.includes('/rest/v1/profiles?')) return Response.json([readyProfile]);
+    if (url.includes('/storage/')) uploaded = true;
+    return new Response(null, { status: 503 });
+  };
+  assert.equal((await POST(uploadRequest())).status, 503);
+  assert.equal(uploaded, false);
 });
 
 test('publication cancels oversized multipart data before parsing or writing', async () => {

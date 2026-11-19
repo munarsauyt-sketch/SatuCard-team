@@ -24,6 +24,9 @@ test('plan selection reaches the authenticated account before revealing payment 
       assert.ok(card.querySelector('.pricing-purpose').textContent);
     }
     assert.equal(w.document.querySelector('#transfer-card'), null);
+    assert.equal(w.document.querySelector('[data-pack]'), null);
+    assert.equal(w.document.querySelector('#pricing-packs').hidden, true);
+    assert.doesNotMatch(w.document.body.textContent, /490|покупка 10|Команда \(5/);
     assert.match(w.document.body.textContent, /48 часов/);
   } finally { dom.window.close(); }
 });

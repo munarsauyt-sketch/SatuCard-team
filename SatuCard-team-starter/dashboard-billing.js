@@ -119,7 +119,9 @@ function adminActions(order) {
     event.preventDefault();
     update({ action: 'reject', orderId: order.id, reason: reason.value });
   });
-  details.append(form, rejection);
+  if (order.retired) details.append(element('p', 'Шаблоны бесплатны. Эту архивную заявку можно только отклонить.'));
+  else details.append(form);
+  details.append(rejection);
   return details;
 }
 

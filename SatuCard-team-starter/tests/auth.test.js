@@ -31,7 +31,7 @@ function harness({ url = `${origin}/auth.html`, saved = {}, pending = {}, respon
     sessionStorage: blockedStorage ? { getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); }, removeItem() {} } : temporary,
     fetch: async (url, options) => {
       calls.push({ url, options, pageURL: location.href });
-      const response = responder?.(url, options) ?? { external: { google: true } };
+      const response = await (responder?.(url, options) ?? { external: { google: true } });
       return { ok: response.ok ?? true, status: response.status ?? 200, json: async () => response.body ?? response };
     }
   });
@@ -43,6 +43,53 @@ const tokenResponse = {
   user: { id: 'existing-user', email: 'seller@example.com', email_confirmed_at: '2026-10-26T10:00:00Z', user_metadata: { full_name: 'Seller' } },
   provider_token: 'google-access-not-to-be-persisted', provider_refresh_token: 'google-refresh-not-to-be-persisted'
 };
+
+test('profile reads share one request and cached data is invalidated by an account change', async () => {
+  let finish;
+  const h = harness({ saved: { [sessionKey]: JSON.stringify({ ...tokenResponse, expires_at: Math.floor(Date.now() / 1000) + 3600 }) },
+    responder: () => new Promise(resolve => { finish = resolve; }) });
+  const first = h.auth.getProfile(), second = h.auth.getProfile();
+  while (!finish) await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(h.calls.length, 1);
+  finish({ profile: { name: 'Seller', profile_completed_at: '2026-01-01' } });
+  const values = await Promise.all([first, second]);
+  assert.equal(values[0], values[1]);
+  assert.equal((await h.auth.getProfile()).name, 'Seller');
+  assert.equal(h.calls.length, 1);
+  const changed = { ...tokenResponse, expires_at: Math.floor(Date.now() / 1000) + 3600, user: { id: 'other-user' } };
+  h.listeners.get('storage')({ key: sessionKey, newValue: JSON.stringify(changed) });
+  finish = null;
+  const next = h.auth.getProfile();
+  while (!finish) await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(h.calls.length, 2);
+  finish({ profile: { name: 'Other' } });
+  assert.equal((await next).name, 'Other');
+});
+
+test('a late profile response cannot populate another account cache', async () => {
+  let finish;
+  const h = harness({ saved: { [sessionKey]: JSON.stringify({ ...tokenResponse, expires_at: Math.floor(Date.now() / 1000) + 3600 }) },
+    responder: () => new Promise(resolve => { finish = resolve; }) });
+  const pending = h.auth.getProfile();
+  const rejected = assert.rejects(pending, /Аккаунт изменился/);
+  while (!finish) await new Promise(resolve => setTimeout(resolve, 0));
+  h.listeners.get('storage')({ key: sessionKey, newValue: null });
+  finish({ profile: { name: 'Private name' } });
+  await rejected;
+  assert.equal(await h.auth.getProfile(), null);
+});
+
+test('saving profile does not invalidate an unrelated in-flight card list for the same account', async () => {
+  let cardsResponse;
+  const h = harness({ saved: { [sessionKey]: JSON.stringify({ ...tokenResponse, expires_at: Math.floor(Date.now() / 1000) + 3600 }) },
+    responder: (url, options) => url.includes('my-cards') ? new Promise(resolve => { cardsResponse = resolve; }) : { profile: { name: JSON.parse(options.body).firstName } } });
+  const cards = h.auth.getMyCardsPage();
+  while (!cardsResponse) await new Promise(resolve => setTimeout(resolve, 0));
+  await h.auth.saveProfile('Updated', 'Seller');
+  cardsResponse({ cards: [], nextOffset: null });
+  assert.equal((await cards).cards.length, 0);
+  assert.equal((await h.auth.getProfile()).name, 'Updated');
+});
 
 test('Google uses S256 PKCE and a fixed callback, ignores arbitrary redirect parameters', async () => {
   const h = harness({ url: `${origin}/auth.html?next=https://attacker.example&mode=signup` });
@@ -102,7 +149,7 @@ test('selected tariff and theme survive login, Google callback and profile setup
   assert.equal(profile.auth.accountPage('dashboard.html'), `${origin}/dashboard.html?theme=dark&plan=plus#billing-title`);
 
   const nicheEntry = harness({ url: `${origin}/dashboard.html?plan=niche10#billing-title` });
-  assert.equal(nicheEntry.auth.accountPage('auth.html'), `${origin}/auth.html?plan=niche10&billing=1`);
+  assert.equal(nicheEntry.auth.accountPage('auth.html'), `${origin}/auth.html?billing=1`);
 });
 
 test('an email link in the same tab restores the tariff after verifying the email', async () => {

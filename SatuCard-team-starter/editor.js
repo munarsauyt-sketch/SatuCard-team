@@ -589,11 +589,20 @@
     finally { loaded.forEach(id => pendingAssets.delete(id)); releaseUnusedAssets(); }
   }
 
-  function activateTab(key, focus = false) {
+  function activateTab(key, focus = false, reveal = false) {
     if (focusMode?.getAttribute('aria-pressed') === 'true') setFocusMode(false);
     document.querySelectorAll('[data-editor-tab]').forEach(button => { const active = button.dataset.editorTab === key; button.setAttribute('aria-selected', String(active)); button.tabIndex = active ? 0 : -1; button.classList.toggle('is-active', active); if (active && focus) button.focus(); });
     document.querySelectorAll('[data-editor-panel]').forEach(panel => { panel.hidden = panel.dataset.editorPanel !== key; });
     if (key === 'templates') renderThumbnails();
+    if (reveal && window.matchMedia?.('(max-width: 900px)').matches) {
+      requestAnimationFrame(() => {
+        const panel = document.querySelector('[data-editor-panel="' + key + '"]');
+        if (!panel) return;
+        const header = document.querySelector('.studio-header');
+        const top = panel.getBoundingClientRect().top + window.scrollY - (header?.getBoundingClientRect().height || 0) - 12;
+        window.scrollTo({ top: Math.max(0, top), behavior: 'auto' });
+      });
+    }
   }
   function applyPreviewZoom() {
     const zoom = Number($('preview-zoom').value);
@@ -807,7 +816,7 @@
   }));
   $('reset-photo-button').addEventListener('click', () => { commit(); model.settings.photo = renderer.normalize({}).photo; syncForm(); edited(true); });
   document.querySelectorAll('[data-editor-tab]').forEach(button => {
-    button.addEventListener('click', () => activateTab(button.dataset.editorTab));
+    button.addEventListener('click', () => activateTab(button.dataset.editorTab, false, true));
     button.addEventListener('keydown', event => {
       const keys = [...document.querySelectorAll('[data-editor-tab]')].map(tab => tab.dataset.editorTab);
       const index = keys.indexOf(button.dataset.editorTab);
@@ -815,7 +824,7 @@
         event.preventDefault();
         const next = event.key === 'Home' ? 0 : event.key === 'End' ? keys.length - 1
           : (index + (event.key === 'ArrowRight' ? 1 : keys.length - 1)) % keys.length;
-        activateTab(keys[next], true);
+        activateTab(keys[next], true, true);
       }
     });
   });

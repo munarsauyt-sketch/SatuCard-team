@@ -126,7 +126,9 @@ export async function installVideoPlus(api){
     const list=$('#video-draft-list');
     if(!list)return;
     list.replaceChildren();
-    const drafts=await listVideoDrafts().catch(()=>[]);
+    let drafts;
+    try { drafts=await listVideoDrafts(); }
+    catch(error) { list.append(element('p',error.message,'muted')); return; }
     for(const draft of drafts){
       const row=element('article',undefined,'scene-card');
       const title=element('strong',draft.name);
@@ -159,7 +161,9 @@ export async function installVideoPlus(api){
   );
   await renderVideoDrafts();
   async function loadCards(){
-    const list=$('#card-list');list.replaceChildren();const cards=await window.SATUCARD_PROJECT.draftAction('list');
+    const list=$('#card-list');list.replaceChildren();let cards;
+    try { cards=await window.SATUCARD_PROJECT.draftAction('list'); }
+    catch(_) { list.append(element('p','Хранилище карточек недоступно. Работайте в студии и скачайте файл проекта.','muted')); return; }
     for(const card of cards.filter(c=>c.payload).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt)))list.append(button(card.title,()=>fromCard(card.payload)));
     if(!list.children.length)list.append(element('p','Сохранённых карточек пока нет. Создайте карточку в редакторе.','muted'));
   }

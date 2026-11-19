@@ -1,4 +1,4 @@
--- Idempotent upgrade for SatuCard pricing v2 (1500 / 2990 / 4990 / 9990 / 490 niche10)
+-- Idempotent upgrade for SatuCard pricing v2 (1500 / 2990 / 4990 / 9990; legacy purchase rows remain readable)
 -- and 5-seat shared team workspace schema.
 begin;
 
@@ -27,7 +27,6 @@ begin
     when 'plus' then amount := 2990; allowance := 8000000; plan_tier := 2;
     when 'max' then amount := 4990; allowance := 10000000; plan_tier := 3;
     when 'max3' then amount := 9990; allowance := 30000000; plan_tier := 3;
-    when 'niche10' then amount := 490; allowance := 1; plan_tier := 1;
     else raise exception 'Unknown plan' using errcode = '22023';
   end case;
   insert into public.billing_accounts(user_id) values(p_user_id) on conflict do nothing;

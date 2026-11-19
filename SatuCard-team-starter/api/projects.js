@@ -21,6 +21,9 @@ async function rows(response) {
   return result;
 }
 export async function GET(request) {
+  if (new URL(request.url).searchParams.get('capabilities') === '1') return json({
+    maxBytes: 3500000, preview: process.env.VERCEL_ENV === 'preview', newFonts, newTemplates
+  });
   try {
     const config = configOrThrow();
     const { user } = await readAccount(request, config, { complete: true });

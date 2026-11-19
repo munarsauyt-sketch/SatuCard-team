@@ -3,27 +3,62 @@ import { MAX_TOTAL, MAX_FILE } from './video-media.js';
 import { checkMediaBundle, checkImageHeader } from './video-file-safety.js';
 
 const DATABASE = 'satucard-video-v1';
-function database() {
-  return new Promise((resolve,reject)=>{
-    const request=indexedDB.open(DATABASE,1);
-    request.onupgradeneeded=()=>request.result.createObjectStore('records');
-    request.onsuccess=()=>resolve(request.result);
-    request.onerror=()=>reject(request.error);
+export const MAX_VIDEO_DRAFTS = 10;
+function storageFailure(error) {
+  if (typeof error?.code === 'string' && error.code.startsWith('video_')) return error;
+  const full = error?.name === 'QuotaExceededError';
+  return Object.assign(new Error(full
+    ? 'Хранилище браузера заполнено. Скачайте файл проекта и удалите ненужные черновики.'
+    : 'Хранилище браузера недоступно. Скачайте файл проекта, чтобы сохранить работу.'), {
+    code: full ? 'video_storage_full' : 'video_storage_unavailable', cause: error
   });
 }
-async function record(key,value) {
+function database() {
+  return new Promise((resolve,reject)=>{
+    if (!globalThis.indexedDB) { reject(new Error('IndexedDB unavailable')); return; }
+    const request=indexedDB.open(DATABASE,1);
+    let finished=false;
+    const timer=setTimeout(()=>{finished=true;reject(new Error('Storage open timeout'));},5000);
+    request.onupgradeneeded=()=>request.result.createObjectStore('records');
+    request.onsuccess=()=>{clearTimeout(timer);if(finished)request.result.close();else{finished=true;resolve(request.result);}};
+    request.onerror=()=>{clearTimeout(timer);finished=true;reject(request.error);};
+    request.onblocked=()=>{clearTimeout(timer);finished=true;reject(new Error('Storage blocked'));};
+  }).catch(error=>{throw storageFailure(error);});
+}
+async function records(mode, action) {
   const db=await database();
   try {
     return await new Promise((resolve,reject)=>{
-      const transaction=db.transaction('records',value===undefined?'readonly':'readwrite');
-      const request=transaction.objectStore('records')[value===undefined?'get':'put'](...(value===undefined?[key]:[value,key]));
-      let result;
-      request.onsuccess=()=>{result=request.result;};
+      const transaction=db.transaction('records',mode);
+      let result, failure;
       transaction.oncomplete=()=>resolve(result);
-      transaction.onerror=()=>reject(transaction.error);
-      transaction.onabort=()=>reject(transaction.error||new Error('Сохранение прервано.'));
+      transaction.onabort=()=>reject(failure||transaction.error||new Error('Сохранение прервано.'));
+      try {
+        action(transaction.objectStore('records'), value=>{result=value;}, error=>{failure=error;transaction.abort();});
+      } catch(error) { failure=error;transaction.abort(); }
     });
-  } finally { db.close(); }
+  } catch(error) { throw storageFailure(error); }
+  finally { db.close(); }
+}
+async function record(key,value) {
+  return records(value===undefined?'readonly':'readwrite',(store,done)=>{
+    const request=value===undefined?store.get(key):store.put(value,key);
+    request.onsuccess=()=>done(request.result);
+  });
+}
+// Inspect the stored records, rather than trusting the old truncated index.
+// This also recovers older drafts that disappeared from that index.
+function scanDrafts(store, done) {
+  const drafts=[], request=store.openCursor();
+  request.onsuccess=()=>{
+    const cursor=request.result;
+    if (!cursor) { done(drafts.sort((a,b)=>b.updatedAt-a.updatedAt||a.id.localeCompare(b.id))); return; }
+    const saved=cursor.value;
+    if (typeof cursor.key==='string' && cursor.key.startsWith('draft:') && saved?.id===cursor.key.slice(6) && saved.project && Array.isArray(saved.files)) {
+      drafts.push({id:saved.id,name:String(saved.name||'Черновик').slice(0,80),updatedAt:Number(saved.updatedAt)||0});
+    }
+    cursor.continue();
+  };
 }
 export async function saveProject(project,files) {
   validateProject(project);
@@ -81,20 +116,23 @@ export async function loadBrand(){
   }catch(_){return null;}
 }
 export async function listVideoDrafts(){
-  const index=await record('drafts_index');
-  return Array.isArray(index)?index:[];
+  return records('readonly',(store,done)=>scanDrafts(store,done));
 }
 export async function saveVideoDraft(name,project,files){
   validateProject(project);
   checkMediaBundle(project,files);
-  const id='d_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6);
+  const id='d_'+crypto.randomUUID();
   const cleanName=String(name||project.name||'Черновик').trim().slice(0,80)||'Черновик';
   const entry={id,name:cleanName,updatedAt:Date.now()};
-  await record('draft:'+id,{id,name:cleanName,project,files:[...files],updatedAt:entry.updatedAt});
-  const current=await listVideoDrafts();
-  const next=[entry,...current.filter(item=>item.id!==id)].slice(0,10);
-  await record('drafts_index',next);
-  return entry;
+  const saved={id,name:cleanName,project,files:[...files],updatedAt:entry.updatedAt};
+  return records('readwrite',(store,done,fail)=>scanDrafts(store,current=>{
+    if(current.length>=MAX_VIDEO_DRAFTS){
+      fail(Object.assign(new Error('Сохранено 10 или больше видеочерновиков. Скачайте нужные проекты и удалите ненужные перед сохранением нового.'),{code:'video_draft_limit'}));return;
+    }
+    store.put(saved,'draft:'+id);
+    store.put([entry,...current],'drafts_index');
+    done(entry);
+  }));
 }
 export async function loadVideoDraft(id){
   const saved=await record('draft:'+id);
@@ -105,9 +143,11 @@ export async function loadVideoDraft(id){
   return {id:saved.id,name:saved.name,project,files};
 }
 export async function deleteVideoDraft(id){
-  const current=await listVideoDrafts();
-  await record('drafts_index',current.filter(item=>item.id!==id));
-  await record('draft:'+id,null);
+  return records('readwrite',(store,done)=>scanDrafts(store,current=>{
+    store.delete('draft:'+id);
+    store.put(current.filter(item=>item.id!==id),'drafts_index');
+    done();
+  }));
 }
 const dataUrl=blob=>new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(reader.error);reader.readAsDataURL(blob);});
 export async function packProject(project,files) {

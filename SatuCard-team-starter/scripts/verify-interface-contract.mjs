@@ -36,6 +36,15 @@ for (const page of pages) {
   const before = new JSDOM(original).window.document;
   const after = new JSDOM(await readFile(resolve(root, page), 'utf8')).window.document;
   const old = inventory(before), current = inventory(after);
+  // The login preview is a static image. These renderer-only dependencies were
+  // deliberately retired during the audit fixes; all controller scripts remain.
+  const retiredScripts = page === 'auth.html' ? ['product-samples.js', 'studio-renderer.js', 'marketing.js'] : [];
+  const removedScripts = old.scripts.filter(value => retiredScripts.includes((JSON.parse(value).src || '').split('?')[0]));
+  if (retiredScripts.length) {
+    assert.equal(after.querySelector('canvas:not([hidden]),[data-mark-card]:not([hidden]),[data-template-item]'), null, 'Auth must not require the retired renderer');
+    assert.ok(after.querySelector('.auth-card-example img[src]'), 'Auth retains a real image preview');
+  }
+  old.scripts = old.scripts.filter(value => !removedScripts.includes(value));
   const failures = Object.fromEntries(Object.keys(old).map(key => [key, missing(old[key], current[key])]));
   const duplicateIds = [...count([...after.querySelectorAll('[id]')].map(node => node.id))].filter(([, total]) => total > 1);
   const idBindings = [...before.querySelectorAll('[id]')].flatMap(node => {
@@ -49,7 +58,7 @@ for (const page of pages) {
   // Added scripts may occur between original ones, but the original order is stable.
   let at = 0;
   for (const script of current.scripts) if (script === old.scripts[at]) at++;
-  const result = { page, baseline, counts: Object.fromEntries(Object.keys(old).map(key => [key, old[key].length])), failures, duplicateIds, idBindings, scriptOrderPreserved: at === old.scripts.length };
+  const result = { page, baseline, counts: Object.fromEntries(Object.keys(old).map(key => [key, old[key].length])), retiredScripts, failures, duplicateIds, idBindings, scriptOrderPreserved: at === old.scripts.length };
   report.push(result);
   console.log(JSON.stringify(result));
 }

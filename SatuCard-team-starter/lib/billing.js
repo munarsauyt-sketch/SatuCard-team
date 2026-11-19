@@ -1,5 +1,5 @@
 import { AccountError } from './account.js';
-import { ACCESS_DAYS, BILLING_PLANS, ONE_TIME_PACKS } from '../billing-plans.js';
+import { ACCESS_DAYS, BILLING_PLANS } from '../billing-plans.js';
 import { SUPPORT } from '../support.js';
 
 export const billingId = value => typeof value === 'string' && /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(value);
@@ -33,12 +33,14 @@ export async function billingRpc(config, name, args) {
 }
 
 export function billingPlan(id) {
-  return BILLING_PLANS.find(plan => plan.id === id) || ONE_TIME_PACKS.find(pack => pack.id === id);
+  return BILLING_PLANS.find(plan => plan.id === id);
 }
 
 export function publicOrder(row) {
   const plan = billingPlan(row.plan_id);
-  return { id: row.id, planId: row.plan_id, planName: plan?.name || row.plan_id,
+  const retired = row.plan_id === 'niche10';
+  return { id: row.id, planId: row.plan_id, planName: retired ? 'Архивная заявка — шаблоны бесплатны' : plan?.name || row.plan_id,
+    ...(retired ? { retired: true } : {}),
     amountKzt: row.amount_kzt, status: row.status, createdAt: row.created_at,
     confirmedAt: row.confirmed_at || null, reviewNote: row.rejection_reason || null,
     ...(typeof row.email === 'string' ? { email: row.email } : {}) };
@@ -69,12 +71,8 @@ export function paymentDetails() {
   return { checkoutUrl: paymentRequestsEnabled() ? checkoutUrl : null, support: SUPPORT };
 }
 
-export const publicPlans = () => [
-  ...BILLING_PLANS.map(({ id, name, priceKzt, models, includes, benefits }) =>
-    ({ id, name, priceKzt, models, includes, benefits, days: ACCESS_DAYS })),
-  ...ONE_TIME_PACKS.map(({ id, name, priceKzt, description }) =>
-    ({ id, name, priceKzt, models: [], benefits: [description], days: 0, permanent: true }))
-];
+export const publicPlans = () => BILLING_PLANS.map(({ id, name, priceKzt, models, includes, benefits }) =>
+  ({ id, name, priceKzt, models, includes, benefits, days: ACCESS_DAYS }));
 
 export const quotaFailures = {
   access_expired: [403, 'Срок платного доступа закончился. Выберите новый период.'],

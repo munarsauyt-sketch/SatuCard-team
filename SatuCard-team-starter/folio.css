@@ -458,9 +458,11 @@ body { font-family: var(--ui-font); }
   .product-ui .header-inner nav a { min-height: 44px; border-radius: 12px; }
 }
 @media (max-width: 480px) {
-  .product-ui .header-inner { gap: 8px; }
-  .product-ui .brand { font-size: 21px; }
-  .product-ui .brand-logo-icon { width: 28px; height: 28px; margin-right: 8px; }
+  .product-ui .header-inner { gap: 6px; }
+  .product-ui .brand { font-size: 20px; }
+  .product-ui .brand-logo-icon { width: 25px; height: 25px; margin-right: 7px; }
+  .product-ui :is(.theme-toggle,.menu-toggle) { width: 44px; min-height: 44px; }
+  .product-ui .header-account { min-height: 44px; padding-inline: 8px; max-width: 84px; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .product-ui button:not([class]) { min-height: 44px; }
 }
 @media (prefers-reduced-motion: reduce) {

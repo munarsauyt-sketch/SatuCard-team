@@ -149,11 +149,10 @@
     'Связаться с продавцом': 'Сатушымен байланысу', 'Ссылка для покупки или связи': 'Сатып алу немесе байланыс сілтемесі',
     'Тарифы sAI': 'sAI тарифтері', 'Доступ на 30 дней с разовой оплатой.': 'Бір реттік төлеммен 30 күнге қолжетімділік.',
     'Выбрать тариф': 'Тарифті таңдау', 'Доступные модели': 'Қолжетімді модельдер', 'Модели тарифа': 'Тариф модельдері',
-    'Видео Pro + ИИ Старт': 'Видео Pro + ЖИ Старт',
+    'ИИ Старт': 'ЖИ Старт',
     'ИИ Плюс': 'ЖИ Плюс',
     'ИИ Макс': 'ЖИ Макс',
-    'Команда (5 чел)': 'Команда (5 адам)',
-    'Пак «10 нишевых шаблонов»': '«10 салалық үлгі» топтамасы',
+    'ИИ Макс ×3': 'ЖИ Макс ×3',
     'Что входит и модели': 'Не кіреді және модельдер',
     'Открыть набор в кабинете': 'Жинақты кабинетте ашу',
     'На карту / Kaspi': 'Картаға / Kaspi',
@@ -304,23 +303,30 @@
       if (target !== clean) element.setAttribute(attr, current.replace(clean, target));
     }
   }
-  const skip = 'script,style,textarea,input,[contenteditable],#card-text-content,#copy-preview,#ai-chat-messages,.my-card-body,.local-project-list,.workflow-project-list,[data-product-label],#profile-title,#profile-email';
+  const protectedContent = '#card-text-content,#copy-preview,#ai-chat-messages,[data-product-label],#profile-title,#profile-email';
+  const skip = 'script,style,textarea,input,[contenteditable],' + protectedContent;
+  function sellerContent(element) {
+    return element.closest('.my-card-body,.local-project-list,.workflow-project-list') &&
+      !element.closest('button,[role=button],.project-card-actions a,.publication-actions a');
+  }
+  const skipText = element => element.closest(skip) || sellerContent(element);
+  const skipAttributes = element => element.closest(protectedContent) || sellerContent(element);
   function update(root = document.body) {
     if (!root) return;
     if (root.nodeType === Node.TEXT_NODE) {
-      if (root.parentElement && !root.parentElement.closest(skip)) translate(root);
+      if (root.parentElement && !skipText(root.parentElement)) translate(root);
       return;
     }
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     while (walker.nextNode()) {
       const node = walker.currentNode;
-      if (!node.parentElement || node.parentElement.closest(skip)) continue;
+      if (!node.parentElement || skipText(node.parentElement)) continue;
       translate(node);
     }
     if (root.nodeType === Node.ELEMENT_NODE) {
-      if (!root.closest('#card-text-content,#copy-preview,#ai-chat-messages')) translateAttributes(root);
+      if (!skipAttributes(root)) translateAttributes(root);
       root.querySelectorAll('[placeholder],[title],[aria-label],[alt]').forEach(el => {
-        if (!el.closest('#card-text-content,#copy-preview,#ai-chat-messages')) translateAttributes(el);
+        if (!skipAttributes(el)) translateAttributes(el);
       });
     }
     document.documentElement.lang = language;
@@ -368,5 +374,10 @@
   });
   update();
   observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-  window.addEventListener('pagehide', () => observer.disconnect(), { once: true });
+  window.addEventListener('pagehide', () => observer.disconnect());
+  window.addEventListener('pageshow', event => {
+    if (!event.persisted) return;
+    update();
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+  });
 })();

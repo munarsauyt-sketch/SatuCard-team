@@ -14,6 +14,44 @@
   const styles = [...form.querySelectorAll('[data-hero-style]')];
   let template = 'studio', image = null, source = null, isExample = true;
   let busy = false, frame = 0;
+  const quickId = 'home-quick', journalKey = 'satucard-quick-journal';
+  let saveTimer, saveQueue = Promise.resolve(), photoKey = 'demo', restoring = true;
+  const backup = document.createElement('button');
+  backup.type = 'button'; backup.className = 'button secondary'; backup.hidden = true;
+  backup.textContent = 'Скачать файл проекта'; open.after(backup);
+
+  function draftMetadata() { return { title: title.value, price: price.value, template, isExample, photoKey }; }
+  function draftPayload() {
+    return JSON.stringify({ ...JSON.parse(project.serializeProject(settings(), source, null)), quickDraft: draftMetadata() });
+  }
+  function saveQuick() {
+    clearTimeout(saveTimer);
+    if (restoring || !image) return saveQueue;
+    const payload = draftPayload();
+    saveQueue = saveQueue.catch(() => {}).then(() => project.draftAction('put', payload, quickId)).catch(() => {
+      backup.hidden = false;
+      setStatus('Автосохранение недоступно. Скачайте файл проекта, чтобы не потерять работу.', true);
+    });
+    return saveQueue;
+  }
+  function edited() {
+    if (restoring) return;
+    try { localStorage.setItem(journalKey, JSON.stringify(draftMetadata())); } catch (_) {}
+    clearTimeout(saveTimer); saveTimer = setTimeout(saveQuick, 250);
+  }
+  backup.addEventListener('click', async () => {
+    try {
+      let photo = source;
+      if (isExample) {
+        const response = await fetch(demoUrl);
+        if (!response.ok) throw new Error();
+        photo = await readSource(await response.blob());
+      }
+      const url = URL.createObjectURL(new Blob([project.serializeProject(settings(), photo, null)], { type: 'application/json' }));
+      const link = document.createElement('a'); link.href = url; link.download = 'SatuCard.satu.json'; link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (_) { setStatus('Не удалось скачать проект. Повторите попытку.', true); }
+  });
 
   const readSource = blob => new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -40,6 +78,8 @@
     busy = value;
     result.setAttribute('aria-busy', String(value));
     upload.disabled = example.disabled = file.disabled = value;
+    title.disabled = price.disabled = value;
+    styles.forEach(button => { button.disabled = value; });
     open.disabled = value || !image;
   }
 
@@ -90,7 +130,9 @@
       price.value = String(sample.price);
       price.removeAttribute('aria-invalid');
       showPhoto(photo, null, true);
-      setStatus('Демонстрационная карточка');
+      photoKey = 'demo'; edited();
+      await saveQuick();
+      if (backup.hidden) setStatus('Демонстрационная карточка');
     } catch (_) {
       setStatus('Пример не загрузился. Выберите своё фото.', true);
     } finally {
@@ -132,7 +174,9 @@
         price.removeAttribute('aria-invalid');
       }
       showPhoto(photo, data, false);
-      setStatus('Фото загружено. Добавьте данные товара.');
+      photoKey = crypto.randomUUID(); edited();
+      await saveQuick();
+      if (backup.hidden) setStatus('Фото загружено. Добавьте данные товара.');
       title.focus({ preventScroll: true });
     } catch (_) {
       setStatus('Не удалось прочитать фото. Попробуйте другой файл.', true);
@@ -160,7 +204,7 @@
     drop.classList.remove('is-dragging');
     addPhoto(event.dataTransfer?.files[0]);
   });
-  title.addEventListener('input', paint);
+  title.addEventListener('input', () => { paint(); edited(); });
   price.addEventListener('input', () => {
     const invalid = Number.isNaN(priceValue());
     const wasInvalid = price.getAttribute('aria-invalid') === 'true';
@@ -168,11 +212,13 @@
     if (invalid && !wasInvalid) setStatus('Укажите цену числом до 999 999 999,99 ₸.', true);
     if (!invalid && wasInvalid) setStatus();
     paint();
+    edited();
   });
   styles.forEach(button => button.addEventListener('click', () => {
     template = button.dataset.heroStyle;
     styles.forEach(item => item.setAttribute('aria-pressed', String(item === button)));
     paint();
+    edited();
   }));
 
   form.addEventListener('submit', async event => {
@@ -202,6 +248,7 @@
       target.searchParams.set('theme', document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
       location.assign(target.href);
     } catch (_) {
+      backup.hidden = false;
       setStatus('Черновик не сохранился. Разрешите локальное хранилище и повторите.', true);
       setBusy(false);
     }
@@ -215,6 +262,31 @@
   });
   form.hidden = false;
   $('quick-fallback').hidden = true;
-  loadExample();
+  window.addEventListener('pagehide', saveQuick);
+  async function restoreQuick() {
+    setBusy(true);
+    try {
+      const raw = await project.draftAction('get', undefined, quickId);
+      if (!raw) { await loadInitialExample(); return; }
+      const data = project.parseProject(raw, renderer.normalize);
+      let metadata = JSON.parse(raw).quickDraft;
+      if (!metadata || typeof metadata.title !== 'string' || typeof metadata.price !== 'string') throw new Error();
+      try {
+        const journal = JSON.parse(localStorage.getItem(journalKey));
+        if (journal?.photoKey === metadata.photoKey && typeof journal.title === 'string' && typeof journal.price === 'string') metadata = journal;
+      } catch (_) {}
+      template = styles.some(button => button.dataset.heroStyle === metadata.template) ? metadata.template : 'studio';
+      title.value = metadata.title.slice(0, 200); price.value = metadata.price.slice(0, 60);
+      photoKey = metadata.photoKey; styles.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.heroStyle === template)));
+      showPhoto(await decode(data.photo || demoUrl), data.photo || null, metadata.isExample === true);
+      setStatus('Черновик восстановлен на этом устройстве.');
+    } catch (error) {
+      await loadInitialExample();
+      setStatus('Не удалось восстановить черновик: ' + (error.message || 'проверьте хранилище браузера.'), true);
+    }
+    finally { restoring = false; setBusy(false); }
+  }
+  async function loadInitialExample() { setBusy(false); await loadExample(); }
+  restoreQuick();
   document.fonts?.ready.then(paint);
 })();

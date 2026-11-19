@@ -72,6 +72,7 @@ html[data-theme="light"] dialog{background:var(--surface);color:var(--ink);borde
 }
 .product-ui.video-workbench .wordmark { font-size: 22px; }
 .product-ui.video-workbench .top-nav { display: flex; margin: 0 0 0 auto; flex-wrap: wrap; align-items: center; }
+.product-ui.video-workbench .top-nav .interface-language { margin-block: 0; }
 .product-ui.video-workbench .top-nav a { white-space: nowrap; min-height: 34px; padding: 7px 13px; font-size: 12px; }
 .product-ui.video-workbench .theme-toggle { width: 38px; height: 38px; min-height: 38px; flex: none; }
 
@@ -342,4 +343,21 @@ html[data-theme="light"] dialog{background:var(--surface);color:var(--ink);borde
   .product-ui.video-workbench .timeline-actions button { min-height: 32px; font-size: 10px; }
   .product-ui.video-workbench .timeline-label { font-size: 11px; }
   .product-ui.video-workbench .zoom-label { margin-left: auto; }
+}
+
+/* Keep navigation and project actions in two rows on short landscape screens. */
+@media (min-width: 620px) and (max-width: 1000px) and (max-height: 600px) {
+  .product-ui.video-workbench .video-identity-row { display: grid; grid-template-columns: auto minmax(0, 1fr) 40px; gap: 8px; min-height: 52px; padding: 6px 12px; }
+  .product-ui.video-workbench .wordmark { font-size: 18px; gap: 6px; }
+  .product-ui.video-workbench .brand-icon { width: 26px; height: 26px; }
+  .product-ui.video-workbench .top-nav { order: 0; width: auto; min-width: 0; flex-wrap: nowrap; overflow-x: auto; gap: 1px; justify-content: flex-start; border-radius: 12px; }
+  .product-ui.video-workbench .top-nav a { flex: none; min-height: 32px; font-size: 10px; padding: 6px; }
+  .product-ui.video-workbench .top-nav .interface-language { flex: none; margin: 0; }
+  .product-ui.video-workbench #workspace .top-nav .interface-language select { min-height: 32px; max-width: 80px; padding: 6px; font-size: 10px; }
+  .product-ui.video-workbench .video-project-row { flex-wrap: nowrap; min-height: 54px; padding: 6px 12px; }
+  .product-ui.video-workbench .project-heading { flex: 1 1 120px; min-width: 0; order: 0; }
+  .product-ui.video-workbench #project-name { min-height: 28px; height: 28px; font-size: 13px; }
+  .product-ui.video-workbench .project-heading > span { font-size: 9px; }
+  .product-ui.video-workbench .history-actions { order: 0; margin-right: 0; }
+  .product-ui.video-workbench .video-project-row > button { order: 0; flex: 0 0 auto; min-height: 36px; padding: 6px 10px; font-size: 11px; }
 }

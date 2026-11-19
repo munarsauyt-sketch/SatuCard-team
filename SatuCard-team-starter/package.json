@@ -11,7 +11,8 @@
     "test:video-design": "node scripts/verify-video-design.mjs",
     "test:video-tour": "node scripts/verify-video-tour.mjs",
     "test:interface-contract": "node scripts/verify-interface-contract.mjs",
-    "test:redesign": "node scripts/verify-redesign.mjs"
+    "test:redesign": "node scripts/verify-redesign.mjs",
+    "test:audit-browser": "node scripts/verify-audit-fixes.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.15",

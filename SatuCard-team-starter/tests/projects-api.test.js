@@ -36,6 +36,17 @@ test('all cloud access requires authenticated confirmed complete account', async
     assert.equal(calls.length, 0);
   }
 });
+
+test('preview capabilities are available before editing without exposing account data', async () => {
+  const calls = setup(); process.env.VERCEL_ENV = 'preview';
+  const response = await GET(req(undefined, '?capabilities=1'));
+  assert.equal(response.status, 200);
+  const data = await response.json();
+  assert.equal(data.preview, true); assert.equal(data.maxBytes, 3500000);
+  assert.ok(data.newFonts.includes('golos')); assert.ok(data.newTemplates.includes('showcase'));
+  assert.equal(calls.length, 0);
+  assert.ok(!JSON.stringify(data).includes('service-secret'));
+});
 test('list excludes payload and secrets; read is owner-filtered with service key', async () => {
   const calls = setup();
   const list = await GET(req()); assert.equal(list.status, 200);
