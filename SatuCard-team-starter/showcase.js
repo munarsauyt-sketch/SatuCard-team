@@ -58,6 +58,8 @@
       card.width = buffer.width; card.height = buffer.height;
       card.getContext('2d').drawImage(buffer, 0, 0);
       photo.src = img.src; photo.alt = state.title;
+      $('cover-original').src = img.src;
+      $('cover-original').alt = state.title;
       current = { key, state, img, draftId: null };
       art.dataset.product = key;
       $('cover-name').textContent = state.title;
@@ -114,13 +116,7 @@
   }
   png.addEventListener('click', () => run(async snapshot => {
     message('Готовим PNG…');
-    const output = document.createElement('canvas');
-    renderer.render(output, snapshot.state, { photo: snapshot.img }, { scale: 1 });
-    const blob = await new Promise((resolve, reject) => output.toBlob(value => value ? resolve(value) : reject(new Error('PNG unavailable')), 'image/png'));
-    const url = URL.createObjectURL(blob), anchor = document.createElement('a');
-    anchor.href = url; anchor.download = 'SatuCard-' + snapshot.key + '-900x1125.png';
-    document.body.append(anchor); anchor.click(); anchor.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    await window.downloadHomeCard(snapshot.state, snapshot.img, 'SatuCard-' + snapshot.key + '-900x1125');
     message('PNG готов. Файл передан браузеру для скачивания.');
   }, 'Не удалось создать PNG. Попробуйте ещё раз.'));
   video.addEventListener('click', () => sendTo('video'));

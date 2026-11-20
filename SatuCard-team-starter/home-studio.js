@@ -11,6 +11,7 @@
   const file = $('quick-file'), upload = $('quick-upload'), example = $('quick-example');
   const title = $('quick-title'), price = $('quick-price'), canvas = $('hero-card');
   const thumbnail = $('quick-photo'), open = $('quick-open'), drop = $('quick-drop'), result = $('quick-result');
+  const download = $('quick-png');
   const styles = [...form.querySelectorAll('[data-hero-style]')];
   let template = 'studio', image = null, source = null, isExample = true;
   let busy = false, frame = 0;
@@ -80,7 +81,7 @@
     upload.disabled = example.disabled = file.disabled = value;
     title.disabled = price.disabled = value;
     styles.forEach(button => { button.disabled = value; });
-    open.disabled = value || !image;
+    open.disabled = download.disabled = value || !image;
   }
 
   function priceValue() {
@@ -221,14 +222,29 @@
     edited();
   }));
 
-  form.addEventListener('submit', async event => {
-    event.preventDefault();
-    if (busy || !image) return;
+  function readyToExport() {
+    if (busy || !image) return false;
     if (Number.isNaN(priceValue())) {
       setStatus('Укажите цену числом до 999 999 999,99 ₸.', true);
       price.focus();
-      return;
+      return false;
     }
+    return true;
+  }
+  download.addEventListener('click', async () => {
+    if (!readyToExport()) return;
+    setBusy(true);
+    setStatus('Готовим PNG…');
+    try {
+      await window.downloadHomeCard(settings(), image, title.value.trim() || 'SatuCard');
+      setStatus('PNG готов. Файл передан браузеру для скачивания.');
+    } catch (_) {
+      setStatus('Не удалось создать PNG. Попробуйте ещё раз.', true);
+    } finally { setBusy(false); }
+  });
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (!readyToExport()) return;
     const state = settings();
     setBusy(true);
     setStatus('Открываем в редакторе…');
