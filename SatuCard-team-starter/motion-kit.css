@@ -1,0 +1,1280 @@
+/* SatuCard Motion Kit — Cross-page spring-physics micro-interactions
+ * Distributed cleanly by page (0% idle CPU/GPU):
+ *  - index.html:    Rubber dock + Fan cards (alongside on-demand 3D hero)
+ *  - pricing.html:  Plan switch spotlight + Rubber dock
+ *  - examples.html: Command button (24 templates) + Rubber dock filters
+ *  - editor.html:   Morph tooltip, Rubber dock, File drop, Springy inputs,
+ *                   Jelly slider (zoom), Hold to publish (PNG),
+ *                   Detent dial (rotation), Exposure slider (light/contrast),
+ *                   Scrubber (radius/blur/warmth/saturation), Copy & Undo pulse
+ */
+
+:root {
+  --mk-surface: #ffffff;
+  --mk-surface-elev: #f7f5f0;
+  --mk-pill-bg: #151519;
+  --mk-pill-fg: #ffffff;
+  --mk-pill-muted: rgba(21, 21, 25, 0.08);
+  --mk-edge: rgba(20, 20, 24, 0.12);
+  --mk-green: #16a34a;
+  --mk-green-soft: rgba(22, 163, 74, 0.13);
+  --mk-green-ink: #15803d;
+  --mk-orange: #ea784e;
+  --mk-shadow: 0 18px 42px -18px rgba(18, 18, 24, 0.24);
+}
+
+html[data-theme=dark] {
+  --mk-surface: #181a21;
+  --mk-surface-elev: #1f222b;
+  --mk-pill-bg: #f4f1ea;
+  --mk-pill-fg: #141418;
+  --mk-pill-muted: rgba(255, 255, 255, 0.09);
+  --mk-edge: rgba(255, 255, 255, 0.14);
+  --mk-green: #22c55e;
+  --mk-green-soft: rgba(34, 197, 94, 0.18);
+  --mk-green-ink: #4ade80;
+  --mk-shadow: 0 22px 48px -18px rgba(0, 0, 0, 0.65);
+}
+
+/* =========================================================================
+   1. RUBBER DOCK — Elastic dual-edge highlight pill (nav, hero, filters, editor)
+   ========================================================================= */
+.mk-rubber-host {
+  position: relative;
+}
+
+.mk-rubber-pill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 999px;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+  will-change: transform, width;
+  background: var(--mk-pill-bg);
+  box-shadow: 0 6px 16px -6px rgba(18, 18, 22, 0.34);
+}
+
+.site-header nav.mk-rubber-host .mk-rubber-pill {
+  background: color-mix(in srgb, var(--ui-accent, #ea784e) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ui-accent, #ea784e) 32%, transparent);
+  box-shadow: none;
+}
+
+.gallery-filters.mk-rubber-host .mk-rubber-pill {
+  border-radius: 10px;
+  background: var(--ui-accent, #ea784e);
+  box-shadow: 0 8px 18px -8px rgba(234, 120, 78, 0.55);
+}
+
+.studio-tabs.mk-rubber-host .mk-rubber-pill {
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--ui-accent, #ea784e) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ui-accent, #ea784e) 42%, transparent);
+  box-shadow: none;
+}
+
+.studio-filters.mk-rubber-host .mk-rubber-pill,
+.format-pills.mk-rubber-host .mk-rubber-pill {
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--ui-accent, #ea784e) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ui-accent, #ea784e) 46%, transparent);
+  box-shadow: none;
+}
+
+.mk-rubber-host > :not(.mk-rubber-pill) {
+  position: relative;
+  z-index: 1;
+}
+
+.product-ui.preview-home .hero-style-bar.mk-rubber-ready button[data-cover-style][aria-pressed=true],
+.product-ui.preview-home .hero-style-bar.mk-rubber-ready button[data-cover-style][aria-pressed=true]:hover,
+html[data-theme=dark] .product-ui.preview-home .hero-style-bar.mk-rubber-ready button[data-cover-style][aria-pressed=true],
+html[data-theme=dark] .product-ui.preview-home .hero-style-bar.mk-rubber-ready button[data-cover-style][aria-pressed=true]:hover {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.gallery-filters.mk-rubber-ready button[aria-pressed=true] {
+  background: transparent;
+  border-color: transparent;
+  color: #1f110b;
+}
+
+.studio-tabs.mk-rubber-ready button[aria-selected=true],
+.studio-filters.mk-rubber-ready button[aria-pressed=true],
+.format-pills.mk-rubber-ready button[aria-pressed=true] {
+  background: transparent;
+  border-color: transparent;
+}
+
+/* =========================================================================
+   2. MORPH TOOLTIP — Shared elastic tooltip + spring tail (Editor rail & toolbar)
+   ========================================================================= */
+.mk-morph-tooltip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 120;
+  pointer-events: none;
+  opacity: 0;
+  will-change: transform, width, opacity;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--mk-pill-bg);
+  color: var(--mk-pill-fg);
+  font: 600 12px/16px var(--ui-font, Manrope, sans-serif);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  box-shadow: 0 12px 28px -10px rgba(0, 0, 0, 0.42);
+  overflow: visible;
+}
+
+.mk-morph-tooltip-clip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  width: 100%;
+  height: 20px;
+}
+
+.mk-morph-tooltip-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  will-change: transform, opacity;
+}
+
+.mk-morph-tooltip-tail {
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 1.5px;
+  background: var(--mk-pill-bg);
+  transform-origin: center;
+  will-change: transform;
+}
+
+.mk-morph-tooltip.is-below .mk-morph-tooltip-tail {
+  bottom: auto;
+  top: -4px;
+}
+
+/* =========================================================================
+   3. COMMAND BUTTON — Expandable 24-template quick search (examples.html)
+   ========================================================================= */
+.mk-cmd-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  z-index: 25;
+}
+
+.mk-cmd-shell {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  min-width: 174px;
+  border-radius: 999px;
+  background: var(--mk-pill-bg);
+  color: var(--mk-pill-fg);
+  border: 1px solid transparent;
+  box-shadow: 0 10px 24px -14px rgba(18, 18, 22, 0.42);
+  overflow: hidden;
+  will-change: width, transform;
+  transition: box-shadow 220ms ease, border-color 220ms ease;
+}
+
+.mk-cmd-shell.is-open {
+  border-color: color-mix(in srgb, var(--ui-accent, #ea784e) 52%, transparent);
+  box-shadow: 0 18px 34px -14px rgba(18, 18, 22, 0.52);
+}
+
+button.mk-cmd-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0 11px 0 15px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--mk-pill-fg);
+  font: 600 13px/18px var(--ui-font, Manrope, sans-serif);
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: none;
+}
+
+button.mk-cmd-trigger:hover:not(:disabled) {
+  background: transparent;
+  color: var(--mk-pill-fg);
+  border-color: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+.mk-cmd-trigger-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mk-cmd-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.14);
+  color: inherit;
+  font: 600 11px/1 var(--ui-mono, monospace);
+}
+
+html[data-theme=dark] .mk-cmd-key {
+  background: rgba(20, 20, 24, 0.14);
+}
+
+.mk-cmd-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  padding: 0 10px 0 14px;
+}
+
+.mk-cmd-input-row[hidden],
+.mk-cmd-trigger[hidden] {
+  display: none;
+}
+
+#template-cmd-input,
+.mk-cmd-input-row input.mk-cmd-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  background-color: transparent;
+  box-shadow: none;
+  color: var(--mk-pill-fg);
+  font: 500 13.5px/20px var(--ui-font, Manrope, sans-serif);
+  outline: none;
+  padding: 0;
+}
+
+#template-cmd-input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+#template-cmd-input::placeholder {
+  color: color-mix(in srgb, var(--mk-pill-fg) 56%, transparent);
+}
+
+button.mk-cmd-esc {
+  flex: none;
+  min-height: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--mk-pill-fg);
+  font: 600 11px/1 var(--ui-mono, monospace);
+  cursor: pointer;
+  box-shadow: none;
+}
+
+html[data-theme=dark] button.mk-cmd-esc {
+  background: rgba(20, 20, 24, 0.14);
+}
+
+.mk-cmd-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(320px, calc(100vw - 32px));
+  max-height: 290px;
+  overflow-y: auto;
+  padding: 6px;
+  border-radius: 16px;
+  border: 1px solid var(--brand-line);
+  background: var(--brand-surface);
+  box-shadow: var(--mk-shadow);
+  display: grid;
+  gap: 2px;
+  z-index: 50;
+}
+
+.mk-cmd-dropdown[hidden] {
+  display: none;
+}
+
+.mk-cmd-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  color: var(--brand-ink);
+  text-decoration: none;
+  font: 500 13px/18px var(--ui-font, Manrope, sans-serif);
+  transition: background-color 140ms ease;
+}
+
+.mk-cmd-item:hover,
+.mk-cmd-item.is-active {
+  background: var(--brand-accent-soft);
+  color: var(--brand-accent-ink);
+}
+
+.mk-cmd-item-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.mk-cmd-swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  flex: none;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+.mk-cmd-swatch::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 8px;
+  height: 8px;
+  border-top-left-radius: 4px;
+  background: var(--sw-accent, #ea784e);
+}
+
+.mk-cmd-item-text {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.mk-cmd-item-text strong {
+  font: 600 13px/17px var(--ui-font, Manrope, sans-serif);
+}
+
+.mk-cmd-item-text small {
+  font: 400 11.5px/15px var(--ui-font, Manrope, sans-serif);
+  color: var(--brand-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mk-cmd-empty {
+  padding: 14px 12px;
+  font: 500 13px/18px var(--ui-font, Manrope, sans-serif);
+  color: var(--brand-muted);
+  text-align: center;
+}
+
+/* =========================================================================
+   4. FILE DROP — Spring dropzone + floating chip + SVG progress (Editor #drop-zone)
+   ========================================================================= */
+.mk-file-drop {
+  position: relative;
+  will-change: transform;
+}
+
+.mk-drop-chip {
+  position: absolute;
+  top: -11px;
+  right: 12px;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 8px;
+  background: var(--mk-pill-bg);
+  color: var(--mk-pill-fg);
+  font: 600 11px/14px var(--ui-mono, monospace);
+  box-shadow: 0 8px 18px -6px rgba(0, 0, 0, 0.36);
+  pointer-events: none;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.mk-upload-ring {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+}
+
+.mk-upload-ring-svg {
+  position: absolute;
+  inset: -6px;
+  width: calc(100% + 12px);
+  height: calc(100% + 12px);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.mk-file-drop.is-uploading .mk-upload-ring-svg,
+.mk-file-drop.is-uploaded .mk-upload-ring-svg {
+  opacity: 1;
+}
+
+.mk-upload-ring-track {
+  fill: none;
+  stroke: var(--mk-edge);
+  stroke-width: 2.5;
+}
+
+.mk-upload-ring-arc {
+  fill: none;
+  stroke: var(--ui-accent, #ea784e);
+  stroke-width: 2.8;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+}
+
+.mk-file-drop.is-uploaded .mk-upload-ring-arc {
+  stroke: var(--mk-green);
+}
+
+/* =========================================================================
+   5. SPRINGY INPUT — Keystroke tactile spring + invalid wave-shake (Editor)
+   ========================================================================= */
+.mk-spring-field input {
+  will-change: transform;
+}
+
+.mk-spring-field.is-error input {
+  border-color: #e14b32;
+  box-shadow: 0 0 0 3px rgba(225, 75, 50, 0.18);
+}
+
+/* =========================================================================
+   6. JELLY SLIDER — Velocity-squashing thumb + SVG goo droplet (Editor #photo-zoom)
+   ========================================================================= */
+.mk-jelly-wrap {
+  display: grid;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.mk-jelly-slider {
+  position: relative;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.mk-jelly-track {
+  position: relative;
+  width: 100%;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--mk-pill-muted);
+  overflow: hidden;
+}
+
+.mk-jelly-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 25%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--ui-accent, #ea784e), #f28a64);
+  will-change: width;
+}
+
+.mk-jelly-goo-layer {
+  position: absolute;
+  inset: -44px 0 -10px 0;
+  pointer-events: none;
+  filter: url(#mk-jelly-goo);
+}
+
+.mk-jelly-thumb {
+  position: absolute;
+  top: 52px;
+  left: 0;
+  width: 20px;
+  height: 20px;
+  margin-left: -10px;
+  border-radius: 50%;
+  background: var(--mk-pill-bg);
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.4);
+  will-change: transform;
+}
+
+.mk-jelly-drop {
+  position: absolute;
+  top: 48px;
+  left: 0;
+  width: 46px;
+  height: 26px;
+  margin-left: -23px;
+  border-radius: 999px;
+  background: var(--mk-pill-bg);
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.mk-jelly-drop-text {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  width: 46px;
+  height: 26px;
+  margin-left: -23px;
+  text-align: center;
+  font: 700 11px/26px var(--ui-mono, monospace);
+  color: var(--mk-pill-fg);
+  pointer-events: none;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.mk-jelly-ticks {
+  display: flex;
+  justify-content: space-between;
+  padding-inline: 2px;
+}
+
+.mk-jelly-tick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font: 500 10px/12px var(--ui-mono, monospace);
+  color: var(--brand-muted);
+  transition: color 200ms ease, transform 220ms cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+
+.mk-jelly-tick::before {
+  content: "";
+  width: 2px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--mk-edge);
+}
+
+.mk-jelly-tick.is-lit {
+  color: var(--brand-ink);
+}
+
+.mk-jelly-tick.is-lit::before {
+  background: var(--ui-accent, #ea784e);
+  transform: scaleY(1.3);
+}
+
+/* =========================================================================
+   7. HOLD TO PUBLISH — Contrast-inverted sweep + checkmark morph (Editor #download-button)
+   ========================================================================= */
+button.mk-hold-btn {
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  will-change: transform;
+  transition: background-color 240ms ease, border-color 240ms ease;
+}
+
+.mk-hold-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0%;
+  background: #141519;
+  pointer-events: none;
+  z-index: 1;
+}
+
+html[data-theme=dark] .mk-hold-fill {
+  background: #ffffff;
+}
+
+.mk-hold-layer {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-style: normal;
+  font-weight: inherit;
+  pointer-events: none;
+}
+
+.mk-hold-layer b,
+.mk-hold-layer span {
+  font-style: normal;
+  font-weight: inherit;
+}
+
+.mk-hold-layer-inv {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  color: #ffffff;
+  clip-path: inset(0 100% 0 0);
+}
+
+html[data-theme=dark] .mk-hold-layer-inv {
+  color: #141418;
+}
+
+.mk-hold-check-svg {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  z-index: 4;
+  width: 20px;
+  height: 20px;
+  opacity: 0;
+  pointer-events: none;
+  stroke: #ffffff;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.mk-hold-check-svg path {
+  stroke-dasharray: 32;
+  stroke-dashoffset: 32;
+  transition: stroke-dashoffset 400ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+button.mk-hold-btn.is-done {
+  background: var(--mk-green);
+  border-color: var(--mk-green);
+  color: #ffffff;
+}
+
+.mk-hold-btn.is-done .mk-hold-layer,
+.mk-hold-btn.is-done .mk-hold-fill {
+  opacity: 0;
+}
+
+.mk-hold-btn.is-done .mk-hold-check-svg {
+  opacity: 1;
+}
+
+.mk-hold-btn.is-done .mk-hold-check-svg path {
+  stroke-dashoffset: 0;
+}
+
+/* =========================================================================
+   8. FAN CARDS — 3 real SATUCARD_RENDERER cards (index.html, 0% idle CPU)
+   ========================================================================= */
+.landing-tagline.mk-tagline-with-fan {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  align-items: center;
+  gap: clamp(32px, 5vw, 64px);
+  overflow-x: clip;
+}
+
+.tagline-copy-col {
+  display: grid;
+  gap: 20px;
+}
+
+.mk-fan-stage {
+  position: relative;
+  height: 310px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 18px;
+  cursor: pointer;
+}
+
+.mk-fan-card {
+  position: absolute;
+  bottom: 18px;
+  width: 196px;
+  padding: 8px;
+  border-radius: 18px;
+  border: 1px solid var(--ui-edge-strong, var(--brand-line));
+  background: var(--brand-surface);
+  box-shadow: 0 20px 44px -18px rgba(14, 14, 20, 0.34);
+  transform-origin: 50% 100%;
+  text-decoration: none;
+  color: var(--brand-ink);
+  will-change: transform;
+  display: grid;
+  gap: 8px;
+}
+
+html[data-theme=dark] .mk-fan-card {
+  box-shadow: 0 24px 50px -16px rgba(0, 0, 0, 0.72);
+}
+
+.mk-fan-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding-inline: 2px;
+}
+
+.mk-fan-card-num {
+  font: 600 11px/14px var(--ui-mono, monospace);
+  color: var(--brand-accent-ink);
+}
+
+.mk-fan-card-title {
+  font: 600 12px/15px var(--ui-font, Manrope, sans-serif);
+  color: var(--brand-ink);
+}
+
+.mk-fan-card-canvas-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  border-radius: 11px;
+  overflow: hidden;
+  border: 1px solid var(--ui-edge, var(--brand-line));
+  background: var(--ui-panel, var(--brand-soft));
+}
+
+.mk-fan-card-canvas-wrap canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* =========================================================================
+   9. PLAN SWITCH — Interactive spotlight card on pricing.html
+   ========================================================================= */
+.mk-pricing-spotlight {
+  margin-bottom: clamp(20px, 2.8vw, 30px);
+  padding: clamp(18px, 2.4vw, 26px);
+  border-radius: 20px;
+  border: 1px solid var(--brand-line);
+  background: var(--brand-surface);
+  box-shadow: var(--mk-shadow);
+  display: grid;
+  gap: 18px;
+}
+
+.mk-pricing-spotlight-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+}
+
+.mk-plan-switch {
+  position: relative;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--mk-pill-muted);
+  border: 1px solid var(--mk-edge);
+  width: min(100%, 480px);
+}
+
+.mk-plan-switch .mk-rubber-pill {
+  background: var(--mk-pill-bg);
+  box-shadow: 0 4px 12px -4px rgba(18, 18, 22, 0.34);
+}
+
+.product-ui .mk-plan-switch button,
+.mk-plan-switch button {
+  position: relative;
+  z-index: 1;
+  min-height: 36px;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  background-color: transparent;
+  color: var(--brand-muted);
+  font: 650 13px/18px var(--ui-font, Manrope, sans-serif);
+  cursor: pointer;
+  box-shadow: none;
+  white-space: nowrap;
+  transition: color 180ms ease;
+}
+
+.product-ui .mk-plan-switch button:hover:not(:disabled),
+.mk-plan-switch button:hover:not(:disabled) {
+  background: transparent;
+  background-color: transparent;
+  border-color: transparent;
+  color: var(--brand-ink);
+  box-shadow: none;
+  transform: none;
+}
+
+.product-ui .mk-plan-switch button[aria-checked=true],
+.product-ui .mk-plan-switch button[aria-checked=true]:hover,
+.mk-plan-switch button[aria-checked=true],
+.mk-plan-switch button[aria-checked=true]:hover {
+  background: transparent;
+  background-color: transparent;
+  border-color: transparent;
+  color: var(--mk-pill-fg);
+  box-shadow: none;
+}
+
+.mk-pricing-spotlight-body {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px 28px;
+}
+
+.mk-pricing-spotlight-meta {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.mk-plan-price-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.mk-price-drum {
+  display: inline-flex;
+  align-items: baseline;
+  font: 800 clamp(32px, 3.8vw, 46px)/1.05 var(--ui-font, Manrope, sans-serif);
+  letter-spacing: -0.045em;
+  color: var(--brand-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.mk-digit-col {
+  display: inline-block;
+  height: 1.08em;
+  overflow: hidden;
+  vertical-align: bottom;
+}
+
+.mk-digit-strip {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.08em;
+  will-change: transform;
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.mk-digit-sep {
+  display: inline-block;
+  width: 0.28em;
+}
+
+.mk-plan-period {
+  font: 500 14px/18px var(--ui-font, Manrope, sans-serif);
+  color: var(--brand-muted);
+}
+
+.mk-plan-token-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--mk-green-soft);
+  color: var(--mk-green-ink);
+  font: 700 12.5px/16px var(--ui-font, Manrope, sans-serif);
+  will-change: transform;
+}
+
+.mk-plan-caption {
+  margin: 0;
+  font: 450 14px/20px var(--ui-font, Manrope, sans-serif);
+  color: var(--brand-muted);
+}
+
+.mk-plan-bonus-row {
+  overflow: hidden;
+  height: 0;
+  opacity: 0;
+  will-change: height, opacity;
+}
+
+.mk-plan-bonus-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 2px;
+  color: var(--mk-green-ink);
+  font: 600 13.5px/20px var(--ui-font, Manrope, sans-serif);
+}
+
+.mk-plan-bonus-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: var(--mk-green-soft);
+  color: var(--mk-green-ink);
+  font-size: 11px;
+  flex: none;
+  will-change: transform;
+}
+
+.mk-spotlight-cta {
+  width: auto;
+  min-width: 196px;
+  padding-inline: 22px;
+  border-radius: 999px;
+  text-decoration: none;
+}
+
+.pricing-card.mk-plan-highlighted {
+  border-color: color-mix(in srgb, var(--ui-accent, #ea784e) 68%, var(--brand-line));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--ui-accent, #ea784e) 42%, transparent),
+    0 22px 46px -22px color-mix(in srgb, var(--ui-accent, #ea784e) 32%, rgba(0, 0, 0, 0.45)),
+    inset 0 1px 0 var(--ui-highlight);
+}
+
+/* =========================================================================
+   10. NEW PRO-EDITOR: DETENT DIAL (#56) — Rotary 270deg SVG tick dial (#photo-rotation)
+   ========================================================================= */
+.mk-dial-wrap {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--mk-edge);
+  background: var(--mk-pill-muted);
+}
+
+.mk-dial-svg {
+  width: 84px;
+  height: 84px;
+  flex: none;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  overflow: visible;
+}
+
+.mk-dial-svg.is-dragging {
+  cursor: grabbing;
+}
+
+.mk-dial-tick {
+  stroke: var(--brand-muted);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  opacity: 0.48;
+  transition: stroke 120ms ease;
+}
+
+.mk-dial-tick.is-major {
+  stroke-width: 2;
+  opacity: 0.85;
+}
+
+.mk-dial-tick.is-near {
+  stroke: var(--ui-accent, #ea784e);
+  opacity: 1;
+}
+
+.mk-dial-knob {
+  fill: var(--brand-surface);
+  stroke: var(--mk-edge);
+  stroke-width: 1.4;
+}
+
+.mk-dial-needle {
+  stroke: var(--ui-accent, #ea784e);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.mk-dial-info {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.mk-dial-deg {
+  font: 700 20px/24px var(--ui-mono, monospace);
+  color: var(--brand-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.mk-dial-hint {
+  font: 450 11px/15px var(--ui-font, Manrope, sans-serif);
+  color: var(--brand-muted);
+}
+
+/* =========================================================================
+   11. NEW PRO-EDITOR: EXPOSURE SLIDER (#60) — Camera ruler notches (brightness/contrast)
+   ========================================================================= */
+.mk-exposure-slider {
+  position: relative;
+  height: 32px;
+  margin-top: 6px;
+  border-radius: 10px;
+  border: 1px solid var(--mk-edge);
+  background: var(--mk-pill-muted);
+  overflow: hidden;
+  cursor: ew-resize;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.mk-exposure-ruler {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 8px 6px;
+  pointer-events: none;
+}
+
+.mk-exposure-notch {
+  width: 2px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--brand-muted);
+  opacity: 0.36;
+  transition: background-color 140ms ease, height 160ms ease, opacity 140ms ease;
+}
+
+.mk-exposure-notch.is-major {
+  height: 14px;
+  opacity: 0.65;
+}
+
+.mk-exposure-notch.is-lit {
+  background: var(--ui-accent, #ea784e);
+  opacity: 1;
+}
+
+.mk-exposure-needle {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 50%;
+  width: 3px;
+  margin-left: -1.5px;
+  border-radius: 999px;
+  background: var(--ui-accent, #ea784e);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--ui-accent, #ea784e) 65%, transparent);
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* =========================================================================
+   12. NEW PRO-EDITOR: SCRUBBER (#72) — Compact 9-tick drag scrubber
+   ========================================================================= */
+.mk-scrubber {
+  position: relative;
+  height: 28px;
+  margin-top: 5px;
+  border-radius: 9px;
+  border: 1px solid var(--mk-edge);
+  background: var(--mk-pill-muted);
+  overflow: hidden;
+  cursor: ew-resize;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: border-color 180ms ease;
+}
+
+.mk-scrubber:hover,
+.mk-scrubber.is-dragging {
+  border-color: color-mix(in srgb, var(--ui-accent, #ea784e) 58%, transparent);
+}
+
+.mk-scrubber-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0%;
+  background: color-mix(in srgb, var(--ui-accent, #ea784e) 22%, transparent);
+  border-right: 2px solid var(--ui-accent, #ea784e);
+  pointer-events: none;
+  will-change: width;
+}
+
+.mk-scrubber-ticks {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  pointer-events: none;
+}
+
+.mk-scrubber-ticks i {
+  width: 1.5px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--brand-muted);
+  opacity: 0.34;
+}
+
+.mk-scrubber-ticks i.is-lit {
+  background: var(--brand-ink);
+  opacity: 0.78;
+}
+
+/* =========================================================================
+   13. NEW PRO-EDITOR: COPY BUTTON (#38) & UNDO PULSE (#76)
+   ========================================================================= */
+#copy-card-image.is-copied {
+  border-color: var(--mk-green);
+  color: var(--mk-green-ink);
+}
+
+.mk-undo-pulse {
+  animation: mkUndoRing 420ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@keyframes mkUndoRing {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ui-accent, #ea784e) 55%, transparent); transform: scale(0.92); }
+  60%  { box-shadow: 0 0 0 6px transparent; transform: scale(1.06); }
+  100% { box-shadow: 0 0 0 0 transparent; transform: scale(1); }
+}
+
+/* Hide native range visually when upgraded by Jelly / Exposure / Scrubber / Dial, preserving full a11y + tests */
+.studio-range {
+  position: relative;
+}
+
+.studio-range input[type=range].mk-upgraded-range,
+input[type=range].mk-upgraded-range,
+.mk-upgraded-range {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  min-width: 0;
+  max-width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* =========================================================================
+   Responsive & Reduced Motion
+   ========================================================================= */
+@media (max-width: 960px) {
+  .landing-tagline.mk-tagline-with-fan {
+    grid-template-columns: 1fr;
+    gap: 36px;
+  }
+  .mk-fan-stage {
+    height: 290px;
+  }
+}
+
+@media (max-width: 767px) {
+  .mk-fan-stage {
+    height: 265px;
+  }
+  .mk-fan-card {
+    width: 164px;
+    padding: 6px;
+    border-radius: 15px;
+  }
+  .mk-cmd-dropdown {
+    left: 0;
+    right: auto;
+  }
+  .mk-plan-switch {
+    width: 100%;
+  }
+  .product-ui .mk-plan-switch button,
+  .mk-plan-switch button {
+    min-width: 0;
+    font-size: 11.5px;
+    padding: 5px 4px;
+  }
+  .mk-spotlight-cta {
+    width: 100%;
+  }
+}
+
+@media (max-width: 380px) {
+  .mk-fan-card {
+    width: 138px;
+  }
+  .mk-cmd-shell {
+    min-width: 152px;
+  }
+  .product-ui .mk-plan-switch button,
+  .mk-plan-switch button {
+    min-width: 0;
+    font-size: 11px;
+    padding: 5px 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mk-morph-tooltip,
+  .mk-drop-chip,
+  .mk-jelly-drop,
+  .mk-jelly-drop-text,
+  .mk-digit-strip {
+    transition: none;
+  }
+}

@@ -30,7 +30,9 @@
   <script src="local-projects.js" defer></script><script src="editor-tour.js?v=wide-tools-1" defer></script>
   <script src="interface-language.js?v=catalog-design" defer></script>
   <link rel="stylesheet" href="folio.css">
+  <link rel="stylesheet" href="motion-kit.css">
   <script src="product-interface.js" defer></script>
+  <script src="motion-kit.js" defer></script>
 </head>
 <body class="product-ui studio-page">
   <a class="skip-link" href="#main">К редактору</a>
@@ -69,16 +71,16 @@
       </div>
       <div class="studio-project-tools">
         <div class="history-tools" aria-label="История изменений">
-          <button id="undo-button" class="studio-icon-button" type="button" title="Отменить · Ctrl+Z" aria-label="Отменить изменение" disabled><svg class="studio-icon" aria-hidden="true"><use href="#i-undo"/></svg></button>
-          <button id="redo-button" class="studio-icon-button" type="button" title="Повторить · Ctrl+Shift+Z" aria-label="Повторить изменение" disabled><svg class="studio-icon" aria-hidden="true"><use href="#i-redo"/></svg></button>
+          <button id="undo-button" class="studio-icon-button" type="button" title="Отменить · Ctrl+Z" aria-label="Отменить изменение" data-morph-tip="Отменить · Ctrl+Z" data-morph-tip-kk="Болдырмау · Ctrl+Z" disabled><svg class="studio-icon" aria-hidden="true"><use href="#i-undo"/></svg></button>
+          <button id="redo-button" class="studio-icon-button" type="button" title="Повторить · Ctrl+Shift+Z" aria-label="Повторить изменение" data-morph-tip="Повторить · Ctrl+Shift+Z" data-morph-tip-kk="Қайталау · Ctrl+Shift+Z" disabled><svg class="studio-icon" aria-hidden="true"><use href="#i-redo"/></svg></button>
         </div>
         <button id="start-tour" class="studio-quiet-button" type="button" hidden>Подсказки</button>
         <div class="export-controls" aria-label="Экспорт карточки">
           <label><span class="sr-only">Формат изображения</span><select id="export-format"><option value="png">PNG</option><option value="jpeg">JPG</option><option value="webp">WebP</option></select></label>
           <label><span class="sr-only">Масштаб файла</span><select id="export-scale"><option value="1">1×</option><option value="2">2×</option></select></label>
-          <button id="copy-card-image" class="studio-quiet-button studio-copy-image" type="button" title="Скопировать карточку" aria-label="Скопировать карточку в буфер обмена"><svg class="studio-icon" aria-hidden="true"><use href="#i-copy"/></svg><span>Копировать</span></button>
-          <button id="download-button" class="studio-primary-button" type="button"><svg class="studio-icon" aria-hidden="true"><use href="#i-download"/></svg><span>Скачать PNG</span></button>
-          <button id="download-set" class="studio-quiet-button" type="button" title="Скачать весь комплект ZIP" aria-label="Скачать весь комплект ZIP" disabled><span>ZIP</span></button>
+          <button id="copy-card-image" class="studio-quiet-button studio-copy-image" type="button" title="Скопировать карточку" aria-label="Скопировать карточку в буфер обмена" data-morph-tip="Копировать в буфер" data-morph-tip-kk="Алмасу буферіне көшіру"><svg class="studio-icon" aria-hidden="true"><use href="#i-copy"/></svg><span>Копировать</span></button>
+          <button id="download-button" class="studio-primary-button" type="button" data-morph-tip="Клик или удержание — экспорт" data-morph-tip-kk="Басу немесе ұстап тұру — экспорт"><svg class="studio-icon" aria-hidden="true"><use href="#i-download"/></svg><span>Скачать PNG</span></button>
+          <button id="download-set" class="studio-quiet-button" type="button" title="Скачать весь комплект ZIP" aria-label="Скачать весь комплект ZIP" data-morph-tip="Комплект слайдов ZIP" data-morph-tip-kk="Слайдтар жинағы ZIP" disabled><span>ZIP</span></button>
         </div>
       </div>
       <p id="download-status" class="studio-export-status" role="status"></p>
@@ -103,7 +105,7 @@
 
     <div class="studio-layout">
       <div class="studio-command-rail" aria-label="Инструменты карточки">
-        <div class="studio-tool-heading"><div class="studio-tabs" role="tablist" aria-label="Разделы редактора"><button id="tab-photo" type="button" role="tab" data-editor-tab="photo" aria-controls="panel-photo" aria-selected="true"><svg class="studio-icon"><use href="#i-image"/></svg>Фото</button><button id="tab-content" type="button" role="tab" data-editor-tab="content" aria-controls="panel-content" aria-selected="false" tabindex="-1"><svg class="studio-icon"><use href="#i-text"/></svg>Тексты</button><button id="tab-design" type="button" role="tab" data-editor-tab="design" aria-controls="panel-design" aria-selected="false" tabindex="-1"><svg class="studio-icon"><use href="#i-design"/></svg>Дизайн</button><button id="tab-templates" type="button" role="tab" data-editor-tab="templates" aria-controls="panel-templates" aria-selected="false" tabindex="-1"><svg class="studio-icon"><use href="#i-design"/></svg>Шаблоны</button></div><a href="#preview" class="studio-quiet-button tool-canvas-link">К холсту ↑</a></div>
+        <div class="studio-tool-heading"><div class="studio-tabs" role="tablist" aria-label="Разделы редактора"><button id="tab-photo" type="button" role="tab" data-editor-tab="photo" aria-controls="panel-photo" aria-selected="true" data-morph-tip="Фото, свет и поворот" data-morph-tip-kk="Фото, жарық және бұру"><svg class="studio-icon"><use href="#i-image"/></svg>Фото</button><button id="tab-content" type="button" role="tab" data-editor-tab="content" aria-controls="panel-content" aria-selected="false" tabindex="-1" data-morph-tip="Название, цена и плюсы" data-morph-tip-kk="Атау, баға және артықшылықтар"><svg class="studio-icon"><use href="#i-text"/></svg>Тексты</button><button id="tab-design" type="button" role="tab" data-editor-tab="design" aria-controls="panel-design" aria-selected="false" tabindex="-1" data-morph-tip="Палитра, шрифт и формат" data-morph-tip-kk="Палитра, қаріп және пішім"><svg class="studio-icon"><use href="#i-design"/></svg>Дизайн</button><button id="tab-templates" type="button" role="tab" data-editor-tab="templates" aria-controls="panel-templates" aria-selected="false" tabindex="-1" data-morph-tip="24 готовых шаблона" data-morph-tip-kk="24 дайын үлгі"><svg class="studio-icon"><use href="#i-design"/></svg>Шаблоны</button></div><a href="#preview" class="studio-quiet-button tool-canvas-link">К холсту ↑</a></div>
       </div>
       <section id="preview" class="studio-workspace" aria-labelledby="preview-heading">
         <div class="workspace-heading">

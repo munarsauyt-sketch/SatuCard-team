@@ -14,8 +14,10 @@
   <script src="pricing.js?v=pricing-v2" type="module"></script>
   <script src="interface-language.js?v=catalog-design" defer></script>
   <link rel="stylesheet" href="folio.css">
+  <link rel="stylesheet" href="motion-kit.css">
+  <script src="motion-kit.js" defer></script>
 </head>
-<body>
+<body class="product-ui pricing-page">
   <a class="skip-link" href="#main">К содержимому</a>
   <header class="site-header"><div class="container header-inner">
     <a class="brand" href="index.html" aria-label="SatuCard — главная"><img class="brand-logo-icon" src="assets/favicon.svg?v=catalog-design" alt="">SatuCard<span class="brand-dot">.</span></a>
@@ -26,11 +28,36 @@
   </div></header>
   <main id="main" class="container pricing-main">
     <section class="pricing-intro" aria-labelledby="pricing-title">
-      <div>
+      <div class="pricing-intro-copy">
+        <span class="section-caption">Тарифы sAI · без автосписания</span>
         <h1 id="pricing-title">Тарифы<span class="brand-dot">.</span></h1>
         <p>Редактор карточек, все доступные шаблоны и видео Full HD — <strong>0 ₸ навсегда, без водяных знаков</strong>. Подписка открывает генерацию и перевод текстов через ИИ (sAI).</p>
       </div>
       <p class="pricing-banner">Оплата переводом <strong>На карту / Kaspi</strong></p>
+    </section>
+    <section class="mk-pricing-spotlight" aria-label="Быстрое сравнение тарифов sAI">
+      <div class="mk-pricing-spotlight-head">
+        <div class="mk-plan-switch" id="sai-plan-switch" role="radiogroup" aria-label="Выбор тарифа sAI">
+          <button type="button" role="radio" data-sai-plan="basic" aria-checked="false">ИИ Старт</button>
+          <button type="button" role="radio" data-sai-plan="plus" aria-checked="false">ИИ Плюс</button>
+          <button type="button" role="radio" data-sai-plan="max" aria-checked="true">ИИ Макс</button>
+          <button type="button" role="radio" data-sai-plan="max3" aria-checked="false">ИИ Макс ×3</button>
+        </div>
+        <span class="mk-plan-token-badge" id="sai-token-badge">10 млн токенов</span>
+      </div>
+      <div class="mk-pricing-spotlight-body">
+        <div class="mk-pricing-spotlight-meta">
+          <div class="mk-plan-price-row">
+            <strong class="mk-price-drum" id="sai-price-drum" aria-live="polite">4 990 ₸</strong>
+            <span class="mk-plan-period">за 30 дней · без автосписания</span>
+          </div>
+          <p class="mk-plan-caption" id="sai-plan-caption">Полный выбор старших моделей sAI на 30 дней.</p>
+          <div class="mk-plan-bonus-row" id="sai-bonus-row">
+            <div class="mk-plan-bonus-inner"><span class="mk-plan-bonus-check" aria-hidden="true">✓</span><span id="sai-bonus-text">Полный выбор старших моделей sAI</span></div>
+          </div>
+        </div>
+        <a class="pricing-button mk-spotlight-cta" id="sai-plan-cta" href="dashboard.html?plan=max#billing-title">Выбрать тариф</a>
+      </div>
     </section>
     <section id="pricing-plans" class="pricing-grid" aria-label="Тарифы на 30 дней"></section>
     <section id="pricing-packs" class="pricing-packs" aria-label="Шаблоны доступны бесплатно" hidden></section>

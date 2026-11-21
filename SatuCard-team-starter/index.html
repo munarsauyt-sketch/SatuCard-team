@@ -1,14 +1,15 @@
 <!doctype html>
-<html lang="ru" data-default-theme="dark">
+<html lang="ru" data-default-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>SatuCard — карточки товаров и короткие видео из ваших фото</title>
-  <meta name="description" content="Веб-студия для продавцов в Казахстане: создайте карточку товара с ценой в тенге для Kaspi, Instagram и WhatsApp или соберите ролик Full HD прямо в браузере.">
+  <title>SatuCard — Карточка товара из вашего фото</title>
+  <meta name="description" content="Веб-студия для продавцов в Казахстане: добавьте название и цену в тенге, выберите оформление и скачайте PNG прямо в браузере.">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="SatuCard — карточки товаров и короткие видео из ваших фото">
-  <meta property="og:description" content="Добавьте фото товара и цену в тенге, выберите стиль и скачайте карточку PNG или видео MP4 Full HD без водяных знаков.">
-  <meta property="og:image" content="assets/images/ceramics-card.webp">
+  <meta property="og:title" content="SatuCard — Карточка товара из вашего фото">
+  <meta property="og:description" content="Добавьте название и цену в тенге, выберите оформление и скачайте PNG без водяных знаков.">
+  <meta property="og:image" content="assets/images/perfume.jpg">
+  <link rel="preload" as="image" href="assets/images/perfume.jpg" fetchpriority="high">
   <link rel="icon" href="assets/favicon.svg?v=catalog-design" type="image/svg+xml">
   <script src="theme.js?v=guide-20261105"></script>
   <link rel="stylesheet" href="brand.css?v=catalog-design">
@@ -23,13 +24,16 @@
   <script src="studio-project.js?v=studio-refresh-1" defer></script>
   <script src="home-export.js" defer></script>
   <script src="home-studio.js?v=quick-studio" defer></script>
+  <script type="module" src="hero-3d.js"></script>
   <script src="showcase.js" defer></script>
   <script src="intro.js?v=20261030" defer></script>
   <script src="interface-language.js?v=quick-studio" defer></script>
   <link rel="stylesheet" href="folio.css">
   <link rel="stylesheet" href="hero-depth.css">
+  <link rel="stylesheet" href="motion-kit.css">
   <script src="product-interface.js" defer></script>
   <script src="home-motion.js" defer></script>
+  <script src="motion-kit.js" defer></script>
 </head>
 <body class="product-ui preview-home">
 <a class="skip-link" href="#main">К содержимому</a>
@@ -42,69 +46,35 @@
 </div></header>
 <main id="main">
   <section class="mark-hero" aria-labelledby="home-title">
+    <div class="hero-studio-backdrop" aria-hidden="true"></div>
     <div class="container cover-spread">
       <div class="cover-copy">
-        <div class="cover-pill"><span class="ink-mark" aria-hidden="true"></span><span>Для продавцов из Казахстана</span></div>
-        <h1 id="home-title">Карточка товара <span>из вашего фото</span></h1>
-        <p>Загрузите снимок, добавьте цену в тенге и выберите оформление. Готово для Kaspi, Instagram и WhatsApp прямо в браузере.</p>
+        <h1 id="home-title">Карточка товара из вашего фото</h1>
+        <p>Добавьте название и цену в тенге, выберите оформление и скачайте PNG</p>
         <div class="cover-actions">
-          <a class="button cover-primary" href="#quick-start"><span>Создать карточку</span><span class="cta-arrow-badge" aria-hidden="true">↓</span></a>
-        </div>
-        <ul class="hero-facts" aria-label="Условия работы">
-          <li><span>0 ₸ без водяных знаков</span></li>
-          <li><span>Без регистрации</span></li>
-          <li><span>PNG, JPEG, WebP и MP4 Full HD</span></li>
-        </ul>
-        <div class="cover-picker-row"><span>Выберите товар</span>
-          <div class="cover-picker" role="group" aria-label="Выбор товара" hidden>
-            <button type="button" data-cover-product="ceramics" data-style="studio" aria-label="Посуда" aria-pressed="true"><img src="assets/images/ceramics.jpg" width="64" height="64" alt=""></button>
-            <button type="button" data-cover-product="headphones" data-style="blueprint" aria-label="Наушники" aria-pressed="false"><img src="assets/images/headphones.jpg" width="64" height="64" alt=""></button>
-            <button type="button" data-cover-product="skincare" data-style="bloom" aria-label="Косметика" aria-pressed="false"><img src="assets/images/skincare.jpg" width="64" height="64" alt=""></button>
-          </div>
+          <a class="button cover-primary" id="hero-create-cta" href="#quick-start"><span>Создать карточку</span></a>
         </div>
       </div>
-      <figure class="cover-frame">
-        <div class="showcase-stage">
-          <div class="landing-depth" aria-hidden="true">
-            <div class="landing-grid"></div>
-            <div class="landing-glow landing-glow-warm"></div>
-            <div class="landing-glow landing-glow-amber"></div>
-            <div class="landing-noise"></div>
-          </div>
-          <div class="source-print showcase-badge showcase-glass">
-            <img id="cover-original" src="assets/images/ceramics.jpg" width="800" height="1200" alt="Фотография керамической чашки">
-            <span class="source-caption"><span class="showcase-badge-icon" aria-hidden="true">↗</span><span class="showcase-badge-term">Исходное фото</span></span>
-          </div>
-          <div class="result-print showcase-sheet">
-            <span class="print-label showcase-demo">Готовая карточка</span>
-            <div class="cover-art" data-product="ceramics" style="--split:0%">
-              <img id="cover-photo" src="assets/images/ceramics-card.webp" width="720" height="900" alt="Карточка керамической чашки" fetchpriority="high">
-              <canvas id="cover-card" role="img" aria-label="Пример готовой карточки" hidden></canvas>
-              <div class="cover-comparison" hidden>
-                <div class="compare-line" aria-hidden="true"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m8 8-4 4 4 4m8-8 4 4-4 4M11 7v10m2-10v10"/></svg></span></div>
-                <input id="cover-compare" type="range" min="0" max="100" value="0" aria-label="Сравнить исходное фото и готовую карточку" aria-describedby="cover-compare-hint">
-              </div>
+      <figure class="cover-frame" data-hero-stage="idle" data-hero-mode="2d">
+        <div class="hero-stage">
+          <div class="hero-3d-viewport" id="hero-3d-viewport" hidden></div>
+          <div class="hero-card-rig" id="hero-card-rig">
+            <div class="hero-card-shadow" id="hero-card-shadow" aria-hidden="true"></div>
+            <div class="hero-card-surface" id="hero-card-surface">
+              <img id="cover-photo" src="assets/images/perfume.jpg" width="1200" height="1500" alt="Флакон парфюма Atelier 100 мл на каменном подиуме" fetchpriority="high">
+              <canvas id="cover-card" role="img" aria-label="Карточка товара «Парфюм Atelier 100 мл» — 21 500 ₸" hidden></canvas>
             </div>
           </div>
         </div>
-        <figcaption>
-          <div class="print-summary showcase-glass showcase-offer">
-            <div class="print-info"><span class="exposure" aria-hidden="true">01 / 03</span><button id="cover-open" type="button" aria-label="Открыть пример в редакторе" hidden><span id="cover-name" data-product-label>Керамическая чашка</span><span aria-hidden="true"> ↗</span></button></div>
-            <div class="showcase-price"><span class="sr-only showcase-offer-label">Цена, ₸</span><strong id="cover-price">4 500 ₸</strong><del id="cover-old-price">5 900 ₸</del></div>
+        <figcaption class="hero-style-dock">
+          <div class="hero-style-bar" role="group" aria-label="Выбор стиля карточки" hidden>
+            <button type="button" data-cover-style="studio" aria-pressed="true"><i class="swatch-studio" aria-hidden="true"></i><span>Студия</span></button>
+            <button type="button" data-cover-style="noir" aria-pressed="false"><i class="swatch-noir" aria-hidden="true"></i><span>Нуар</span></button>
+            <button type="button" data-cover-style="bold" aria-pressed="false"><i class="swatch-bold" aria-hidden="true"></i><span>Постер</span></button>
+            <span class="hero-dock-divider" id="hero-dock-divider" aria-hidden="true" hidden></span>
+            <button type="button" id="hero-explode-toggle" class="hero-explode-btn" data-cover-explode aria-pressed="false" hidden><svg viewBox="0 0 18 18" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 2.4 15.4 6 9 9.6 2.6 6 9 2.4Z"/><path d="M2.6 9.3 9 12.9l6.4-3.6"/><path d="M2.6 12.6 9 16.2l6.4-3.6"/></svg><span>Слои 3D</span></button>
           </div>
-          <div class="showcase-toolbar">
-            <span class="showcase-caption">Сравнение</span>
-            <div class="cover-switch" role="group" aria-label="Режим просмотра" hidden>
-              <button type="button" data-cover-mode="photo" aria-pressed="false">Фото</button>
-              <button type="button" data-cover-mode="card" aria-pressed="false">Карточка</button>
-            </div>
-            <button type="button" class="showcase-motion" aria-label="Остановить анимацию" aria-pressed="false" hidden><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path class="motion-pause" d="M7 4v12M13 4v12"/><path class="motion-play" d="m7 4 9 6-9 6V4Z"/></svg></button>
-          </div>
-          <div class="showcase-exports" hidden>
-            <button type="button" id="cover-png" aria-label="Скачать пример карточки в PNG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4"/></svg>PNG</button>
-            <button type="button" id="cover-video" aria-label="Перенести пример в видеостудию"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m10 9 5 3-5 3V9Z"/></svg><span>Видео</span></button>
-          </div>
-          <div class="compare-help" id="cover-compare-hint" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 12h18m-4-4 4 4-4 4M7 8l-4 4 4 4"/></svg><span>Двигайте ползунок — смотрите разницу</span></div>
+          <p class="hero-3d-hint" id="hero-3d-hint" hidden>Потяните карточку для вращения · «Слои 3D» — разбор карточки</p>
           <span id="cover-status" class="sr-only" role="status"></span>
         </figcaption>
       </figure>
@@ -126,7 +96,7 @@
           </div>
 
           <div class="quick-drop" id="quick-drop">
-            <img id="quick-photo" src="assets/images/ceramics.jpg" width="64" height="64" alt="">
+            <img id="quick-photo" src="assets/images/perfume.jpg" width="64" height="64" alt="">
             <div>
               <button class="button button-orange quick-upload" id="quick-upload" type="button">
                 <span aria-hidden="true">↑</span><span id="quick-upload-label">Загрузить фото</span>
@@ -137,8 +107,8 @@
           </div>
 
           <div class="quick-fields">
-            <label>Название товара<input id="quick-title" type="text" maxlength="60" placeholder="Название вашего товара" value="Керамическая чашка"></label>
-            <label>Цена, ₸<input id="quick-price" type="text" inputmode="decimal" maxlength="18" placeholder="Без цены" value="4900" aria-describedby="quick-status"></label>
+            <label>Название товара<input id="quick-title" type="text" maxlength="60" placeholder="Название вашего товара" value="Парфюм Atelier 100 мл"></label>
+            <label>Цена, ₸<input id="quick-price" type="text" inputmode="decimal" maxlength="18" placeholder="Без цены" value="21500" aria-describedby="quick-status"></label>
           </div>
 
           <fieldset class="hero-style-picker">
@@ -157,7 +127,7 @@
           <div class="quick-result-top"><span>Предпросмотр</span><span class="quick-ratio">4:5 · PNG</span></div>
           <div class="quick-canvas render-wrap">
             <canvas id="hero-card" role="img" aria-label="Предпросмотр товарной карточки"></canvas>
-            <img class="canvas-fallback" src="assets/images/ceramics.jpg" alt="Фотография керамической чашки">
+            <img class="canvas-fallback" src="assets/images/perfume.jpg" alt="Фотография парфюма Atelier 100 мл">
           </div>
           <div class="quick-result-actions">
             <button class="button button-orange quick-download" id="quick-png" type="button" disabled>Скачать PNG</button>
@@ -171,9 +141,25 @@
     </div>
   </section>
 
-  <section class="container landing-tagline" aria-labelledby="tagline-heading">
-    <span class="section-caption">Один рабочий процесс</span>
-    <h2 id="tagline-heading" class="tagline-statement" data-tagline-reveal data-product-label data-tagline-ru="Одно фото с телефона превращается в аккуратную карточку, комплект слайдов и короткий ролик для вашего магазина." data-tagline-kk="Телефондағы бір фото дүкеніңізге арналған ұқыпты карточкаға, слайдтар жинағына және қысқа бейнероликке айналады.">Одно фото с телефона превращается в аккуратную карточку, комплект слайдов и короткий ролик для вашего магазина.</h2>
+  <section class="container landing-tagline mk-tagline-with-fan" aria-labelledby="tagline-heading">
+    <div class="tagline-copy-col">
+      <span class="section-caption">Один рабочий процесс</span>
+      <h2 id="tagline-heading" class="tagline-statement" data-tagline-reveal data-product-label data-tagline-ru="Одно фото с телефона превращается в аккуратную карточку, комплект слайдов и короткий ролик для вашего магазина." data-tagline-kk="Телефондағы бір фото дүкеніңізге арналған ұқыпты карточкаға, слайдтар жинағына және қысқа бейнероликке айналады.">Одно фото с телефона превращается в аккуратную карточку, комплект слайдов и короткий ролик для вашего магазина.</h2>
+    </div>
+    <div class="mk-fan-stage" id="fan-deck" aria-label="Веер примеров карточек">
+      <a class="mk-fan-card" data-fan-template="studio" data-fan-photo="perfume" href="editor.html?style=studio&amp;photo=perfume">
+        <div class="mk-fan-card-head"><span class="mk-fan-card-num">01</span><span class="mk-fan-card-title">Студия</span></div>
+        <div class="mk-fan-card-canvas-wrap"><canvas aria-label="Карточка в стиле Студия"></canvas></div>
+      </a>
+      <a class="mk-fan-card" data-fan-template="noir" data-fan-photo="jewelry" href="editor.html?style=noir&amp;photo=jewelry">
+        <div class="mk-fan-card-head"><span class="mk-fan-card-num">02</span><span class="mk-fan-card-title">Нуар</span></div>
+        <div class="mk-fan-card-canvas-wrap"><canvas aria-label="Карточка в стиле Нуар"></canvas></div>
+      </a>
+      <a class="mk-fan-card" data-fan-template="bold" data-fan-photo="bag" href="editor.html?style=bold&amp;photo=bag">
+        <div class="mk-fan-card-head"><span class="mk-fan-card-num">03</span><span class="mk-fan-card-title">Постер</span></div>
+        <div class="mk-fan-card-canvas-wrap"><canvas aria-label="Карточка в стиле Постер"></canvas></div>
+      </a>
+    </div>
   </section>
 
   <section class="container landing-benefits" aria-labelledby="benefits-title" data-reveal>

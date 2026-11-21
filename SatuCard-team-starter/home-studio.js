@@ -4,10 +4,10 @@
   const $ = id => document.getElementById(id);
   const form = $('home-studio'), renderer = window.SATUCARD_RENDERER;
   const project = window.SATUCARD_PROJECT, importer = window.SATUCARD_PHOTO_IMPORT;
-  const sample = window.SATUCARD_SAMPLES?.ceramics;
+  const sample = window.SATUCARD_SAMPLES?.perfume || window.SATUCARD_SAMPLES?.sneaker || window.SATUCARD_SAMPLES?.ceramics;
   if (!form || !renderer || !project || !importer || !sample) return;
 
-  const demoUrl = 'assets/images/ceramics.jpg';
+  const demoUrl = window.SATUCARD_SAMPLES?.perfume ? 'assets/images/perfume.jpg' : (window.SATUCARD_SAMPLES?.sneaker ? 'assets/images/sneaker.jpg' : 'assets/images/ceramics.jpg');
   const file = $('quick-file'), upload = $('quick-upload'), example = $('quick-example');
   const title = $('quick-title'), price = $('quick-price'), canvas = $('hero-card');
   const thumbnail = $('quick-photo'), open = $('quick-open'), drop = $('quick-drop'), result = $('quick-result');
@@ -149,6 +149,7 @@
     }
     setBusy(true);
     setStatus('Читаем фото…');
+    document.dispatchEvent(new CustomEvent('satucard:quick-upload-start', { detail: { name: selected.name } }));
     try {
       const blob = await importer.convert(selected);
       const url = URL.createObjectURL(blob);
@@ -178,8 +179,10 @@
       photoKey = crypto.randomUUID(); edited();
       await saveQuick();
       if (backup.hidden) setStatus('Фото загружено. Добавьте данные товара.');
+      document.dispatchEvent(new CustomEvent('satucard:quick-upload-done', { detail: { ok: true } }));
       title.focus({ preventScroll: true });
     } catch (_) {
+      document.dispatchEvent(new CustomEvent('satucard:quick-upload-done', { detail: { ok: false } }));
       setStatus('Не удалось прочитать фото. Попробуйте другой файл.', true);
     } finally {
       setBusy(false);
@@ -221,6 +224,14 @@
     paint();
     edited();
   }));
+  document.addEventListener('satucard:hero-style', event => {
+    const next = event.detail?.style;
+    if (next && styles.some(button => button.dataset.heroStyle === next)) {
+      template = next;
+      styles.forEach(item => item.setAttribute('aria-pressed', String(item.dataset.heroStyle === next)));
+      if (image) { paint(); edited(); }
+    }
+  });
 
   function readyToExport() {
     if (busy || !image) return false;
@@ -238,6 +249,7 @@
     try {
       await window.downloadHomeCard(settings(), image, title.value.trim() || 'SatuCard');
       setStatus('PNG готов. Файл передан браузеру для скачивания.');
+      document.dispatchEvent(new CustomEvent('satucard:quick-png-done'));
     } catch (_) {
       setStatus('Не удалось создать PNG. Попробуйте ещё раз.', true);
     } finally { setBusy(false); }

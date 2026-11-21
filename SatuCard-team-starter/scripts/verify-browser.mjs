@@ -50,6 +50,8 @@ try {
     const savedCard = () => page.evaluate(() => JSON.parse(window.SATUCARD_EDITOR.snapshot(true).serialized));
     const beforeReturn = await savedCard();
     await page.locator('header .brand').click();
+    await page.waitForURL(url => url.pathname === '/index.html');
+    await page.waitForLoadState('domcontentloaded');
     const editorLink = page.locator('#main-nav a[href*="editor.html"]');
     const menu = page.locator('[data-menu-toggle]');
     if (await menu.isVisible()) await menu.click();
@@ -109,8 +111,10 @@ try {
     assert.equal(await (await download).failure(), null);
     await page.goto(origin + '/index.html');
     assert.equal(await page.locator('#cover-zoom').count(), 0);
-    await page.locator('[data-cover-mode=card]').click();
-    await page.locator('#cover-card:visible').waitFor();
+    await page.locator('.cover-frame[data-hero-stage=ready]').waitFor();
+    await page.locator('[data-cover-style=noir]').click();
+    assert.equal(await page.locator('.cover-frame').getAttribute('data-active-style'), 'noir');
+    await page.locator(width < 768 ? '#cover-card:visible' : '.hero-3d-canvas:visible').waitFor();
     for (const path of ['examples.html', 'pricing.html']) {
       await page.goto(origin + '/' + path);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width);
