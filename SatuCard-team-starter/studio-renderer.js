@@ -5,30 +5,30 @@
 (() => {
   const root = typeof window === 'undefined' ? globalThis : window;
   const templates = {
-    studio: { label: 'Студия', description: 'Мягкий свет и спокойный фон', background: '#e7ecdf', accent: '#4e6846', textColor: '#243322' },
-    accent: { label: 'Терракота', description: 'Тёплый цвет и выразительные формы', background: '#f4b99f', accent: '#b63b28', textColor: '#42261d' },
-    minimal: { label: 'Минимал', description: 'Чистая композиция для каталога', background: '#faf9f6', accent: '#697966', textColor: '#232b24' },
-    noir: { label: 'Нуар', description: 'Тёмный фон и золотые детали', background: '#171a1b', accent: '#d8b675', textColor: '#f4ede0' },
-    neon: { label: 'Неон', description: 'Светящиеся линии и цифровой ритм', background: '#071522', accent: '#45e5da', textColor: '#eaffff' },
-    editorial: { label: 'Журнал', description: 'Крупная типографика и разворот', background: '#eee9df', accent: '#b44836', textColor: '#292720' },
-    bloom: { label: 'Цветение', description: 'Пастельная палитра и мягкие круги', background: '#ece3f5', accent: '#8759bd', textColor: '#402c57' },
-    bold: { label: 'Постер', description: 'Контраст, крупный текст и характер', background: '#f1f35b', accent: '#ed5d32', textColor: '#20221b' },
-    showcase: { label: 'Витрина', description: 'Тёплый фон и рамка вокруг товара', background: '#fff4e5', accent: '#a4482c', textColor: '#39231d' },
-    blueprint: { label: 'Чертёж', description: 'Индиго, тонкая сетка и разворот', background: '#17254b', accent: '#9fd5ff', textColor: '#eff6ff', layout: 'editorial' },
-    matcha: { label: 'Матча', description: 'Оливковый фон с мягкими арками', background: '#e8edcb', accent: '#486134', textColor: '#25351d' },
-    pop: { label: 'Поп-арт', description: 'Кобальт, лайм и крупная геометрия', background: '#2937b8', accent: '#e9fc78', textColor: '#ffffff' },
-    graphite: { label: 'Графит', description: 'Монохромный разворот с холодным акцентом', background: '#212427', accent: '#a8ccdb', textColor: '#f3f4f4', layout: 'editorial' },
-    cloud: { label: 'Облако', description: 'Ледяной градиент и воздушные кольца', background: '#e8f7ff', accent: '#24619a', textColor: '#183858' },
-    porcelain: { label: 'Фарфор', description: 'Фото сверху и тонкая окантовка', background: '#f8f3e9', accent: '#695a46', textColor: '#302920', layout: 'photo-first', surface: 'paper', frame: 'line' },
-    espresso: { label: 'Эспрессо', description: 'Фото слева на кофейном фоне', background: '#2c211d', accent: '#e0a779', textColor: '#fff2e6', layout: 'photo-left', surface: 'spotlight', frame: 'mat' },
-    cobalt: { label: 'Кобальт', description: 'Яркий фон и световые полосы', background: '#192e85', accent: '#a9c7ff', textColor: '#f6f8ff', surface: 'rays', frame: 'line' },
-    citrus: { label: 'Цитрус', description: 'Солнечный акцент и крупное фото', background: '#fff2aa', accent: '#c25c20', textColor: '#392a23', layout: 'photo-first', surface: 'blocks' },
-    mineral: { label: 'Минерал', description: 'Крупная сетка и холодный разворот', background: '#dfe7e9', accent: '#4c6478', textColor: '#22313d', layout: 'editorial', surface: 'grid' },
-    blush: { label: 'Румянец', description: 'Розовый градиент и широкое паспарту', background: '#f7e1e8', accent: '#a23c61', textColor: '#512b40', surface: 'gradient', frame: 'mat' },
-    midnight: { label: 'Полночь', description: 'Тёмная обложка с кругами света', background: '#1b162a', accent: '#cda4ff', textColor: '#f8f1ff', layout: 'photo-first', surface: 'rings', frame: 'none' },
-    linen: { label: 'Лён', description: 'Фото слева и фактура бумаги', background: '#ece4d3', accent: '#7c632f', textColor: '#332d21', layout: 'photo-left', surface: 'paper', frame: 'none' },
-    jade: { label: 'Нефрит', description: 'Зелёный разворот с мягким свечением', background: '#173d35', accent: '#a0d5b6', textColor: '#edf7ec', layout: 'editorial', surface: 'spotlight', frame: 'line' },
-    cherry: { label: 'Вишня', description: 'Цветные блоки и контрастный ценник', background: '#871e39', accent: '#ffc7a8', textColor: '#fff5ee', surface: 'blocks', frame: 'mat' }
+    studio:    { label: 'Студия',    description: 'Тёплый свет, мягкий подиум и чистая сетка',        background: '#f2efe9', accent: '#3d5f47', textColor: '#1b241d', priceStyle: 'filled', featureStyle: 'chips',    frame: 'line' },
+    accent:    { label: 'Терракота', description: 'Тёплый глиняный тон и архитектурная тень',        background: '#f6e1d3', accent: '#b83e1f', textColor: '#2d1a14', priceStyle: 'filled', featureStyle: 'accent',   shadow: 'deep' },
+    minimal:   { label: 'Минимал',   description: 'Музейная белизна и точные разделители',           background: '#faf9f7', accent: '#3d4741', textColor: '#171b18', priceStyle: 'plain',  featureStyle: 'numbered' },
+    noir:      { label: 'Нуар',      description: 'Обсидиан, шампанское золото и студийный свет',    background: '#111215', accent: '#d6b16b', textColor: '#f5efe3', priceStyle: 'outline',featureStyle: 'accent',   frame: 'line' },
+    neon:      { label: 'Неон',      description: 'Глубокий тёмный неон и техно-сетка',              background: '#08121d', accent: '#2ce4d4', textColor: '#ecfeff', priceStyle: 'filled', featureStyle: 'chips',    titleCase: 'upper' },
+    editorial: { label: 'Журнал',    description: 'Асимметричный журнальный разворот',               background: '#f1ece2', accent: '#b44329', textColor: '#221f1a', layout: 'editorial', priceStyle: 'plain', featureStyle: 'numbered' },
+    bloom:     { label: 'Цветение',  description: 'Мягкий ирисовый свет и плавная рамка',            background: '#f2ecfa', accent: '#6d45ad', textColor: '#2a1d3e', priceStyle: 'pill',   featureStyle: 'chips' },
+    bold:      { label: 'Постер',    description: 'Швейцарский постер и дерзкий контраст',           background: '#edf05a', accent: '#d84522', textColor: '#161714', priceStyle: 'filled', featureStyle: 'accent',   titleCase: 'upper', titleWeight: 'heavy' },
+    showcase:  { label: 'Витрина',   description: 'Галерейная рамка и тёплый подиум',                background: '#fbf5ec', accent: '#ab4624', textColor: '#2c1e18', priceStyle: 'filled', featureStyle: 'chips',    frame: 'mat' },
+    blueprint: { label: 'Чертёж',    description: 'Инженерная сетка индиго и точный разворот',       background: '#101d3b', accent: '#7ec4ff', textColor: '#eef6ff', layout: 'editorial', priceStyle: 'outline', featureStyle: 'numbered' },
+    matcha:    { label: 'Матча',     description: 'Ботанический фон с мягкой студийной аркой',       background: '#edf2e4', accent: '#335936', textColor: '#1c2b1d', priceStyle: 'pill',   featureStyle: 'chips' },
+    pop:       { label: 'Поп-арт',   description: 'Ультрамарин, лайм и современная графика',         background: '#1e2ca8', accent: '#e2fd5c', textColor: '#ffffff', priceStyle: 'filled', featureStyle: 'chips',    titleCase: 'upper' },
+    graphite:  { label: 'Графит',    description: 'Матовый титан и строгий разворот',                background: '#181b1f', accent: '#90c5d8', textColor: '#f2f4f6', layout: 'editorial', priceStyle: 'filled', featureStyle: 'accent' },
+    cloud:     { label: 'Облако',    description: 'Скандинавский воздух и световые кольца',          background: '#edf6fc', accent: '#1f5e99', textColor: '#132d47', priceStyle: 'pill',   featureStyle: 'chips' },
+    porcelain: { label: 'Фарфор',    description: 'Фото сверху, фактура бумаги и тонкий контур',     background: '#f8f4ec', accent: '#73583c', textColor: '#2b241c', layout: 'photo-first', surface: 'paper',     frame: 'line', priceStyle: 'plain',   featureStyle: 'numbered' },
+    espresso:  { label: 'Эспрессо',  description: 'Фото слева, кофейный свет и паспарту',            background: '#1f1714', accent: '#e2a372', textColor: '#fff2e6', layout: 'photo-left',  surface: 'spotlight', frame: 'mat',  priceStyle: 'outline', featureStyle: 'accent' },
+    cobalt:    { label: 'Кобальт',   description: 'Глубокий кобальт и диагональные лучи света',      background: '#132678', accent: '#9fc3ff', textColor: '#f6f8ff', surface: 'rays',      frame: 'line', priceStyle: 'filled',  featureStyle: 'chips' },
+    citrus:    { label: 'Цитрус',    description: 'Солнечные блоки и крупное фото сверху',           background: '#fbf0c6', accent: '#be5016', textColor: '#2f2119', layout: 'photo-first', surface: 'blocks',   priceStyle: 'filled',  featureStyle: 'accent' },
+    mineral:   { label: 'Минерал',   description: 'Архитектурная сетка и холодный разворот',         background: '#e4ebee', accent: '#3b566b', textColor: '#1c2a35', layout: 'editorial',   surface: 'grid',     priceStyle: 'outline', featureStyle: 'numbered' },
+    blush:     { label: 'Румянец',   description: 'Шёлковый градиент и широкое паспарту',            background: '#f8e9ef', accent: '#9b355c', textColor: '#3f2030', surface: 'gradient',  frame: 'mat',  priceStyle: 'pill',    featureStyle: 'chips' },
+    midnight:  { label: 'Полночь',   description: 'Бархатная полночь, аура и фото сверху',           background: '#151026', accent: '#c79dff', textColor: '#f8f2ff', layout: 'photo-first', surface: 'rings',    frame: 'none', priceStyle: 'pill',    featureStyle: 'chips' },
+    linen:     { label: 'Лён',       description: 'Тёплый лён, фактура бумаги и фото слева',         background: '#efe8da', accent: '#755b2c', textColor: '#2b251b', layout: 'photo-left',  surface: 'paper',    frame: 'none', priceStyle: 'plain',   featureStyle: 'numbered' },
+    jade:      { label: 'Нефрит',    description: 'Глубокий нефрит, мягкий луч и разворот',          background: '#0f2f29', accent: '#8fd4b2', textColor: '#edf8f2', layout: 'editorial',   surface: 'spotlight',frame: 'line', priceStyle: 'outline', featureStyle: 'accent' },
+    cherry:    { label: 'Вишня',     description: 'Бархатный бордо, цветовые блоки и паспарту',      background: '#65152c', accent: '#ffc2a4', textColor: '#fff5ef', surface: 'blocks',    frame: 'mat',  priceStyle: 'filled',  featureStyle: 'chips' }
   };
   const fonts = {
     manrope: { label: 'Manrope', family: 'Manrope' },
@@ -47,14 +47,14 @@
   const categories = { generic: { label: 'Любой товар' }, electronics: { label: 'Электроника' }, clothing: { label: 'Одежда' }, beauty: { label: 'Красота' }, home: { label: 'Дом' } };
   const designChoices = {
     layout: ['template', 'stacked', 'photo-first', 'editorial', 'photo-left'],
-    backdrop: ['template', 'solid', 'gradient', 'spotlight', 'grid', 'paper'],
+    backdrop: ['template', 'solid', 'gradient', 'spotlight', 'mesh', 'grid', 'dots', 'paper'],
     border: ['none', 'line', 'double'],
     photoFrame: ['template', 'none', 'line', 'mat'],
     shadow: ['template', 'none', 'soft', 'deep'],
     titleWeight: ['template', 'medium', 'bold', 'heavy'],
     titleCase: ['template', 'original', 'upper'],
-    featureStyle: ['template', 'plain', 'numbered', 'chips'],
-    priceStyle: ['template', 'plain', 'filled', 'outline']
+    featureStyle: ['template', 'plain', 'numbered', 'chips', 'accent'],
+    priceStyle: ['template', 'plain', 'filled', 'outline', 'pill']
   };
   const clamp = (value, min, max, fallback) => {
     if (value === null || value === undefined || value === '') return fallback;
@@ -144,6 +144,12 @@
   function line(ctx, x1, y1, x2, y2, color, width = 1) {
     ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.strokeStyle = color; ctx.lineWidth = width; ctx.stroke();
   }
+  function cornerTicks(ctx, x, y, w, h, len, color, weight = 1.5) {
+    line(ctx, x, y, x + len, y, color, weight); line(ctx, x, y, x, y + len, color, weight);
+    line(ctx, x + w, y, x + w - len, y, color, weight); line(ctx, x + w, y, x + w, y + len, color, weight);
+    line(ctx, x, y + h, x + len, y + h, color, weight); line(ctx, x, y + h, x, y + h - len, color, weight);
+    line(ctx, x + w, y + h, x + w - len, y + h, color, weight); line(ctx, x + w, y + h, x + w, y + h - len, color, weight);
+  }
   const fontFamily = state => `${fonts[state.font].family}, Arial, sans-serif`;
   function font(ctx, state, size, weight = 600) {
     ctx.font = `${weight} ${size}px ${fontFamily(state)}`;
@@ -199,138 +205,217 @@
     });
     return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
   }
-  function label(ctx, state, value, x, y, color, size = 16) {
-    font(ctx, state, size, 750); ctx.fillStyle = color || state.textColor; ctx.textBaseline = 'top'; ctx.textAlign = 'left'; ctx.fillText(value, x, y);
+  function contrastRatio(a, b) {
+    const la = luminance(a), lb = luminance(b);
+    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
   }
-  function pill(ctx, state, value, x, y, maxWidth, fill, color, size = 18) {
-    font(ctx, state, size, 750);
-    while (ctx.measureText(value).width + 32 > maxWidth && size > 11) { size -= 0.5; font(ctx, state, size, 750); }
-    const width = Math.min(maxWidth, ctx.measureText(value).width + 32);
-    const height = size + 22;
-    box(ctx, x, y, width, height, height / 2, fill);
-    ctx.fillStyle = color; ctx.textBaseline = 'middle'; ctx.fillText(value, x + 16, y + height / 2); ctx.textBaseline = 'top';
+  function label(ctx, state, value, x, y, color, size = 16) {
+    font(ctx, state, size, 700); ctx.fillStyle = color || state.textColor; ctx.textBaseline = 'top'; ctx.textAlign = 'left'; ctx.fillText(value, x, y);
+  }
+  function pill(ctx, state, value, x, y, maxWidth, fill, color, size = 18, stroke = null) {
+    font(ctx, state, size, 700);
+    const padX = 18;
+    while (ctx.measureText(value).width + padX * 2 > maxWidth && size > 12) { size -= 0.5; font(ctx, state, size, 700); }
+    const width = Math.min(maxWidth, ctx.measureText(value).width + padX * 2);
+    const height = Math.max(36, size + 20);
+    const r = ['bold', 'blueprint', 'pop'].includes(state.template) ? 8 : height / 2;
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.18)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 4;
+    ctx.lineWidth = stroke ? 1.5 : 0;
+    box(ctx, x, y, width, height, r, fill, stroke);
+    ctx.restore();
+    ctx.fillStyle = color; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+    ctx.fillText(value, x + padX, y + height / 2 + 0.5);
+    ctx.textBaseline = 'top';
     return { width, height };
   }
-  function brand(ctx, state, assets, y = 38) {
+  function brand(ctx, state, assets, y = 36) {
     if (!state.showBrand) return;
     let x = 54;
     const image = assets.logo;
     if (image && (image.naturalWidth || image.width) > 0) {
       const width = image.naturalWidth || image.width, height = image.naturalHeight || image.height;
-      const ratio = Math.min(40 / width, 40 / height);
+      const ratio = Math.min(38 / width, 38 / height);
       ctx.drawImage(image, x, y, width * ratio, height * ratio);
-      x += 52;
+      x += 50;
+    } else {
+      // Subtle editorial brand dot mark
+      box(ctx, x, y + 11, 10, 10, 3, state.accent);
+      x += 20;
     }
-    fitText(ctx, state, state.brandName, { x, y: y + 4, width: 470, height: 32 }, { size: 22, minSize: 16, weight: 800, align: 'left' });
+    fitText(ctx, state, state.brandName, { x, y: y + 5, width: 470, height: 30 }, { size: 20, minSize: 15, weight: 750, align: 'left', color: rgba(state.textColor, 0.88) });
   }
 
   function background(ctx, state, height) {
     ctx.fillStyle = state.background; ctx.fillRect(0, 0, 900, height);
     const accent = state.accent;
+    const dark = !lightColor(state.background);
     const surface = state.design?.backdrop || templates[state.template].surface;
-    if (surface) {
+    if (surface && surface !== 'solid') {
       const intensity = (state.design?.texture ?? 50) / 50;
       const shade = (alpha, color = accent) => rgba(color, Math.min(1, alpha * intensity));
-      if (surface === 'gradient' || surface === 'spotlight') {
-        const gradient = surface === 'gradient' ? ctx.createLinearGradient(60, 0, 840, height)
-          : ctx.createRadialGradient(540, height * .47, 30, 540, height * .47, 690);
-        gradient.addColorStop(0, shade(surface === 'gradient' ? .24 : .46));
-        gradient.addColorStop(1, shade(0));
-        ctx.fillStyle = gradient; ctx.fillRect(0, 0, 900, height);
+      if (surface === 'gradient') {
+        const g1 = ctx.createLinearGradient(0, 0, 900, height);
+        g1.addColorStop(0, shade(dark ? .22 : .16));
+        g1.addColorStop(0.55, shade(.04));
+        g1.addColorStop(1, shade(dark ? .14 : .2));
+        ctx.fillStyle = g1; ctx.fillRect(0, 0, 900, height);
+        circle(ctx, 820, height * .16, 260, shade(.08, dark ? '#ffffff' : accent));
+      } else if (surface === 'spotlight') {
+        const g = ctx.createRadialGradient(480, height * .44, 24, 480, height * .44, 660);
+        g.addColorStop(0, shade(dark ? .34 : .22));
+        g.addColorStop(0.55, shade(dark ? .12 : .07));
+        g.addColorStop(1, shade(0));
+        ctx.fillStyle = g; ctx.fillRect(0, 0, 900, height);
+        line(ctx, 54, 86, 846, 86, shade(.35), 1.2);
+      } else if (surface === 'mesh') {
+        const m1 = ctx.createRadialGradient(140, 160, 20, 140, 160, 520);
+        m1.addColorStop(0, shade(dark ? .32 : .24)); m1.addColorStop(1, shade(0));
+        ctx.fillStyle = m1; ctx.fillRect(0, 0, 900, height);
+        const m2 = ctx.createRadialGradient(820, height * .78, 20, 820, height * .78, 540);
+        m2.addColorStop(0, shade(dark ? .24 : .18, dark ? '#ffffff' : state.textColor)); m2.addColorStop(1, shade(0));
+        ctx.fillStyle = m2; ctx.fillRect(0, 0, 900, height);
       } else if (surface === 'grid') {
-        for (let x = 27; x < 900; x += 47) line(ctx, x, 0, x, height, shade(.17));
-        for (let y = 27; y < height; y += 47) line(ctx, 0, y, 900, y, shade(.17));
+        for (let x = 36; x < 900; x += 48) line(ctx, x, 0, x, height, shade(.13));
+        for (let y = 36; y < height; y += 48) line(ctx, 0, y, 900, y, shade(.13));
+        cornerTicks(ctx, 30, 30, 840, height - 60, 18, shade(.55), 1.6);
+      } else if (surface === 'dots') {
+        ctx.fillStyle = shade(.22);
+        for (let x = 32; x < 880; x += 28) {
+          for (let y = 32; y < height - 20; y += 28) {
+            ctx.fillRect(x, y, 2, 2);
+          }
+        }
       } else if (surface === 'paper') {
-        for (let y = 6; y < height; y += 9) line(ctx, 0, y, 900, y, shade(y % 5 ? .035 : .07));
-        line(ctx, 54, 89, 846, 89, shade(.46));
+        const g = ctx.createLinearGradient(0, 0, 0, height);
+        g.addColorStop(0, shade(.06, '#ffffff')); g.addColorStop(1, shade(.07, state.textColor));
+        ctx.fillStyle = g; ctx.fillRect(0, 0, 900, height);
+        for (let y = 10; y < height; y += 12) line(ctx, 0, y, 900, y, shade(y % 4 ? .025 : .055, state.textColor));
+        line(ctx, 54, 86, 846, 86, shade(.42), 1.2);
+        line(ctx, 54, height - 34, 846, height - 34, shade(.24), 1);
       } else if (surface === 'rays') {
-        ctx.save(); ctx.translate(450, height / 2); ctx.rotate(-.24);
-        for (let x = -600; x < 650; x += 125) box(ctx, x, -height, 40, height * 2, 0, shade(.15));
+        const g = ctx.createRadialGradient(640, height * .3, 20, 640, height * .3, 720);
+        g.addColorStop(0, shade(.26)); g.addColorStop(1, shade(0));
+        ctx.fillStyle = g; ctx.fillRect(0, 0, 900, height);
+        ctx.save(); ctx.translate(450, height / 2); ctx.rotate(-0.26);
+        for (let x = -580; x < 640; x += 135) box(ctx, x, -height, 34, height * 2, 0, shade(.11));
         ctx.restore();
+        line(ctx, 54, 86, 846, 86, shade(.45), 1.5);
       } else if (surface === 'blocks') {
-        box(ctx, 0, height * .37, 900, height * .4, 0, shade(.22));
-        box(ctx, 0, height * .77, 11, height * .23, 0, shade(.8));
+        box(ctx, 0, height * .42, 900, height * .36, 0, shade(dark ? .14 : .16));
+        box(ctx, 0, 0, 12, height, 0, shade(.78));
+        line(ctx, 54, 86, 846, 86, shade(.4), 1.5);
       } else if (surface === 'rings') {
-        for (const radius of [310, 375, 440]) {
-          ctx.beginPath(); ctx.arc(470, height * .35, radius, 0, Math.PI * 2);
-          ctx.strokeStyle = shade(.29); ctx.lineWidth = 3; ctx.stroke();
+        const glow = ctx.createRadialGradient(450, height * .36, 30, 450, height * .36, 460);
+        glow.addColorStop(0, shade(.26)); glow.addColorStop(1, shade(0));
+        ctx.fillStyle = glow; ctx.fillRect(0, 0, 900, height);
+        for (const [radius, alpha] of [[250, .24], [330, .18], [410, .12]]) {
+          ctx.beginPath(); ctx.arc(450, height * .36, radius, 0, Math.PI * 2);
+          ctx.strokeStyle = shade(alpha); ctx.lineWidth = 1.8; ctx.stroke();
         }
       }
-    } else if (state.template === 'showcase') {
-      box(ctx, 24, 24, 852, height - 48, 8, null, rgba(accent, 0.42));
-      box(ctx, 54, 89, 110, 4, 2, accent);
-      box(ctx, 750, height - 30, 96, 5, 2, accent);
-    } else if (state.template === 'blueprint') {
-      for (let x = 30; x < 900; x += 60) line(ctx, x, 92, x, height - 32, rgba(accent, 0.11));
-      for (let y = 92; y < height - 32; y += 60) line(ctx, 30, y, 870, y, rgba(accent, 0.11));
-      box(ctx, 24, 24, 852, height - 48, 0, null, rgba(accent, 0.32));
-    } else if (state.template === 'matcha') {
-      box(ctx, 500, height * 0.22, 530, height * 0.8, 265, rgba(accent, 0.11));
-      circle(ctx, 30, height * 0.76, 150, rgba(accent, 0.08));
-    } else if (state.template === 'pop') {
-      circle(ctx, 810, height * 0.57, 300, rgba(accent, 0.22));
-      ctx.save(); ctx.translate(860, 63); ctx.rotate(-0.3);
-      box(ctx, -53, -34, 100, 52, 6, accent); ctx.restore();
-      box(ctx, 44, height - 28, 60, 6, 0, accent);
-    } else if (state.template === 'graphite') {
-      box(ctx, 427, 101, 473, height - 149, 0, rgba(accent, 0.10));
-      line(ctx, 54, 89, 846, 89, rgba(accent, 0.56));
-      line(ctx, 54, height - 38, 846, height - 38, rgba(accent, 0.56));
-    } else if (state.template === 'cloud') {
-      const gradient = ctx.createLinearGradient(0, 0, 900, height);
-      gradient.addColorStop(0, rgba('#ffffff', 0.62));
-      gradient.addColorStop(1, rgba(accent, 0.14));
-      ctx.fillStyle = gradient; ctx.fillRect(0, 0, 900, height);
-      for (const radius of [120, 170, 220]) {
-        ctx.beginPath(); ctx.arc(780, height - 50, radius, 0, Math.PI * 2);
-        ctx.strokeStyle = rgba(accent, 0.16); ctx.lineWidth = 2; ctx.stroke();
+    } else if (surface !== 'solid') {
+      if (state.template === 'studio') {
+        const g = ctx.createLinearGradient(0, 0, 900, height);
+        g.addColorStop(0, rgba('#ffffff', 0.48)); g.addColorStop(1, rgba(accent, 0.1));
+        ctx.fillStyle = g; ctx.fillRect(0, 0, 900, height);
+        const halo = ctx.createRadialGradient(780, 180, 20, 780, 180, 420);
+        halo.addColorStop(0, rgba(accent, 0.11)); halo.addColorStop(1, rgba(accent, 0));
+        ctx.fillStyle = halo; ctx.fillRect(0, 0, 900, height);
+        line(ctx, 54, 86, 846, 86, rgba(state.textColor, 0.14), 1.2);
+        cornerTicks(ctx, 26, 26, 848, height - 52, 16, rgba(accent, 0.38), 1.4);
+      } else if (state.template === 'accent') {
+        const g = ctx.createLinearGradient(0, 0, 900, height);
+        g.addColorStop(0, rgba('#ffffff', 0.24)); g.addColorStop(1, rgba(accent, 0.14));
+        ctx.fillStyle = g; ctx.fillRect(0, 0, 900, height);
+        circle(ctx, 820, height * 0.42, 330, rgba(accent, 0.12));
+        box(ctx, 54, 86, 92, 4, 2, accent);
+        line(ctx, 158, 88, 846, 88, rgba(state.textColor, 0.14), 1.2);
+      } else if (state.template === 'minimal') {
+        // Keep solid title background clean for titleContrast calculation.
+        line(ctx, 54, 86, 846, 86, rgba(state.textColor, 0.16), 1.2);
+        line(ctx, 54, height - 34, 846, height - 34, rgba(state.textColor, 0.12), 1);
+      } else if (state.template === 'noir') {
+        const g = ctx.createRadialGradient(450, height * 0.48, 30, 450, height * 0.48, 680);
+        g.addColorStop(0, rgba(accent, 0.18)); g.addColorStop(0.6, rgba(accent, 0.05)); g.addColorStop(1, rgba(accent, 0));
+        ctx.fillStyle = g; ctx.fillRect(0, 0, 900, height);
+        ctx.lineWidth = 1.2;
+        box(ctx, 26, 26, 848, height - 52, 8, null, rgba(accent, 0.34));
+        line(ctx, 54, 86, 846, 86, rgba(accent, 0.32), 1);
+        cornerTicks(ctx, 36, 36, 828, height - 72, 14, rgba(accent, 0.65), 1.5);
+      } else if (state.template === 'neon') {
+        const g = ctx.createRadialGradient(650, height * 0.46, 20, 520, height * 0.46, 650);
+        g.addColorStop(0, rgba(accent, 0.2)); g.addColorStop(0.55, rgba(accent, 0.05)); g.addColorStop(1, rgba(accent, 0));
+        ctx.fillStyle = g; ctx.fillRect(0, 0, 900, height);
+        for (let x = 45; x < 900; x += 54) line(ctx, x, 0, x, height, rgba(accent, 0.055));
+        for (let y = 45; y < height; y += 54) line(ctx, 0, y, 900, y, rgba(accent, 0.055));
+        line(ctx, 54, 86, 846, 86, rgba(accent, 0.48), 1.6);
+        box(ctx, 796, 46, 50, 8, 4, accent);
+      } else if (state.template === 'editorial') {
+        ctx.fillStyle = rgba(accent, 0.075); ctx.fillRect(432, 0, 468, height);
+        line(ctx, 432, 86, 432, height - 42, rgba(state.textColor, 0.12), 1);
+        line(ctx, 54, 86, 846, 86, rgba(state.textColor, 0.72), 1.8);
+      } else if (state.template === 'bloom') {
+        const g1 = ctx.createRadialGradient(840, 170, 20, 840, 170, 440);
+        g1.addColorStop(0, rgba(accent, 0.2)); g1.addColorStop(1, rgba(accent, 0));
+        ctx.fillStyle = g1; ctx.fillRect(0, 0, 900, height);
+        const g2 = ctx.createRadialGradient(90, height * 0.8, 20, 90, height * 0.8, 420);
+        g2.addColorStop(0, rgba('#ffffff', 0.58)); g2.addColorStop(1, rgba('#ffffff', 0));
+        ctx.fillStyle = g2; ctx.fillRect(0, 0, 900, height);
+        ctx.beginPath(); ctx.arc(824, 52, 16, 0, Math.PI * 2);
+        ctx.strokeStyle = rgba(accent, 0.45); ctx.lineWidth = 1.8; ctx.stroke();
+        circle(ctx, 824, 52, 5, accent);
+      } else if (state.template === 'bold') {
+        ctx.fillStyle = state.textColor; ctx.fillRect(0, 0, 14, height);
+        box(ctx, 54, 84, 792, 3, 0, state.textColor);
+        box(ctx, 748, 36, 98, 28, 6, accent);
+        ctx.save(); ctx.translate(860, height - 240); ctx.rotate(-0.12);
+        ctx.fillStyle = rgba(state.textColor, 0.055); ctx.fillRect(-520, -24, 860, 140); ctx.restore();
+      } else if (state.template === 'showcase') {
+        const g = ctx.createLinearGradient(0, 0, 0, height);
+        g.addColorStop(0, rgba('#ffffff', 0.4)); g.addColorStop(1, rgba(accent, 0.08));
+        ctx.fillStyle = g; ctx.fillRect(0, 0, 900, height);
+        ctx.lineWidth = 1.5;
+        box(ctx, 24, 24, 852, height - 48, 12, null, rgba(accent, 0.34));
+        box(ctx, 54, 86, 84, 4, 2, accent);
+        line(ctx, 150, 88, 846, 88, rgba(accent, 0.2), 1);
+      } else if (state.template === 'blueprint') {
+        for (let x = 36; x < 900; x += 54) line(ctx, x, 86, x, height - 30, rgba(accent, 0.095));
+        for (let y = 86; y < height - 30; y += 54) line(ctx, 36, y, 864, y, rgba(accent, 0.095));
+        ctx.lineWidth = 1.4;
+        box(ctx, 24, 24, 852, height - 48, 4, null, rgba(accent, 0.34));
+        cornerTicks(ctx, 36, 36, 828, height - 72, 16, rgba(accent, 0.72), 1.6);
+      } else if (state.template === 'matcha') {
+        box(ctx, 470, height * 0.16, 460, height * 0.86, 230, rgba(accent, 0.095));
+        circle(ctx, 60, height * 0.82, 170, rgba('#ffffff', 0.36));
+        line(ctx, 54, 86, 846, 86, rgba(accent, 0.24), 1.2);
+      } else if (state.template === 'pop') {
+        const g = ctx.createRadialGradient(780, height * 0.56, 40, 780, height * 0.56, 460);
+        g.addColorStop(0, rgba(accent, 0.22)); g.addColorStop(1, rgba(accent, 0));
+        ctx.fillStyle = g; ctx.fillRect(0, 0, 900, height);
+        ctx.save(); ctx.translate(820, 62); ctx.rotate(-0.2);
+        box(ctx, -46, -16, 92, 24, 12, accent); ctx.restore();
+        box(ctx, 54, 86, 792, 2, 0, rgba('#ffffff', 0.26));
+        box(ctx, 54, height - 26, 76, 5, 3, accent);
+      } else if (state.template === 'graphite') {
+        box(ctx, 430, 86, 470, height - 124, 0, rgba(accent, 0.075));
+        line(ctx, 54, 86, 846, 86, rgba(accent, 0.48), 1.4);
+        line(ctx, 54, height - 38, 846, height - 38, rgba(accent, 0.36), 1.2);
+      } else if (state.template === 'cloud') {
+        const g = ctx.createLinearGradient(0, 0, 900, height);
+        g.addColorStop(0, rgba('#ffffff', 0.7)); g.addColorStop(1, rgba(accent, 0.12));
+        ctx.fillStyle = g; ctx.fillRect(0, 0, 900, height);
+        for (const [radius, alpha] of [[140, 0.16], [210, 0.12], [280, 0.08]]) {
+          ctx.beginPath(); ctx.arc(790, height - 60, radius, 0, Math.PI * 2);
+          ctx.strokeStyle = rgba(accent, alpha); ctx.lineWidth = 1.6; ctx.stroke();
+        }
+        line(ctx, 54, 86, 846, 86, rgba(accent, 0.2), 1);
       }
-    } else if (state.template === 'studio') {
-      const gradient = ctx.createLinearGradient(0, 0, 900, height);
-      gradient.addColorStop(0, rgba('#ffffff', 0.35)); gradient.addColorStop(1, rgba(accent, 0.12));
-      ctx.fillStyle = gradient; ctx.fillRect(0, 0, 900, height);
-      circle(ctx, 865, 220, 285, rgba(accent, 0.06));
-      line(ctx, 54, 88, 846, 88, rgba(state.textColor, 0.16));
-    } else if (state.template === 'accent') {
-      circle(ctx, 800, height * 0.47, 390, rgba(accent, 0.18));
-      circle(ctx, 80, height * 0.85, 280, rgba('#ffffff', 0.16));
-      ctx.save(); ctx.translate(700, 140); ctx.rotate(-0.25); box(ctx, -150, -35, 310, 90, 12, rgba(accent, 0.13)); ctx.restore();
-    } else if (state.template === 'minimal') {
-      line(ctx, 54, 88, 846, 88, rgba(state.textColor, 0.2));
-      line(ctx, 54, height - 42, 846, height - 42, rgba(state.textColor, 0.14));
-    } else if (state.template === 'noir') {
-      const gradient = ctx.createRadialGradient(450, height * 0.52, 40, 450, height * 0.52, 760);
-      gradient.addColorStop(0, rgba(accent, 0.15)); gradient.addColorStop(1, rgba(accent, 0));
-      ctx.fillStyle = gradient; ctx.fillRect(0, 0, 900, height);
-      box(ctx, 24, 24, 852, height - 48, 1, null, rgba(accent, 0.4));
-      line(ctx, 54, 88, 846, 88, rgba(accent, 0.42));
-    } else if (state.template === 'neon') {
-      const gradient = ctx.createRadialGradient(680, height * 0.48, 20, 540, height * 0.48, 690);
-      gradient.addColorStop(0, rgba(accent, 0.15)); gradient.addColorStop(1, rgba(accent, 0));
-      ctx.fillStyle = gradient; ctx.fillRect(0, 0, 900, height);
-      for (let x = 0; x <= 900; x += 60) line(ctx, x, 0, x, height, rgba(accent, 0.06));
-      for (let y = 0; y <= height; y += 60) line(ctx, 0, y, 900, y, rgba(accent, 0.06));
-      line(ctx, 54, 88, 846, 88, rgba(accent, 0.55), 2);
-      box(ctx, 825, 23, 13, 13, 2, accent); box(ctx, 845, 23, 13, 13, 2, rgba(accent, 0.4));
-    } else if (state.template === 'editorial') {
-      ctx.fillStyle = rgba(accent, 0.09); ctx.fillRect(450, 0, 450, height);
-      line(ctx, 54, 88, 846, 88, state.textColor, 2);
-    } else if (state.template === 'bloom') {
-      circle(ctx, 910, 190, 310, rgba(accent, 0.12));
-      circle(ctx, 35, height * 0.75, 320, rgba('#ffffff', 0.4));
-      circle(ctx, 830, height - 70, 220, rgba('#d6b88d', 0.16));
-      for (let index = 0; index < 5; index++) circle(ctx, 824 + Math.cos(index * Math.PI * 2 / 5) * 19, 43 + Math.sin(index * Math.PI * 2 / 5) * 19, 13, rgba(accent, 0.55));
-      circle(ctx, 824, 43, 10, state.background);
-    } else if (state.template === 'bold') {
-      ctx.save(); ctx.translate(865, height - 310); ctx.rotate(-0.14);
-      ctx.fillStyle = rgba(state.textColor, 0.08); ctx.fillRect(-500, -30, 850, 170); ctx.restore();
-      ctx.fillStyle = state.textColor; ctx.fillRect(0, 0, 16, height);
-      line(ctx, 54, 88, 846, 88, state.textColor, 3);
     }
     if (state.design?.border) {
       ctx.lineWidth = 2;
-      box(ctx, 22, 22, 856, height - 44, 4, null, rgba(accent, .75));
-      if (state.design.border === 'double') box(ctx, 32, 32, 836, height - 64, 3, null, rgba(accent, .43));
+      box(ctx, 22, 22, 856, height - 44, 6, null, rgba(accent, .72));
+      if (state.design.border === 'double') box(ctx, 32, 32, 836, height - 64, 4, null, rgba(accent, .38));
     }
   }
 
@@ -433,22 +518,27 @@
 
   function photo(ctx, state, image, rect, primary = false) {
     let radius = state.photo.radius;
-    if (state.template === 'bloom') radius = Math.max(radius, 42);
-    if (state.template === 'editorial') radius = Math.min(radius, 8);
+    if (state.template === 'bloom') radius = Math.max(radius, 36);
+    if (state.template === 'editorial') radius = Math.min(radius, 12);
+    if (state.template === 'bold') radius = Math.min(radius, 10);
     const dark = !lightColor(state.background);
-    const baseFill = dark ? rgba('#ffffff', 0.065) : rgba('#ffffff', state.template === 'minimal' ? 0.38 : 0.56);
+    const baseFill = dark ? rgba('#ffffff', 0.055) : rgba('#ffffff', state.template === 'minimal' ? 0.55 : 0.72);
     const frame = state.design?.photoFrame || templates[state.template].frame;
-    const shadow = state.design?.shadow;
+    const shadow = state.design?.shadow || templates[state.template].shadow;
     ctx.save();
     if (shadow === 'deep' || shadow === 'soft') {
-      ctx.shadowColor = rgba('#000000', shadow === 'deep' ? .34 : .16);
-      ctx.shadowBlur = shadow === 'deep' ? 42 : 22;
-      ctx.shadowOffsetY = shadow === 'deep' ? 18 : 8;
+      ctx.shadowColor = rgba('#000000', shadow === 'deep' ? .32 : .16);
+      ctx.shadowBlur = shadow === 'deep' ? 44 : 24;
+      ctx.shadowOffsetY = shadow === 'deep' ? 18 : 10;
     } else if (!shadow && (state.template === 'noir' || state.template === 'neon')) {
-      ctx.shadowColor = rgba(state.accent, state.template === 'neon' ? 0.3 : 0.15);
-      ctx.shadowBlur = state.template === 'neon' ? 30 : 20;
-    } else if (!shadow) { ctx.shadowColor = rgba(state.textColor, 0.11); ctx.shadowBlur = 24; ctx.shadowOffsetY = 10; }
-    if (frame === 'mat') box(ctx, rect.x - 9, rect.y - 9, rect.width + 18, rect.height + 18, radius + 7, dark ? '#fff7e9' : '#ffffff');
+      ctx.shadowColor = rgba(state.accent, state.template === 'neon' ? 0.24 : 0.14);
+      ctx.shadowBlur = state.template === 'neon' ? 32 : 24;
+      ctx.shadowOffsetY = 8;
+    } else if (!shadow) {
+      ctx.shadowColor = rgba(dark ? '#000000' : state.textColor, dark ? 0.34 : 0.12);
+      ctx.shadowBlur = 28; ctx.shadowOffsetY = 12;
+    }
+    if (frame === 'mat') box(ctx, rect.x - 10, rect.y - 10, rect.width + 20, rect.height + 20, radius + 8, dark ? '#f8f2e8' : '#ffffff');
     box(ctx, rect.x, rect.y, rect.width, rect.height, radius, baseFill);
     ctx.restore();
     ctx.save(); path(ctx, rect.x, rect.y, rect.width, rect.height, radius); ctx.clip();
@@ -489,12 +579,15 @@
     }
     if (primary && state.annotations?.dimension) dimensionLine(ctx, state, rect, state.annotations);
     ctx.restore();
+    // Crisp architectural rim around every photo window
+    ctx.lineWidth = 1.25;
+    box(ctx, rect.x, rect.y, rect.width, rect.height, radius, null, dark ? rgba('#ffffff', 0.14) : rgba(state.textColor, 0.08));
     if (frame === 'line') {
-      ctx.lineWidth = 2;
-      box(ctx, rect.x - 3, rect.y - 3, rect.width + 6, rect.height + 6, radius + 3, null, rgba(state.accent, .78));
+      ctx.lineWidth = 1.8;
+      box(ctx, rect.x - 4, rect.y - 4, rect.width + 8, rect.height + 8, radius + 4, null, rgba(state.accent, .58));
     } else if (!frame && ['neon', 'noir', 'bold'].includes(state.template)) {
-      ctx.lineWidth = state.template === 'bold' ? 3 : 1.5;
-      box(ctx, rect.x - 6, rect.y - 6, rect.width + 12, rect.height + 12, radius + 4, null, rgba(state.template === 'bold' ? state.textColor : state.accent, 0.68));
+      ctx.lineWidth = state.template === 'bold' ? 2.5 : 1.5;
+      box(ctx, rect.x - 5, rect.y - 5, rect.width + 10, rect.height + 10, radius + 4, null, rgba(state.template === 'bold' ? state.textColor : state.accent, 0.55));
     }
     return photoScale;
   }
@@ -532,45 +625,74 @@
   function price(ctx, state, rect, options = {}) {
     if (!state.showPrice) return;
     const value = state.price === null ? 'Цена по запросу' : money(state.price);
-    const style = state.design?.priceStyle || (options.plain ? 'plain' : 'filled');
-    const fill = style === 'filled' ? (['bold', 'minimal'].includes(state.template) ? state.textColor : state.accent) : null;
-    const color = fill ? (lightColor(fill) ? '#17231b' : '#ffffff') : state.textColor;
-    if (fill) box(ctx, rect.x, rect.y, rect.width, rect.height, state.template === 'bold' ? 8 : 18, fill);
+    const tplStyle = templates[state.template].priceStyle;
+    const style = state.design?.priceStyle || (options.plain ? 'plain' : (tplStyle || 'filled'));
+    const filled = style === 'filled' || style === 'pill';
+    const fill = filled ? (['bold', 'minimal'].includes(state.template) ? state.textColor : state.accent) : null;
+    const color = fill ? (lightColor(fill) ? '#17201a' : '#ffffff') : state.textColor;
+    const radius = style === 'pill' ? rect.height / 2 : ['bold', 'blueprint'].includes(state.template) ? 8 : 16;
+    if (fill) {
+      ctx.save();
+      ctx.shadowColor = rgba(fill, 0.25); ctx.shadowBlur = 18; ctx.shadowOffsetY = 6;
+      box(ctx, rect.x, rect.y, rect.width, rect.height, radius, fill);
+      ctx.restore();
+      // Subtle top specular hairline on filled price pills
+      ctx.lineWidth = 1;
+      box(ctx, rect.x + 0.5, rect.y + 0.5, rect.width - 1, rect.height - 1, Math.max(0, radius - 0.5), null, rgba('#ffffff', 0.2));
+    }
     if (style === 'outline') {
       ctx.lineWidth = 2;
-      box(ctx, rect.x, rect.y, rect.width, rect.height, 14, null, state.accent);
+      box(ctx, rect.x, rect.y, rect.width, rect.height, 14, rgba(state.accent, 0.08), state.accent);
     }
-    const inset = style === 'plain' ? 0 : 20;
+    const inset = style === 'plain' ? 0 : style === 'pill' ? 30 : 20;
     const oldHeight = state.oldPrice !== null ? 26 : 0;
     if (state.oldPrice !== null) {
-      let oldSize = 18;
+      let oldSize = 17;
       const old = money(state.oldPrice);
       font(ctx, state, oldSize, 500);
       while (ctx.measureText(old).width > rect.width - inset * 2 && oldSize > 12) { oldSize -= 1; font(ctx, state, oldSize, 500); }
       const oldWidth = ctx.measureText(old).width;
-      const x = rect.x + inset, y = rect.y + 13;
+      const x = rect.x + inset, y = rect.y + (style === 'pill' ? 14 : 11);
       ctx.fillStyle = rgba(color, 0.72); ctx.textBaseline = 'top'; ctx.fillText(old, x, y);
       line(ctx, x, y + oldSize * 0.55, x + oldWidth, y + oldSize * 0.55, rgba(color, 0.8), 1.4);
     }
-    fitText(ctx, state, value, { x: rect.x + inset, y: rect.y + oldHeight + (inset ? 11 : 4), width: rect.width - inset * 2, height: rect.height - oldHeight - (inset ? 20 : 6) }, { size: options.size || 38, minSize: 17, weight: 850, align: 'left', color, verticalCenter: true });
+    fitText(ctx, state, value, { x: rect.x + inset, y: rect.y + oldHeight + (inset ? 10 : 4), width: rect.width - inset * 2, height: rect.height - oldHeight - (inset ? 18 : 6) }, { size: options.size || 38, minSize: 17, weight: 800, align: 'left', color, verticalCenter: true });
   }
   function features(ctx, state, rect, vertical = false, hitAreas = [], size = 19) {
     if (!state.features.length) return;
-    const style = state.design?.featureStyle || (vertical ? 'bullets' : 'chips');
-    const count = state.features.length, gap = 10;
+    const tplStyle = templates[state.template].featureStyle;
+    const style = state.design?.featureStyle || (vertical ? (tplStyle === 'numbered' ? 'numbered' : 'bullets') : (tplStyle || 'chips'));
+    const count = state.features.length, gap = 12;
     const width = vertical ? rect.width : (rect.width - gap * (count - 1)) / count;
     const step = vertical ? rect.height / count : rect.height;
+    const dark = !lightColor(state.background);
     state.features.forEach((feature, index) => {
       const x = rect.x + (vertical ? 0 : index * (width + gap));
       const y = rect.y + (vertical ? index * step : 0);
-      const marker = style === 'numbered' ? 33 : style === 'bullets' ? 22 : 0;
-      const inset = style === 'chips' ? 15 : 0;
-      const pad = style === 'chips' ? Math.min(9, step * .18) : Math.min(3, step * .1);
-      if (style === 'chips') box(ctx, x, y, width, step - (vertical ? 4 : 0), 12, rgba(state.textColor, lightColor(state.background) ? .055 : .075));
-      if (style === 'bullets') circle(ctx, x + 7, y + 15, 4, state.accent);
-      if (style === 'numbered') label(ctx, state, String(index + 1).padStart(2, '0'), x + 1, y + 8, state.accent, 16);
-      const area = { x: x + inset + marker, y: y + pad, width: width - 2 * inset - marker, height: step - 2 * pad - (vertical ? 1 : 0) };
-      const { fontSize } = fitText(ctx, state, feature, area, { size, minSize: vertical ? 13 : 12, weight: 650, align: vertical || marker ? 'left' : 'center', verticalCenter: style !== 'bullets' });
+      const marker = style === 'numbered' ? 36 : style === 'bullets' ? 20 : style === 'accent' ? 14 : 0;
+      const inset = style === 'chips' ? 14 : style === 'accent' ? 10 : 0;
+      const pad = style === 'chips' ? Math.min(8, step * .16) : Math.min(4, step * .1);
+      if (style === 'chips') {
+        const h = step - (vertical ? 6 : 0);
+        ctx.lineWidth = 1;
+        box(ctx, x, y, width, h, 12,
+          dark ? rgba('#ffffff', 0.065) : rgba(state.textColor, 0.045),
+          dark ? rgba('#ffffff', 0.12) : rgba(state.textColor, 0.1));
+        if (!vertical) box(ctx, x + 14, y + 6, 22, 3, 2, rgba(state.accent, 0.85));
+      } else if (style === 'accent') {
+        const h = step - (vertical ? 8 : 0);
+        box(ctx, x, y + 2, width, h - 4, 10, dark ? rgba('#ffffff', 0.04) : rgba(state.textColor, 0.03));
+        box(ctx, x, y + 8, 4, Math.max(14, h - 16), 2, state.accent);
+      } else if (style === 'bullets') {
+        circle(ctx, x + 6, y + Math.min(18, step / 2), 4, state.accent);
+      } else if (style === 'numbered') {
+        const ny = y + Math.max(2, (step - 24) / 2);
+        box(ctx, x, ny, 28, 22, 6, rgba(state.accent, dark ? 0.22 : 0.14));
+        label(ctx, state, String(index + 1).padStart(2, '0'), x + 5, ny + 4, state.accent, 13);
+      }
+      const topExtra = style === 'chips' && !vertical ? 5 : 0;
+      const area = { x: x + inset + marker, y: y + pad + topExtra, width: width - 2 * inset - marker, height: Math.max(12, step - 2 * pad - topExtra - (vertical ? 2 : 0)) };
+      const { fontSize } = fitText(ctx, state, feature, area, { size, minSize: vertical ? 13 : 12, weight: 600, align: vertical || marker || style === 'chips' ? 'left' : 'center', verticalCenter: style !== 'bullets' });
       hitAreas.push({ field: 'feature-' + (index + 1), ...area, fontSize });
     });
   }
@@ -580,15 +702,20 @@
     const y = rect.y + 18;
     let x = rect.x + 18;
     if (discount) {
-      const result = pill(ctx, state, discount, x, y, 140, state.accent, lightColor(state.accent) ? '#17231b' : '#ffffff', 22);
+      const result = pill(ctx, state, discount, x, y, 148, state.accent, lightColor(state.accent) ? '#17201a' : '#ffffff', 20);
       x += result.width + 10;
     }
-    if (state.badge) pill(ctx, state, state.badge, x, y, rect.width - (x - rect.x) - 18, state.textColor, lightColor(state.textColor) ? '#17231b' : '#ffffff', 16);
+    if (state.badge) {
+      const bg = lightColor(state.textColor) ? '#14171a' : state.textColor;
+      const fg = '#ffffff';
+      pill(ctx, state, state.badge, x, y, rect.width - (x - rect.x) - 18, rgba(bg, 0.9), fg, 16, rgba('#ffffff', 0.22));
+    }
   }
 
-  const titleWeight = (state, fallback) => ({ medium: 550, bold: 750, heavy: 900 })[state.design?.titleWeight] || fallback;
+  const titleWeight = (state, fallback) => ({ medium: 550, bold: 750, heavy: 900 })[state.design?.titleWeight || templates[state.template].titleWeight] || fallback;
   function titleText(state, defaultUpper = false) {
-    const upper = state.design?.titleCase ? state.design.titleCase === 'upper' : defaultUpper;
+    const tplCase = templates[state.template].titleCase;
+    const upper = state.design?.titleCase ? state.design.titleCase === 'upper' : (tplCase ? tplCase === 'upper' : defaultUpper);
     return upper ? state.title.toLocaleUpperCase('ru-RU') : state.title;
   }
   function stackedLayout(ctx, state, assets, height, photoFirst = false) {
@@ -598,40 +725,40 @@
     const titleHeight = isSquare ? 139 : isStory ? 214 : 173;
     const subtitleHeight = isSquare ? 52 : 69;
     const descHeight = state.description ? (isSquare ? 72 : 78) : 0;
-    const featureHeight = state.features.length ? (isSquare ? 66 : 68) : 0;
+    const featureHeight = state.features.length ? (isSquare ? 68 : 72) : 0;
     const priceHeight = state.showPrice ? (state.oldPrice !== null ? 91 : 72) : 0;
     const footerHeight = descHeight + featureHeight + priceHeight + (state.description ? 16 : 0) + (state.features.length ? 16 : 0);
     const photoBottom = height - 54 - footerHeight - 20;
-    const titleSize = state.template === 'bold' ? (isSquare ? 59 : 78) : state.template === 'minimal' ? 56 : isStory ? 75 : 64;
+    const titleSize = state.template === 'bold' ? (isSquare ? 58 : 74) : state.template === 'minimal' ? 54 : isStory ? 72 : 62;
     const title = titleText(state, ['bold', 'neon'].includes(state.template));
-    const titleOptions = { size: titleSize, minSize: 30, weight: titleWeight(state, state.template === 'bold' ? 900 : 800), spacing: 1.08 };
-    const subtitleOptions = { size: 23, minSize: 17, weight: 500, color: rgba(state.textColor, 0.76) };
-    const titleBox = { x: padding, y: 115, width, height: titleHeight };
+    const titleOptions = { size: titleSize, minSize: 30, weight: titleWeight(state, state.template === 'bold' ? 900 : 750), spacing: 1.07 };
+    const subtitleOptions = { size: 22, minSize: 16, weight: 500, color: rgba(state.textColor, 0.72) };
+    const titleBox = { x: padding, y: 112, width, height: titleHeight };
     const subtitleBox = { x: padding, y: 0, width, height: subtitleHeight };
     if (photoFirst) {
       const titleUsed = fitText(ctx, state, title, titleBox, { ...titleOptions, measureOnly: true }).height;
       const subtitleUsed = fitText(ctx, state, state.subtitle, subtitleBox, { ...subtitleOptions, measureOnly: true }).height;
-      titleBox.y = photoBottom - titleUsed - (subtitleUsed ? subtitleUsed + 13 : 0);
+      titleBox.y = photoBottom - titleUsed - (subtitleUsed ? subtitleUsed + 12 : 0);
     }
     const titleY = titleBox.y;
     const { height: titleUsed, fontSize: titleFontSize } = fitText(ctx, state, title, titleBox, titleOptions);
     hitAreas.push({ field: 'product-name', x: padding, y: titleY, width, height: titleUsed });
-    const subtitleY = titleY + titleUsed + 13;
+    const subtitleY = titleY + titleUsed + 12;
     const subtitleUsed = fitText(ctx, state, state.subtitle, { ...subtitleBox, y: subtitleY }, subtitleOptions).height;
     if (state.subtitle) hitAreas.push({ field: 'product-subtitle', x: padding, y: subtitleY, width, height: subtitleUsed });
-    const top = photoFirst ? 109 : subtitleY + subtitleUsed + 22;
-    const frameBottom = photoFirst ? titleY - 24 : photoBottom;
+    const top = photoFirst ? 108 : subtitleY + subtitleUsed + 20;
+    const frameBottom = photoFirst ? titleY - 22 : photoBottom;
     let photoRect = { x: padding, y: top, width, height: Math.max(140, frameBottom - top) };
-    if (state.template === 'minimal') photoRect = { ...photoRect, x: 82, width: 736 };
-    if (state.template === 'bloom') photoRect = { ...photoRect, x: 70, width: 760 };
+    if (state.template === 'minimal') photoRect = { ...photoRect, x: 76, width: 748 };
+    if (state.template === 'bloom') photoRect = { ...photoRect, x: 66, width: 768 };
     if (state.template === 'accent') {
-      box(ctx, photoRect.x - 14, photoRect.y + 14, photoRect.width, photoRect.height, 28, rgba(state.accent, 0.22));
+      box(ctx, photoRect.x - 10, photoRect.y + 12, photoRect.width, photoRect.height, 26, rgba(state.accent, 0.2));
     }
     const gallery = photoGallery(ctx, state, assets, photoRect);
     let y = photoBottom + 20;
     if (state.description) {
       const area = { x: padding, y, width, height: descHeight };
-      const { fontSize } = fitText(ctx, state, state.description, area, { size: 22, minSize: 15, weight: 500, color: rgba(state.textColor, 0.8) });
+      const { fontSize } = fitText(ctx, state, state.description, area, { size: 22, minSize: 15, weight: 500, color: rgba(state.textColor, 0.78) });
       hitAreas.push({ field: 'product-description', ...area, fontSize });
       y += descHeight + 16;
     }
@@ -640,8 +767,12 @@
     }
     if (state.showPrice) {
       const priceWidth = state.oldPrice !== null || state.price !== null && state.price >= 1000000 ? 395 : 335;
+      // Subtle architectural balance accent bar left of the price block
+      const barW = Math.max(40, width - priceWidth - 36);
+      line(ctx, padding, y + priceHeight / 2, padding + barW, y + priceHeight / 2, rgba(state.textColor, 0.14), 1.2);
+      box(ctx, padding, y + priceHeight / 2 - 2, 32, 4, 2, state.accent);
       hitAreas.push({ field: 'product-price', x: padding + width - priceWidth, y, width: priceWidth, height: priceHeight });
-      price(ctx, state, { x: padding + width - priceWidth, y, width: priceWidth, height: priceHeight }, { plain: state.template === 'minimal', size: state.template === 'bold' ? 45 : 38 });
+      price(ctx, state, { x: padding + width - priceWidth, y, width: priceWidth, height: priceHeight }, { plain: state.template === 'minimal', size: state.template === 'bold' ? 44 : 38 });
     }
     return { ...gallery, hitAreas, titleFontSize };
   }
@@ -649,24 +780,25 @@
   function editorialLayout(ctx, state, assets, height, photoLeft = false) {
     const hitAreas = [];
     const square = height === 900, story = height === 1600;
-    const x = photoLeft ? 496 : 54, leftWidth = 350;
-    const photoX = photoLeft ? 54 : 444, photoWidth = 402;
-    const titleY = 122, titleHeight = square ? 221 : story ? 345 : 285;
-    const { height: titleUsed, fontSize: titleFontSize } = fitText(ctx, state, titleText(state), { x, y: titleY, width: leftWidth, height: titleHeight }, { size: story ? 68 : 60, minSize: 27, weight: titleWeight(state, 850), spacing: 1.08, wholeWords: true });
+    const leftWidth = 348, photoWidth = 424;
+    const x = photoLeft ? 498 : 54;
+    const photoX = photoLeft ? 54 : 422;
+    const titleY = 120, titleHeight = square ? 221 : story ? 345 : 285;
+    const { height: titleUsed, fontSize: titleFontSize } = fitText(ctx, state, titleText(state), { x, y: titleY, width: leftWidth, height: titleHeight }, { size: story ? 64 : 56, minSize: 26, weight: titleWeight(state, 800), spacing: 1.07, wholeWords: true });
     hitAreas.push({ field: 'product-name', x, y: titleY, width: leftWidth, height: titleUsed });
-    let y = titleY + titleUsed + 23;
+    let y = titleY + titleUsed + 20;
     if (state.subtitle) {
-      const { height: used } = fitText(ctx, state, state.subtitle, { x, y, width: leftWidth, height: square ? 84 : 111 }, { size: 22, minSize: 16, weight: 650, align: 'left', color: rgba(state.textColor, 0.8) });
+      const { height: used } = fitText(ctx, state, state.subtitle, { x, y, width: leftWidth, height: square ? 84 : 111 }, { size: 22, minSize: 15, weight: 600, align: 'left', color: rgba(state.textColor, 0.78) });
       hitAreas.push({ field: 'product-subtitle', x, y, width: leftWidth, height: used });
-      y += used + 23;
+      y += used + 20;
     }
-    line(ctx, x, y, x + 56, y, state.accent, 3); y += 21;
+    box(ctx, x, y, 52, 4, 2, state.accent); y += 22;
     const priceHeight = state.showPrice ? state.oldPrice !== null ? 105 : 84 : 0;
-    const footerY = height - 60 - priceHeight;
+    const footerY = height - 58 - priceHeight;
     const descriptionHeight = state.description ? square ? 121 : 154 : 0;
-    const featureHeight = state.features.length ? square ? 116 : 149 : 0;
+    const featureHeight = state.features.length ? square ? 116 : 152 : 0;
     // The description and features flex to the actual space below the title.
-    const available = Math.max(100, footerY - y - 25);
+    const available = Math.max(100, footerY - y - 24);
     const needed = descriptionHeight + featureHeight + (state.description && state.features.length ? 24 : 0);
     const compression = needed ? Math.min(1, available / needed) : 1;
     if (state.description) {
@@ -678,12 +810,19 @@
     }
     if (state.features.length) features(ctx, state, { x, y, width: leftWidth, height: featureHeight * compression }, true, hitAreas);
     if (state.showPrice) hitAreas.push({ field: 'product-price', x, y: footerY, width: leftWidth, height: priceHeight });
-    if (state.showPrice) price(ctx, state, { x, y: footerY, width: leftWidth, height: priceHeight }, { plain: true, size: 39 });
-    const photoRect = { x: photoX, y: 122, width: photoWidth, height: height - 182 };
+    if (state.showPrice) price(ctx, state, { x, y: footerY, width: leftWidth, height: priceHeight }, { plain: templates[state.template].priceStyle === 'plain', size: 39 });
+    // Keep photo frame at a balanced gallery proportion (3:4 to 5:7) instead of overly narrow slices
+    const colTop = 120, colHeight = height - 178;
+    const photoHeight = square ? Math.min(colHeight, 560) : story ? Math.min(colHeight, 820) : Math.min(colHeight, 620);
+    const photoY = colTop + Math.round((colHeight - photoHeight) * 0.42);
+    // Subtle magazine framing hairlines above and below the photo plate
+    line(ctx, photoX, colTop + 2, photoX + photoWidth, colTop + 2, rgba(state.textColor, 0.14), 1);
+    line(ctx, photoX, height - 60, photoX + photoWidth, height - 60, rgba(state.textColor, 0.14), 1);
+    box(ctx, photoX + photoWidth - 36, height - 62, 36, 4, 2, state.accent);
+    const photoRect = { x: photoX, y: photoY, width: photoWidth, height: photoHeight };
     const gallery = photoGallery(ctx, state, assets, photoRect);
     return { ...gallery, hitAreas, titleFontSize };
   }
-
 
   // Purpose controls composition; template continues to control colour and surface styling.
   function purposeLayout(ctx, state, assets, height) {
@@ -696,7 +835,7 @@
       return metrics;
     };
     label(ctx, state, purposes[state.purpose].label.toLocaleUpperCase('ru-RU'), 54, 103, state.accent, 19);
-    const title = area('product-name', titleText(state), { x: 54, y: 135, width: 792, height: 120 },
+    const title = area('product-name', state.title, { x: 54, y: 135, width: 792, height: 120 },
       { size: 57, weight: titleWeight(state, 850), spacing: 1.08, compact: true });
     const subtitleY = 135 + title.height + 13;
     const subtitle = area('product-subtitle', state.subtitle, { x: 54, y: subtitleY, width: 792, height: 62 },
@@ -823,8 +962,7 @@
     let titleContrast;
     // Measure Minimal's solid title background. Other templates can vary under the letters.
     if (state.design?.backdrop === 'solid' || (state.template === 'minimal' && !state.design?.backdrop)) {
-      const foreground = luminance(state.textColor), background = luminance(state.background);
-      titleContrast = (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05);
+      titleContrast = contrastRatio(state.textColor, state.background);
     }
     return { ...layout, photoRects: layout.photoRects || [layout.photoRect], hitAreas: layout.hitAreas || [], width: format.width, height: format.height, titleContrast };
   }
@@ -836,5 +974,5 @@
       .map(([field, size]) => ({ field, reduction: Math.round((1 - size / ru.get(field)) * 100) }));
   }
   const templateTone = key => lightColor(templates[key].background) ? 'light' : 'dark';
-  root.SATUCARD_RENDERER = { templates, fonts, formats, purposes, categories, designChoices, templateTone, normalize, render, compareTypeSizes, photoPlacement };
+  root.SATUCARD_RENDERER = { templates, fonts, formats, purposes, categories, designChoices, templateTone, contrastRatio, lightColor, normalize, render, compareTypeSizes, photoPlacement };
 })();

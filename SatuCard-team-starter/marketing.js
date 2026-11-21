@@ -27,7 +27,8 @@
       const link = article.querySelector('[data-editor-template]');
       link.dataset.editorTemplate = key;
       const canvas = article.querySelector('canvas');
-      canvas.dataset.template = key; canvas.dataset.photo = 'headphones';
+      canvas.dataset.template = key;
+      canvas.dataset.photo = window.SATUCARD_TEMPLATE_SAMPLES?.[key] || 'headphones';
       galleryRoot.append(article);
       cards.push(canvas);
     }
@@ -38,7 +39,7 @@
   const originalSamples = new Map(galleryCards.map(canvas => [canvas, canvas.dataset.photo]));
   const productSelector = document.querySelector('[data-demo-product]');
   const prices = new Intl.NumberFormat('ru-RU');
-  let gallerySample = 'headphones';
+  let gallerySample = 'mixed';
   function loadImage(key) {
     if (images.has(key)) return images.get(key);
     const promise = new Promise((resolve, reject) => {

@@ -68,7 +68,7 @@ export async function installVideoPlus(api){
   const nav=element('button');nav.dataset.panel='workflow';nav.setAttribute('aria-label','Проекты');nav.innerHTML='<span aria-hidden="true">✦</span>Проекты';$('.rail').prepend(nav);nav.addEventListener('click',()=>api.showPanel('workflow'));
   panel.querySelectorAll('[data-workflow-tab]').forEach(tab=>tab.addEventListener('click',()=>panel.querySelectorAll('[data-workflow-page]').forEach(page=>page.hidden=page.dataset.workflowPage!==tab.dataset.workflowTab)));
   const categories=['Яркие',...new Set(TEMPLATES.filter(t=>t.category!=='Яркие').map(t=>t.category))];
-  const filters=$('#template-filters');filters.replaceChildren();for(const category of ['Все',...categories]){const b=element('button',category);b.dataset.filter=category;if(category==='Все')b.className='active';filters.append(b);}
+  const filters=$('#template-filters');filters.replaceChildren();for(const category of ['Все',...categories,'★ Избранные']){const b=element('button',category);b.dataset.filter=category;if(category==='Все')b.className='active';filters.append(b);}
   const search=element('input');search.placeholder='Найти шаблон…';search.setAttribute('aria-label','Поиск шаблона');search.className='template-search';filters.before(search);
   search.addEventListener('input',run(()=>api.searchTemplates(search.value)));
   for(const template of TEMPLATES){const option=element('option',template.name);option.value=template.id;$('#card-template').append(option);}

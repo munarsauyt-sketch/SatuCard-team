@@ -29,7 +29,14 @@ async function setup(options = {}) {
   let userId = '11111111-1111-4111-8111-111111111111';
   w.SATUCARD_AUTH = { getSession: async () => ({ user: { id: userId }, access_token: 'fake-token' }) };
   const authChange = id => { userId = id; w.document.dispatchEvent(new w.CustomEvent('satucard:authchange', { detail: { user: id ? { id } : null } })); };
-  for (const file of files) w.eval(readFileSync(new URL('../' + file, import.meta.url), 'utf8'));
+  for (const file of files) {
+    w.eval(readFileSync(new URL('../' + file, import.meta.url), 'utf8'));
+    if (file === 'product-samples.js') {
+      for (const key of Object.keys(w.SATUCARD_SAMPLES)) {
+        if (!w.SATUCARD_DEMO_IMAGES[key]) w.eval(readFileSync(new URL(`../assets/demo-${key}.js`, import.meta.url), 'utf8'));
+      }
+    }
+  }
   await until(() => w.document.getElementById('editor-form').dataset.editorReady === 'true');
   const $ = id => w.document.getElementById(id);
   const input = (id, value) => { $(id).value = value; $(id).dispatchEvent(new w.Event('input', { bubbles: true })); $(id).dispatchEvent(new w.Event('change', { bubbles: true })); };

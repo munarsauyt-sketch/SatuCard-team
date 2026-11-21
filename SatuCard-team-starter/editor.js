@@ -42,6 +42,30 @@
     }
   };
   const paletteColors = { ...palettes.light, ...palettes.dark };
+  const photoFilterPresets = {
+    original: [100, 100, 100, 0],
+    studio: [107, 112, 108, 0],
+    vivid: [103, 115, 130, 0],
+    warm: [104, 106, 112, 22],
+    soft: [110, 90, 85, 0],
+    mono: [100, 110, 0, 0]
+  };
+  const FAVORITES_KEY = 'satucard-favorite-templates';
+  const loadFavorites = () => {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]');
+      return new Set(Array.isArray(parsed) ? parsed.filter(key => Object.hasOwn(renderer.templates, key)) : []);
+    } catch (_) { return new Set(); }
+  };
+  const saveFavorites = set => { try { localStorage.setItem(FAVORITES_KEY, JSON.stringify([...set])); } catch (_) {} };
+  const favoriteTemplates = loadFavorites();
+  const templateSamples = window.SATUCARD_TEMPLATE_SAMPLES || {};
+  const sampleThumbCache = new Map();
+  let copiedStyle = null;
+  let shuffleCursor = 0;
+  let lockedProduct = false;
+  const templateSampleFor = key => Object.hasOwn(samples, templateSamples[key]) ? templateSamples[key] : 'dark_headphones';
+  const hasUserPhoto = () => model.photoIds.some(id => !demoPhoto(id));
   const designFields = {
     'design-layout': 'layout', 'design-backdrop': 'backdrop', 'design-border': 'border', 'design-frame': 'photoFrame',
     'design-shadow': 'shadow', 'design-title-weight': 'titleWeight', 'design-title-case': 'titleCase',
@@ -266,6 +290,48 @@
         autoBadge.dataset.badgePreset = `−${pct}%`;
       }
     }
+    document.querySelectorAll('[data-format-pill]').forEach(button => {
+      button.setAttribute('aria-pressed', String(button.dataset.formatPill === model.settings.format));
+    });
+    updateColorTools();
+  }
+  function updateColorTools() {
+    const bg = model.settings.background, accent = model.settings.accent, ink = model.settings.textColor;
+    const preview = $('palette-active-preview');
+    if (preview) {
+      const dots = preview.querySelectorAll('i');
+      if (dots[0]) dots[0].style.backgroundColor = bg;
+      if (dots[1]) dots[1].style.backgroundColor = accent;
+      if (dots[2]) dots[2].style.backgroundColor = ink;
+    }
+    const activeName = $('palette-active-name');
+    if (activeName) {
+      const matched = model.settings.customColors
+        ? Object.keys(paletteColors).find(name => paletteColors[name].every((value, index) => value === [bg, accent, ink][index]))
+        : null;
+      const tplLabel = renderer.templates[model.settings.template]?.label || '';
+      const isKk = window.SATUCARD_LANGUAGE?.getLanguage?.() === 'kk';
+      activeName.textContent = matched
+        ? matched
+        : model.settings.customColors
+          ? (isKk ? 'Өз түстеріңіз' : 'Свои цвета')
+          : `${isKk ? 'Үлгіден' : 'Из шаблона'} · ${tplLabel}`;
+    }
+    const meter = $('contrast-meter');
+    const fixButton = $('fix-contrast');
+    if (meter && typeof renderer.contrastRatio === 'function') {
+      const ratio = renderer.contrastRatio(ink, bg);
+      const rounded = ratio.toFixed(1).replace('.', ',');
+      const level = ratio >= 4.5 ? 'good' : ratio >= 3 ? 'mid' : 'low';
+      const isKk = window.SATUCARD_LANGUAGE?.getLanguage?.() === 'kk';
+      meter.dataset.level = level;
+      meter.textContent = level === 'good'
+        ? `Контраст ${rounded}:1`
+        : level === 'mid'
+          ? `Контраст ${rounded}:1 · ${isKk ? 'әлсіздеу' : 'слабоват'}`
+          : `Контраст ${rounded}:1 · ${isKk ? 'күңгірт' : 'тускло'}`;
+      if (fixButton) fixButton.hidden = ratio >= 4.5;
+    }
   }
   function updateContentHints() {
     const purpose = model.settings.purpose || 'cover', category = model.settings.category || 'generic';
@@ -341,10 +407,11 @@
     $('download-button').querySelector('span').textContent = 'Скачать ' + selectedExportFormat().label;
     document.querySelectorAll('[data-template]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.template === model.settings.template)));
     document.querySelectorAll('[data-sample]').forEach(button => button.setAttribute('aria-pressed', String(model.photoId === 'sample-' + button.dataset.sample)));
-    const filters = { original: [100, 100, 100], mono: [100, 110, 0], vivid: [103, 115, 130], soft: [110, 90, 85] };
     const { brightness, contrast, saturation, warmth, blur } = model.settings.photo;
-    document.querySelectorAll('[data-photo-filter]').forEach(button => button.setAttribute('aria-pressed',
-      String(!warmth && !blur && filters[button.dataset.photoFilter].every((value, index) => value === [brightness, contrast, saturation][index]))));
+    document.querySelectorAll('[data-photo-filter]').forEach(button => {
+      const preset = photoFilterPresets[button.dataset.photoFilter];
+      button.setAttribute('aria-pressed', String(Boolean(preset) && !blur && preset.every((value, index) => value === [brightness, contrast, saturation, warmth][index])));
+    });
     document.querySelectorAll('[data-palette]').forEach(button => button.setAttribute('aria-pressed', String(model.settings.customColors && paletteColors[button.dataset.palette].every((value, index) => value === model.settings[['background', 'accent', 'textColor'][index]]))));
     $('photo-palette').disabled = !model.photoId;
     if ($('fullscreen-dialog').open) renderer.render($('fullscreen-canvas'), model.settings, imageAssets());
@@ -354,21 +421,69 @@
     if (!framePending) { framePending = true; requestAnimationFrame(renderNow); }
     if (thumbs) { clearTimeout(thumbTimer); thumbTimer = setTimeout(renderThumbnails, 220); }
   }
+  function loadSampleThumb(sampleKey) {
+    const existingAsset = assets.get('sample-' + sampleKey)?.image;
+    if (existingAsset) return existingAsset;
+    const cached = sampleThumbCache.get(sampleKey);
+    if (cached && cached !== 'loading') return cached;
+    if (cached === 'loading') return null;
+    sampleThumbCache.set(sampleKey, 'loading');
+    const src = window.SATUCARD_DEMO_IMAGES?.[sampleKey] || 'assets/images/' + sampleKey + '.jpg';
+    const image = new Image();
+    image.onload = () => {
+      if (typeof document === 'undefined' || !document?.defaultView || !form.isConnected) return;
+      if (image.naturalWidth && image.naturalHeight) {
+        sampleThumbCache.set(sampleKey, image);
+        renderThumbnails();
+      }
+    };
+    image.onerror = () => sampleThumbCache.delete(sampleKey);
+    image.src = src;
+    return null;
+  }
   function renderThumbnails() {
-    if ($('panel-templates').hidden) return;
-    const assets = imageAssets();
-    document.querySelectorAll('#template-grid [data-template]:not([hidden])').forEach(button => renderer.render(button.querySelector('canvas'), { ...model.settings, template: button.dataset.template, customColors: false, format: 'portrait' }, assets, { scale: 0.16 }));
+    if (typeof document === 'undefined' || !document?.defaultView || !form.isConnected || $('panel-templates')?.hidden) return;
+    const userPhoto = hasUserPhoto();
+    const currentAssets = imageAssets();
+    const logo = assets.get(model.logoId)?.image || null;
+    document.querySelectorAll('#template-grid .template-tile:not([hidden]) [data-template]').forEach(button => {
+      const key = button.dataset.template;
+      if (userPhoto || lockedProduct) {
+        renderer.render(button.querySelector('canvas'), { ...model.settings, template: key, customColors: false, format: 'portrait' }, currentAssets, { scale: 0.22 });
+        return;
+      }
+      const sampleKey = templateSampleFor(key);
+      const sample = samples[sampleKey] || samples.headphones;
+      const photo = loadSampleThumb(sampleKey) || currentAssets.photo;
+      const thumbSettings = {
+        ...model.settings, ...sample,
+        oldPrice: null, template: key, customColors: false, format: 'portrait',
+        photo: { ...renderer.normalize({}).photo, fit: 'cover', ...sample.photo }
+      };
+      renderer.render(button.querySelector('canvas'), thumbSettings, { photo, photos: photo ? [photo] : [], logo }, { scale: 0.22 });
+    });
   }
   function buildDesignOptions() {
     for (const [key, font] of Object.entries(renderer.fonts)) $('font-family').add(new Option(font.label, key));
     for (const [key, template] of Object.entries(renderer.templates)) {
+      const tile = document.createElement('div'); tile.className = 'template-tile'; tile.dataset.templateTile = key;
+      tile.dataset.tone = renderer.templateTone(key);
+      if (template.surface) tile.dataset.newTemplate = '';
+      tile.dataset.search = `${template.label} ${template.description} ${key}`.toLowerCase();
       const button = document.createElement('button'); button.type = 'button'; button.className = 'template-card'; button.dataset.template = key;
-      button.dataset.tone = renderer.templateTone(key);
+      button.dataset.tone = tile.dataset.tone;
       if (template.surface) button.dataset.newTemplate = '';
       button.setAttribute('aria-label', template.label + '. ' + template.description); button.setAttribute('aria-pressed', 'false');
       const thumb = document.createElement('canvas'); thumb.className = 'template-thumb'; thumb.setAttribute('aria-hidden', 'true');
       const label = document.createElement('span'); label.className = 'template-label'; label.textContent = template.label;
-      button.append(thumb, label); $('template-grid').append(button);
+      button.append(thumb, label);
+      const fav = document.createElement('button'); fav.type = 'button'; fav.className = 'template-fav-btn'; fav.dataset.favTemplate = key;
+      const isFav = favoriteTemplates.has(key);
+      fav.setAttribute('aria-pressed', String(isFav));
+      fav.setAttribute('aria-label', (isFav ? 'Убрать из избранного: ' : 'В избранное: ') + template.label);
+      fav.textContent = isFav ? '★' : '☆';
+      tile.append(button, fav);
+      $('template-grid').append(tile);
     }
     applyTemplateFilter();
     for (const [tone, group] of Object.entries(palettes)) {
@@ -376,6 +491,7 @@
         const button = document.createElement('button');
         button.type = 'button'; button.dataset.palette = label; button.dataset.tone = tone;
         button.setAttribute('aria-pressed', 'false');
+        button.setAttribute('title', label);
         const swatch = document.createElement('i');
         colors.forEach((color, index) => swatch.style.setProperty('--palette-' + ['a', 'b', 'c'][index], color));
         const name = document.createElement('span'); name.textContent = label;
@@ -385,12 +501,27 @@
   }
   function applyTemplateFilter() {
     const filter = $('template-filter').value;
+    const query = ($('template-search')?.value || '').trim().toLowerCase();
     let count = 0;
-    for (const button of $('template-grid').children) {
-      button.hidden = filter === 'new' ? !button.hasAttribute('data-new-template') : filter !== 'all' && button.dataset.tone !== filter;
-      if (!button.hidden) count++;
+    for (const tile of $('template-grid').children) {
+      const key = tile.dataset.templateTile;
+      const matchFilter = filter === 'all'
+        ? true
+        : filter === 'new'
+          ? tile.hasAttribute('data-new-template')
+          : filter === 'favorites'
+            ? favoriteTemplates.has(key)
+            : tile.dataset.tone === filter;
+      const matchQuery = !query || (tile.dataset.search || '').includes(query);
+      tile.hidden = !(matchFilter && matchQuery);
+      if (!tile.hidden) count++;
     }
     $('template-count').textContent = String(count);
+    const empty = $('template-empty');
+    if (empty) empty.hidden = count > 0;
+    document.querySelectorAll('[data-template-chip]').forEach(chip => {
+      chip.setAttribute('aria-pressed', String(chip.dataset.templateChip === filter));
+    });
     renderThumbnails();
   }
   function updateHistory() { $('undo-button').disabled = !history?.canUndo; $('redo-button').disabled = !history?.canRedo; }
@@ -512,7 +643,7 @@
         const source = await optimizedImage(file, 1800); added.push(await registerAsset(source));
         if (version !== photoVersion || viewId !== model.activeViewId) throw new Error('Выбор карточки или фото изменился. Загрузите файлы ещё раз.');
       }
-      commit(); model.libraryIds.push(...added);
+      commit(); model.libraryIds.push(...added); lockedProduct = true;
       // A first real upload must not quietly export the demo product alongside it.
       const selected = model.photoIds.filter(id => !demoPhoto(id));
       const newProduct = replaceSelectedPhotos([...selected, ...added].slice(0, 3));
@@ -528,8 +659,9 @@
     } catch (error) { added.forEach(id => assets.delete(id)); if (version === photoVersion) status('file-status', error.message, true); }
     finally { added.forEach(id => pendingAssets.delete(id)); releaseUnusedAssets(); }
   }
-  async function loadSample(key, initialize = false) {
+  async function loadSample(key, initialize = false, options = {}) {
     if (!Object.hasOwn(samples, key)) return;
+    const { replaceDemo = false, templateOverride = null, designOverride = null } = options;
     const version = ++photoVersion, viewId = model.activeViewId;
     const isCurrent = () => version === photoVersion && viewId === model.activeViewId;
     status('file-status', 'Загружаем пример…');
@@ -545,9 +677,17 @@
         assets.get(id).sampleKey = key;
       }
       pendingAssets.delete(id); if (!isCurrent()) return; if (!initialize) commit();
+      if (replaceDemo && model.views) {
+        const usedElsewhere = new Set(model.views.filter(v => v.id !== model.activeViewId).flatMap(v => v.photoIds || []));
+        model.libraryIds = model.libraryIds.filter(existing => !demoPhoto(existing) || existing === id || usedElsewhere.has(existing));
+      }
       if (!model.libraryIds.includes(id)) { if (model.libraryIds.length >= 12) throw new Error('В проекте до 12 фото. Удалите ненужный снимок.'); model.libraryIds.push(id); }
       setPhotoIds([id]);
-      model.settings = renderer.normalize({ ...model.settings, ...samples[key], oldPrice: null, photo: { ...renderer.normalize({}).photo, ...samples[key].photo } });
+      const tplPatch = templateOverride && renderer.templates[templateOverride]
+        ? { template: templateOverride, customColors: false, background: renderer.templates[templateOverride].background, accent: renderer.templates[templateOverride].accent, textColor: renderer.templates[templateOverride].textColor }
+        : {};
+      const designPatch = designOverride ? { design: { ...model.settings.design, ...designOverride } } : {};
+      model.settings = renderer.normalize({ ...model.settings, ...tplPatch, ...designPatch, ...samples[key], oldPrice: null, photo: { ...renderer.normalize({}).photo, fit: 'cover', ...samples[key].photo } });
       syncActiveView(); activeView().sampleKey = key; changeProductContext(); syncForm();
       status('file-status', 'Демонстрационный товар. Загрузите своё фото и укажите его данные.');
       if (!initialize) edited(true);
@@ -578,6 +718,7 @@
       });
       const activeViewId = parsed.activeViewId || 'main', active = views.find(view => view.id === activeViewId);
       model = { settings: parsed.settings, photoId: active.photoIds[0] || null, photoIds: [...active.photoIds], libraryIds: parsed.photos ? [...refs.values()] : legacyPhoto ? [legacyPhoto] : [], logoId, views, activeViewId };
+      if (!resume || hasUserPhoto()) lockedProduct = true;
       changeProductContext(); syncActiveView(); syncForm();
       if (resume) {
         history = project.createHistory(model);
@@ -766,8 +907,9 @@
   }
 
   form.addEventListener('submit', event => event.preventDefault());
-  form.addEventListener('input', event => { if (event.target.type === 'file' || event.target.closest('[data-workflow-control]')) return; readForm(); edited(false, false); if (event.target.id === 'card-format') fitPreview(); if (['card-purpose', 'product-category'].includes(event.target.id)) updateContentHints(); });
-  form.addEventListener('change', event => { if (event.target.type === 'file' || event.target.closest('[data-workflow-control]')) return; readForm(); commit(); requestRender(true); if (event.target.id === 'card-format') fitPreview(); if (['card-purpose', 'product-category'].includes(event.target.id)) updateContentHints(); });
+  const contentInputIds = new Set(['product-name', 'product-subtitle', 'product-description', 'product-price', 'old-price', 'product-badge', 'feature-1', 'feature-2', 'feature-3']);
+  form.addEventListener('input', event => { if (event.target.type === 'file' || event.target.closest('[data-workflow-control]')) return; if (contentInputIds.has(event.target.id)) lockedProduct = true; readForm(); edited(false, false); if (event.target.id === 'card-format') fitPreview(); if (['card-purpose', 'product-category'].includes(event.target.id)) updateContentHints(); });
+  form.addEventListener('change', event => { if (event.target.type === 'file' || event.target.closest('[data-workflow-control]')) return; if (contentInputIds.has(event.target.id)) lockedProduct = true; readForm(); commit(); requestRender(true); if (event.target.id === 'card-format') fitPreview(); if (['card-purpose', 'product-category'].includes(event.target.id)) updateContentHints(); });
   form.addEventListener('focusout', commit);
   $('photo-input').addEventListener('change', event => { loadPhotos([...event.target.files]); event.target.value = ''; });
   document.addEventListener('paste', event => {
@@ -785,12 +927,37 @@
   ['dragenter', 'dragover'].forEach(type => zone.addEventListener(type, event => { event.preventDefault(); zone.classList.add('drag-over'); }));
   ['dragleave', 'drop'].forEach(type => zone.addEventListener(type, event => { event.preventDefault(); zone.classList.remove('drag-over'); }));
   zone.addEventListener('drop', event => loadPhotos([...event.dataTransfer.files]));
-  document.querySelectorAll('[data-sample]').forEach(button => button.addEventListener('click', () => loadSample(button.dataset.sample)));
+  document.querySelectorAll('[data-sample]').forEach(button => button.addEventListener('click', () => { lockedProduct = true; loadSample(button.dataset.sample); }));
   $('template-grid').addEventListener('click', event => {
-    const button = event.target.closest('[data-template]'); if (!button) return; commit(); const template = renderer.templates[button.dataset.template];
-    model.settings = renderer.normalize({ ...model.settings, template: button.dataset.template, customColors: false, background: template.background, accent: template.accent, textColor: template.textColor }); syncForm(); edited(true);
+    const favBtn = event.target.closest('[data-fav-template]');
+    if (favBtn) {
+      event.stopPropagation();
+      const key = favBtn.dataset.favTemplate;
+      if (favoriteTemplates.has(key)) favoriteTemplates.delete(key); else favoriteTemplates.add(key);
+      const isFav = favoriteTemplates.has(key);
+      favBtn.setAttribute('aria-pressed', String(isFav));
+      favBtn.setAttribute('aria-label', (isFav ? 'Убрать из избранного: ' : 'В избранное: ') + (renderer.templates[key]?.label || key));
+      favBtn.textContent = isFav ? '★' : '☆';
+      saveFavorites(favoriteTemplates);
+      if ($('template-filter').value === 'favorites') applyTemplateFilter();
+      return;
+    }
+    const button = event.target.closest('[data-template]'); if (!button) return;
+    const key = button.dataset.template;
+    if (!lockedProduct && !hasUserPhoto()) {
+      const matched = templateSampleFor(key);
+      loadSample(matched, false, { replaceDemo: true, templateOverride: key });
+      return;
+    }
+    commit(); const template = renderer.templates[key];
+    model.settings = renderer.normalize({ ...model.settings, template: key, customColors: false, background: template.background, accent: template.accent, textColor: template.textColor }); syncForm(); edited(true);
   });
   $('template-filter').addEventListener('change', applyTemplateFilter);
+  $('template-search')?.addEventListener('input', applyTemplateFilter);
+  document.querySelectorAll('[data-template-chip]').forEach(chip => chip.addEventListener('click', () => {
+    $('template-filter').value = chip.dataset.templateChip;
+    applyTemplateFilter();
+  }));
   $('palette-filter').addEventListener('change', event => {
     for (const button of $('palette-grid').children) button.hidden = event.target.value !== 'all' && button.dataset.tone !== event.target.value;
   });
@@ -802,6 +969,128 @@
     model.settings = renderer.normalize({ ...model.settings, customColors: true, background, accent, textColor });
     syncForm(); edited(true);
   });
+  $('swap-colors')?.addEventListener('click', () => {
+    commit();
+    const { background, textColor } = model.settings;
+    model.settings = renderer.normalize({ ...model.settings, customColors: true, background: textColor, textColor: background });
+    syncForm(); edited(true);
+    status('design-status', 'Цвета фона и текста поменялись местами.');
+  });
+  document.addEventListener('satucard:language-change', updateColorTools);
+  $('fix-contrast')?.addEventListener('click', () => {
+    if (typeof renderer.lightColor !== 'function') return;
+    commit();
+    const textColor = renderer.lightColor(model.settings.background) ? '#17181c' : '#f7f6f2';
+    model.settings = renderer.normalize({ ...model.settings, customColors: true, textColor });
+    syncForm(); edited(true);
+    status('design-status', 'Контраст текста повышен.');
+  });
+  $('shuffle-style')?.addEventListener('click', () => {
+    const curated = [
+      { template: 'porcelain', design: { backdrop: 'mesh', priceStyle: 'pill', featureStyle: 'accent' } },
+      { template: 'noir', design: { backdrop: 'spotlight', priceStyle: 'pill', featureStyle: 'accent' } },
+      { template: 'studio', design: { backdrop: 'mesh', priceStyle: 'filled', featureStyle: 'chips' } },
+      { template: 'cobalt', design: { backdrop: 'dots', priceStyle: 'pill', featureStyle: 'chips' } },
+      { template: 'accent', design: { backdrop: 'paper', priceStyle: 'filled', featureStyle: 'accent' } },
+      { template: 'neon', design: { backdrop: 'grid', priceStyle: 'pill', featureStyle: 'chips' } },
+      { template: 'matcha', design: { backdrop: 'mesh', priceStyle: 'pill', featureStyle: 'accent' } },
+      { template: 'editorial', design: { backdrop: 'paper', priceStyle: 'plain', featureStyle: 'plain' } },
+      { template: 'espresso', design: { backdrop: 'spotlight', priceStyle: 'outline', featureStyle: 'accent' } },
+      { template: 'cloud', design: { backdrop: 'mesh', priceStyle: 'pill', featureStyle: 'chips' } },
+      { template: 'jade', design: { backdrop: 'spotlight', priceStyle: 'filled', featureStyle: 'accent' } },
+      { template: 'cherry', design: { backdrop: 'gradient', priceStyle: 'pill', featureStyle: 'chips' } },
+      { template: 'midnight', design: { backdrop: 'spotlight', priceStyle: 'pill', featureStyle: 'chips' } },
+      { template: 'graphite', design: { backdrop: 'dots', priceStyle: 'filled', featureStyle: 'accent' } }
+    ].filter(item => Object.hasOwn(renderer.templates, item.template));
+    if (!curated.length) return;
+    let pick = curated[shuffleCursor % curated.length];
+    shuffleCursor++;
+    if (pick.template === model.settings.template && curated.length > 1) {
+      pick = curated[shuffleCursor % curated.length];
+      shuffleCursor++;
+    }
+    const tpl = renderer.templates[pick.template];
+    if (!lockedProduct && !hasUserPhoto()) {
+      loadSample(templateSampleFor(pick.template), false, { replaceDemo: true, templateOverride: pick.template, designOverride: pick.design });
+      status('style-transfer-status', 'Подобран стиль: ' + tpl.label + '. Действие можно отменить.');
+      return;
+    }
+    commit();
+    model.settings = renderer.normalize({
+      ...model.settings,
+      template: pick.template,
+      customColors: false,
+      background: tpl.background,
+      accent: tpl.accent,
+      textColor: tpl.textColor,
+      design: { ...model.settings.design, ...pick.design }
+    });
+    syncForm(); edited(true);
+    status('style-transfer-status', 'Подобран стиль: ' + tpl.label + '. Действие можно отменить.');
+  });
+  $('copy-card-style')?.addEventListener('click', () => {
+    const s = model.settings;
+    copiedStyle = clone({
+      template: s.template, font: s.font, textAlign: s.textAlign, textScale: s.textScale,
+      customColors: s.customColors, background: s.background, accent: s.accent, textColor: s.textColor,
+      design: s.design
+    });
+    if ($('paste-card-style')) $('paste-card-style').disabled = false;
+    status('style-transfer-status', 'Стиль скопирован. Можно вставить на другую карточку.');
+  });
+  $('paste-card-style')?.addEventListener('click', () => {
+    if (!copiedStyle) return;
+    commit();
+    model.settings = renderer.normalize({ ...model.settings, ...clone(copiedStyle) });
+    syncForm(); edited(true);
+    status('style-transfer-status', 'Стиль применён к текущей карточке.');
+  });
+  document.querySelectorAll('[data-format-pill]').forEach(button => button.addEventListener('click', () => {
+    const format = button.dataset.formatPill;
+    if (!renderer.formats[format] || model.settings.format === format) return;
+    commit();
+    model.settings = renderer.normalize({ ...model.settings, format });
+    syncForm(); edited(true); fitPreview();
+  }));
+  document.querySelectorAll('[data-discount-preset]').forEach(button => button.addEventListener('click', () => {
+    const pct = Number(button.dataset.discountPreset);
+    if (pct === 0) {
+      commit();
+      model.settings = renderer.normalize({ ...model.settings, oldPrice: null });
+      syncForm(); edited(true);
+      return;
+    }
+    const current = readPrice('product-price', 'price-error');
+    if (!current.valid || current.value === null || current.value <= 0) {
+      $('old-price-error').textContent = 'Сначала укажите текущую цену.';
+      $('product-price').focus();
+      return;
+    }
+    const raw = current.value / (1 - pct / 100);
+    const step = current.value >= 5000 ? 100 : 10;
+    let rounded = Math.ceil(raw / step) * step;
+    if (rounded <= current.value) rounded = current.value + step;
+    if (rounded > 999999999.99) rounded = 999999999;
+    commit();
+    model.settings = renderer.normalize({ ...model.settings, price: current.value, oldPrice: rounded, showPrice: true });
+    syncForm(); edited(true);
+  }));
+  $('center-photo')?.addEventListener('click', () => {
+    commit();
+    model.settings.photo = { ...model.settings.photo, x: 50, y: 50 };
+    syncForm(); edited(true);
+  });
+  const rotatePhotoBy = delta => {
+    commit();
+    let next = ((model.settings.photo.rotation || 0) + delta + 180) % 360;
+    if (next < 0) next += 360;
+    next -= 180;
+    if (next === -180 && delta > 0) next = 180;
+    model.settings.photo = { ...model.settings.photo, rotation: next };
+    syncForm(); edited(true);
+  };
+  $('rotate-left')?.addEventListener('click', () => rotatePhotoBy(-90));
+  $('rotate-right')?.addEventListener('click', () => rotatePhotoBy(90));
   $('reset-design').addEventListener('click', () => {
     commit();
     model.settings = renderer.normalize({ ...model.settings, design: undefined, customColors: false, font: 'manrope', textScale: 100, textAlign: 'left' });
@@ -810,9 +1099,11 @@
   });
   $('photo-palette').addEventListener('click', applyPhotoPalette);
   document.querySelectorAll('[data-photo-filter]').forEach(button => button.addEventListener('click', () => {
-    const filters = { original: [100, 100, 100], mono: [100, 110, 0], vivid: [103, 115, 130], soft: [110, 90, 85] }; commit();
-    const [brightness, contrast, saturation] = filters[button.dataset.photoFilter];
-    model.settings.photo = { ...model.settings.photo, brightness, contrast, saturation, warmth: 0, blur: 0 }; syncForm(); edited(true);
+    const preset = photoFilterPresets[button.dataset.photoFilter];
+    if (!preset) return;
+    commit();
+    const [brightness, contrast, saturation, warmth] = preset;
+    model.settings.photo = { ...model.settings.photo, brightness, contrast, saturation, warmth, blur: 0 }; syncForm(); edited(true);
   }));
   $('reset-photo-button').addEventListener('click', () => { commit(); model.settings.photo = renderer.normalize({}).photo; syncForm(); edited(true); });
   document.querySelectorAll('[data-editor-tab]').forEach(button => {
@@ -833,7 +1124,7 @@
     if (event.target.matches('input[type="text"],textarea,[contenteditable="true"]') || !(event.ctrlKey || event.metaKey) || !initialized) return;
     if (['z', 'y'].includes(event.key.toLowerCase())) { event.preventDefault(); undoRedo(event.shiftKey || event.key.toLowerCase() === 'y' ? 'redo' : 'undo'); }
   });
-  $('reset-button').addEventListener('click', () => { if (!initialModel) return; cancelDrag(); commit(); ++photoVersion; ++logoVersion; ++projectVersion; model = clone(initialModel); changeProductContext(); syncForm(); edited(true); fitPreview(); status('file-status', 'Исходный демонстрационный товар. Сброс можно отменить.'); status('brand-logo-status', ''); });
+  $('reset-button').addEventListener('click', () => { if (!initialModel) return; cancelDrag(); commit(); ++photoVersion; ++logoVersion; ++projectVersion; lockedProduct = false; model = clone(initialModel); changeProductContext(); syncForm(); edited(true); fitPreview(); status('file-status', 'Исходный демонстрационный товар. Сброс можно отменить.'); status('brand-logo-status', ''); });
   $('preview-zoom').addEventListener('input', applyPreviewZoom);
   $('preview-fit-button').addEventListener('click', () => fitPreview());
   window.addEventListener('resize', () => fitPreview(false));
@@ -1151,7 +1442,8 @@
     buildDesignOptions(); activateTab('photo'); syncForm(); fitPreview();
     if (hasStyle) model.settings.template = style;
     if (hasFormat) model.settings.format = format;
-    await loadSample(hasPhoto ? photo : 'headphones', true);
+    if (hasPhoto) lockedProduct = true;
+    await loadSample(hasPhoto ? photo : templateSampleFor(model.settings.template), true);
     syncActiveView(); initialModel = clone(model); history = project.createHistory(model);
     initialized = true; updateHistory();
 

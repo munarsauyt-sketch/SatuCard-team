@@ -117,7 +117,7 @@ try {
     }
     await page.goto(origin + '/examples.html');
     await page.waitForFunction(() => document.querySelectorAll('[data-template-item]').length === Object.keys(window.SATUCARD_RENDERER?.templates || {}).length && document.querySelector('[data-template-item=cherry]'));
-    assert.equal(await page.locator('[data-demo-product]').inputValue(), 'headphones');
+    assert.equal(await page.locator('[data-demo-product]').inputValue(), 'mixed');
     assert.deepEqual(errors, []);
     console.log('Browser workflow passed at ' + width + 'px');
     await context.close();

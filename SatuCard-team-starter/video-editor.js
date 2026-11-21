@@ -16,6 +16,107 @@ const welcomeProject = project;
 let history=[],future=[],playing=false,playStart=0,audioNode=null,audioBuffer=null,audioRevision=-1;
 let revision=0,savedRevision=-1,saveTimer,saveQueue=Promise.resolve(),toastTimer,beats=[],busy=false,exporting=false,controller=null,resultUrl=null,projectOperation=0;
 let pixels=55,trackLabel=matchMedia('(max-width:620px)').matches?105:145;
+let userCustomizedProduct=false,copiedLayerStyle=null,activePaletteId='';
+const VIDEO_FAV_KEY='satucard-video-favorite-templates';
+let favoriteTemplates=new Set();
+try{const raw=JSON.parse(localStorage.getItem(VIDEO_FAV_KEY)||'[]');if(Array.isArray(raw))favoriteTemplates=new Set(raw.filter(v=>typeof v==='string'));}catch{}
+function saveFavorites(){try{localStorage.setItem(VIDEO_FAV_KEY,JSON.stringify([...favoriteTemplates]));}catch{}}
+
+const VIDEO_PALETTES=[
+  {id:'indigo',name:'Ночной индиго',bg:'#14192b',bg2:'#0b0e18',accent:'#b8c5ff',ink:'#f6f5ef',plateInk:'#15182c'},
+  {id:'graphite',name:'Графит',bg:'#1c1d22',bg2:'#101114',accent:'#f0b86e',ink:'#f7f6f2',plateInk:'#1b1610'},
+  {id:'espresso',name:'Эспрессо',bg:'#231b16',bg2:'#120e0b',accent:'#d8bc93',ink:'#f8f2e8',plateInk:'#1d1610'},
+  {id:'emerald',name:'Изумруд',bg:'#162c22',bg2:'#0d1b15',accent:'#b9e3c6',ink:'#f4faf6',plateInk:'#12261c'},
+  {id:'cobalt',name:'Кобальт',bg:'#182b8b',bg2:'#0e1954',accent:'#c9d5ff',ink:'#ffffff',plateInk:'#12206b'},
+  {id:'plum',name:'Сливовый',bg:'#281e3b',bg2:'#161024',accent:'#d8c2f8',ink:'#f8f4ff',plateInk:'#221736'},
+  {id:'sand',name:'Тёплый песок',bg:'#f4ece0',bg2:'#e4d5bf',accent:'#3c2e22',ink:'#2a2018',plateInk:'#ffffff'},
+  {id:'ivory',name:'Слоновая кость',bg:'#f8f5ef',bg2:'#ebe5d8',accent:'#1e1d1a',ink:'#1e1d1a',plateInk:'#ffffff'},
+  {id:'sage',name:'Шалфей',bg:'#e1ead8',bg2:'#cbd9be',accent:'#2c3d2b',ink:'#223121',plateInk:'#ffffff'},
+  {id:'peach',name:'Персик',bg:'#f9e3d8',bg2:'#efcab7',accent:'#4f291c',ink:'#3d1f15',plateInk:'#ffffff'},
+  {id:'lavender',name:'Лаванда',bg:'#ece3fa',bg2:'#dacbf2',accent:'#3d2563',ink:'#2a1a45',plateInk:'#ffffff'},
+  {id:'lime',name:'Неоновый лайм',bg:'#ecfa8b',bg2:'#d5e95c',accent:'#1b2114',ink:'#1b2114',plateInk:'#ffffff'},
+  {id:'mango',name:'Манго',bg:'#ff593c',bg2:'#42207a',accent:'#ffd438',ink:'#ffffff',plateInk:'#30175c'},
+  {id:'electric',name:'Электрик',bg:'#5733ef',bg2:'#22154e',accent:'#28edce',ink:'#ffffff',plateInk:'#160d36'},
+  {id:'berry',name:'Ягодный',bg:'#ed347c',bg2:'#441653',accent:'#b6ff68',ink:'#ffffff',plateInk:'#310f3d'},
+  {id:'lagoon',name:'Лагуна',bg:'#067b94',bg2:'#123f52',accent:'#ffe071',ink:'#ffffff',plateInk:'#0e3242'},
+  {id:'terracotta',name:'Терракота',bg:'#c7613c',bg2:'#5c2414',accent:'#fde3c8',ink:'#fffaf4',plateInk:'#471a0e'},
+  {id:'mono',name:'Монохром',bg:'#e6e6e8',bg2:'#d2d2d6',accent:'#17171a',ink:'#17171a',plateInk:'#ffffff'},
+];
+function hexRgb(hex){
+  if(!/^#[0-9a-f]{6}$/i.test(hex||''))return [20,22,30];
+  return [parseInt(hex.slice(1,3),16),parseInt(hex.slice(3,5),16),parseInt(hex.slice(5,7),16)];
+}
+function luminance(hex){
+  const [r,g,b]=hexRgb(hex).map(v=>{const c=v/255;return c<=0.03928?c/12.92:((c+0.055)/1.055)**2.4;});
+  return 0.2126*r+0.7152*g+0.0722*b;
+}
+function contrastRatio(a,b){
+  const l1=luminance(a),l2=luminance(b);
+  return (Math.max(l1,l2)+0.05)/(Math.min(l1,l2)+0.05);
+}
+function bestInk(bg){return contrastRatio(bg,'#ffffff')>=contrastRatio(bg,'#141418')?'#ffffff':'#141418';}
+function sceneColors(){
+  const bgLayer=project.layers.find(i=>i.name==='Фон сцены');
+  const heading=project.layers.find(i=>i.name==='Заголовок')||project.layers.find(i=>i.type==='text');
+  const veil=heading&&project.layers.find(i=>i.scene===heading.scene&&i.name==='Подложка заголовка'&&!i.hidden);
+  const plate=project.layers.find(i=>i.name==='Плашка цены');
+  const bg=bgLayer?.color||project.background||'#14192b';
+  const surface=(heading?.background&&heading.background!=='transparent')?heading.background:(veil?.color||bg);
+  const ink=heading?.color||'#f6f5ef';
+  const accent=plate?.color||$('#brand-color')?.value||'#b8c5ff';
+  return {bg,surface,ink,accent};
+}
+function updatePaletteUI(){
+  const {bg,surface,ink,accent}=sceneColors();
+  const dots=document.querySelectorAll('#v-palette-preview i');
+  if(dots.length===3){dots[0].style.background=bg;dots[1].style.background=accent;dots[2].style.background=ink;}
+  const matched=VIDEO_PALETTES.find(p=>p.id===activePaletteId)||VIDEO_PALETTES.find(p=>p.bg.toLowerCase()===bg.toLowerCase()&&p.accent.toLowerCase()===accent.toLowerCase());
+  const nameEl=$('#v-palette-name');
+  if(nameEl)nameEl.textContent=matched?matched.name:'По шаблону';
+  document.querySelectorAll('#v-palette-grid button').forEach(btn=>btn.setAttribute('aria-pressed',String(btn.dataset.palette===matched?.id)));
+  const ratio=contrastRatio(surface,ink);
+  const meter=$('#v-contrast-meter'),fix=$('#v-fix-contrast');
+  if(meter){
+    const level=ratio>=4.5?'good':ratio>=3?'mid':'low';
+    meter.dataset.level=level;
+    meter.textContent='Контраст '+ratio.toFixed(1)+':1 · '+(level==='good'?'AA':level==='mid'?'крупный':'низкий');
+  }
+  if(fix)fix.hidden=ratio>=4.5;
+}
+function renderPaletteGrid(){
+  const grid=$('#v-palette-grid');if(!grid)return;
+  grid.replaceChildren();
+  for(const palette of VIDEO_PALETTES){
+    const btn=document.createElement('button');btn.type='button';btn.dataset.palette=palette.id;btn.setAttribute('aria-pressed','false');
+    const swatch=document.createElement('i');swatch.style.background=`linear-gradient(125deg, ${palette.bg} 0 42%, ${palette.accent} 42% 76%, ${palette.ink} 76% 100%)`;
+    const label=document.createElement('span');label.textContent=palette.name;
+    btn.append(swatch,label);
+    btn.addEventListener('click',safely(()=>applyVideoPalette(palette)));
+    grid.append(btn);
+  }
+}
+function applyVideoPalette(palette){
+  snapshot();
+  activePaletteId=palette.id;
+  project.background=palette.bg;
+  if($('#brand-color'))$('#brand-color').value=palette.accent;
+  for(const item of project.layers){
+    if(item.name==='Фон сцены'){
+      item.color=palette.bg;item.gradient='linear';item.gradientColor=palette.bg2;item.gradientAngle=150;
+    }else if(item.name==='Плашка цены'){
+      item.color=palette.accent;
+    }else if(item.role==='price'){
+      item.color=palette.plateInk;
+    }else if(item.name==='Подложка заголовка'){
+      item.color=palette.bg2;item.gradient='linear';item.gradientColor=palette.bg;
+    }else if(item.type==='text'){
+      if(item.background&&item.background!=='transparent'){item.background=palette.bg2;item.color=bestInk(palette.bg2);}
+      else item.color=palette.ink;
+    }
+  }
+  changed();
+  toast('Палитра «'+palette.name+'» применена.');
+}
 
 function toast(message){$('#toast').textContent=message;$('#toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').classList.remove('visible'),4200);}
 function handle(error){if(!error.code?.startsWith('video_'))console.error(error);toast(error.message||'Не удалось выполнить действие.');}
@@ -64,9 +165,12 @@ new ResizeObserver(fitStage).observe($('.stage'));
 async function seek(next){stop();time=clamp(next,0,project.duration);activeFrame=null;await media.seek(project,Math.min(time,project.duration-.001),true);draw();renderInspector();}
 function renderControls(){
   $('#project-name').value=project.name;$('#format').value=project.format;$('#duration').value=project.duration;$('#fps').value=project.fps;$('#bpm').value=project.bpm;
+  document.querySelectorAll('.v-format-pill').forEach(btn=>btn.setAttribute('aria-pressed',String(btn.dataset.vFormat===project.format)));
+  document.querySelectorAll('#template-list .template-card').forEach(btn=>btn.classList.toggle('is-active',btn.dataset.templateId===project.templateId));
   $('#undo').disabled=!history.length;$('#redo').disabled=!future.length;
   for(const id of ['split','duplicate','layer-down','layer-up','delete-layer'])$('#'+id).disabled=!current();
   $('#layer-count').textContent=project.layers.length+' слоёв';
+  updatePaletteUI();
 }
 function select(id,{jump=false}={}){
   selected=id;activeFrame=null;const item=current();
@@ -85,14 +189,19 @@ async function switchProject(next,files=new Map(media.files),expectedRevision=re
   media.dispose();media=replacement;project=next;selected=null;activeFrame=null;time=Math.min(.7,project.duration/2);history=[];future=[];beats=[];
   productForm();changed({library:true});await persist();
 }
-function confirmReplace(){return !project.layers.length || (project===welcomeProject && revision===0) || confirm('Заменить текущий ролик? Черновик будет перезаписан. Чтобы сохранить его отдельно, сначала скачайте файл проекта.');}
-async function chooseTemplate(id){
-  if(!confirmReplace())return;
-  const next=templateProject(id,project.product);
-  next.assets=clone(project.assets);
-  const own=project.layers.find(item=>item.role==='product'&&!DEMOS[item.assetId]);
+function confirmReplace(){return !project.layers.length || (!userCustomizedProduct && project.assets.every(a=>Object.hasOwn(DEMOS,a.id))) || (project===welcomeProject && revision===0) || confirm('Заменить текущий ролик? Черновик будет перезаписан. Чтобы сохранить его отдельно, сначала скачайте файл проекта.');}
+async function chooseTemplate(id,{undoable=false}={}){
+  if(!undoable&&!confirmReplace())return;
+  const own=project.layers.find(item=>item.role==='product'&&!Object.hasOwn(DEMOS,item.assetId));
+  const userAssets=project.assets.filter(asset=>!Object.hasOwn(DEMOS,asset.id));
+  const keepProduct=userCustomizedProduct||Boolean(own);
+  const next=templateProject(id,keepProduct?project.product:undefined);
+  if(userAssets.length)next.assets=[...next.assets,...clone(userAssets)];
   if(own)for(const item of next.layers.filter(item=>item.role==='product')){item.assetId=own.assetId;item.type=own.type;}
-  await switchProject(next);toast('Шаблон «'+next.name+'» готов. Замените товар во вкладке «Медиа».');
+  activePaletteId='';
+  if(undoable){await replaceProject(next);}
+  else{await switchProject(next);}
+  toast('Шаблон «'+next.name+'» готов. Замените товар во вкладке «Медиа».');
 }
 let activeTemplateFilter='Все',activeTemplateQuery='',templateGeneration=0;
 const templateMedia=new MediaStore();
@@ -102,8 +211,14 @@ async function renderTemplates(filter=activeTemplateFilter,query=activeTemplateQ
   const list=$('#template-list');list.replaceChildren();
   const portrait=document.createElement('canvas');portrait.width=216;portrait.height=384;
   document.querySelector('[data-library="templates"] .panel-heading>span').textContent=TEMPLATES.length;
-  for(const template of TEMPLATES.filter(item=>(filter==='Все'||item.category===filter)&&[item.name,item.note,item.category].some(text=>text.toLocaleLowerCase().includes(query.toLocaleLowerCase().trim())))){
-    const button=document.createElement('button');button.className='template-card';button.title=template.note;
+  const filtered=TEMPLATES.filter(item=>{
+    const matchesCat=filter==='Все'?true:filter==='★ Избранные'?favoriteTemplates.has(item.id):item.category===filter;
+    const q=query.toLocaleLowerCase().trim();
+    return matchesCat&&(!q||[item.name,item.note,item.category].some(text=>text.toLocaleLowerCase().includes(q)));
+  });
+  for(const template of filtered){
+    const tile=document.createElement('div');tile.className='v-template-tile';
+    const button=document.createElement('button');button.className='template-card'+(project.templateId===template.id?' is-active':'');button.title=template.note;button.dataset.templateId=template.id;
     const thumb=document.createElement('canvas');thumb.width=216;thumb.height=288;
     const temp=templateProject(template.id);await templateMedia.prepare(temp);
     if(generation!==templateGeneration)return;
@@ -137,9 +252,26 @@ async function renderTemplates(filter=activeTemplateFilter,query=activeTemplateQ
     button.addEventListener('blur',()=>scrub(.9));
     const title=document.createElement('strong');title.textContent=template.name;
     const note=document.createElement('small');note.textContent=temp.duration+' сек · '+template.category;
-    button.append(thumb,title,note);button.addEventListener('click',safely(()=>chooseTemplate(template.id)));list.append(button);
+    button.append(thumb,title,note);button.addEventListener('click',safely(()=>chooseTemplate(template.id)));
+    const fav=document.createElement('button');fav.type='button';fav.className='v-template-fav';
+    const isFav=favoriteTemplates.has(template.id);
+    fav.textContent=isFav?'★':'☆';fav.setAttribute('aria-pressed',String(isFav));
+    fav.setAttribute('aria-label',isFav?'Убрать из избранного':'Добавить в избранное');
+    fav.title=isFav?'Убрать из избранного':'В избранное';
+    fav.addEventListener('click',safely(async event=>{
+      event.stopPropagation();
+      if(favoriteTemplates.has(template.id))favoriteTemplates.delete(template.id);
+      else favoriteTemplates.add(template.id);
+      saveFavorites();
+      const nextFav=favoriteTemplates.has(template.id);
+      fav.textContent=nextFav?'★':'☆';fav.setAttribute('aria-pressed',String(nextFav));
+      fav.setAttribute('aria-label',nextFav?'Убрать из избранного':'Добавить в избранное');
+      if(activeTemplateFilter==='★ Избранные')await renderTemplates();
+    }));
+    tile.append(button,fav);
+    list.append(tile);
   }
-  if(!list.children.length){const empty=document.createElement('p');empty.className='muted';empty.textContent='Шаблоны не найдены. Измените поиск или категорию.';list.append(empty);}
+  if(!list.children.length){const empty=document.createElement('p');empty.className='muted';empty.textContent=filter==='★ Избранные'?'Отметьте звёздочкой шаблоны, которые хотите сохранить.':'Шаблоны не найдены. Измените поиск или категорию.';list.append(empty);}
 }
 $('#template-filters').addEventListener('click',safely(async event=>{const button=event.target.closest('[data-filter]');if(!button)return;$('#template-filters').querySelectorAll('button').forEach(item=>item.classList.toggle('active',item===button));await renderTemplates(button.dataset.filter);}));
 on('#blank-project','click',async()=>{if(confirmReplace()){const next=emptyProject();next.product=clone(project.product);next.assets=clone(project.assets);await switchProject(next);showPanel('media');}});
@@ -181,7 +313,7 @@ async function importFiles(files,logo=false){
     if(project!==target)throw new Error('Ролик изменился во время загрузки. Добавьте файлы в текущий проект заново.');
     // Decoding yields to other imports; re-read both limits immediately at commit.
     checkImportQuota(project,media.files,file);
-    snapshot();media.files.set(asset.id,file);project.assets.push(asset);
+    snapshot();media.files.set(asset.id,file);project.assets.push(asset);userCustomizedProduct=true;
     changed({library:true});
     if(logo)insertAsset(asset,{logo:true});
     await persist();
@@ -219,12 +351,68 @@ on('#detect-beats','click',async()=>{
 on('#fit-beats','click',()=>{if(!project.layers.some(item=>item.scene))throw new Error('Автомонтаж работает со сценами шаблона. Отдельные слои можно двигать вручную.');snapshot();const grid=beats.length?beats:Array.from({length:Math.ceil(project.duration*project.bpm/60)+1},(_,index)=>index*60/project.bpm).filter(t=>t<=project.duration);fitToBeats(project,[0,...grid,project.duration]);changed();toast('Границы сцен привязаны к ритму.');});
 
 on('#product-form','submit',event=>{
-  event.preventDefault();const data=new FormData(event.target);snapshot();
+  event.preventDefault();const data=new FormData(event.target);snapshot();userCustomizedProduct=true;
   project.product={title:String(data.get('title')),price:String(data.get('price')),brand:String(data.get('brand')),cta:String(data.get('cta')),features:String(data.get('features')).split('\n').filter(Boolean).slice(0,3).map(text=>text.slice(0,120))};
   while(project.product.features.length<3)project.product.features.push('Ваше преимущество');
   for(const item of project.layers)if(['title','price','brand','cta'].includes(item.role))item.text=project.product[item.role];
   const titles=project.layers.filter(item=>item.name==='Заголовок'&&!item.role);
   titles.forEach((item,index)=>{if(item.text!=='До / После')item.text=project.product.features[index%3];});changed();toast('Содержание обновлено, монтаж сохранён.');
+});
+document.querySelectorAll('[data-v-discount]').forEach(btn=>btn.addEventListener('click',safely(()=>{
+  const pct=Number(btn.dataset.vDiscount);
+  const priceInput=$('#product-form [name="price"]');
+  const digits=String(priceInput?.value||'').replace(/[^\d]/g,'');
+  const base=Number(digits);
+  if(!base||!Number.isFinite(base)){toast('Укажите числовую цену перед расчётом скидки.');return;}
+  const discounted=Math.max(10,Math.round(base*(1-pct/100)/10)*10);
+  const formatted=new Intl.NumberFormat('ru').format(discounted)+' ₸';
+  priceInput.value=formatted;
+  snapshot();userCustomizedProduct=true;
+  project.product.price=formatted;
+  for(const item of project.layers)if(item.role==='price')item.text=formatted;
+  changed();toast('Цена со скидкой −'+pct+'%: '+formatted);
+})));
+on('#video-shuffle-style','click',async()=>{
+  const pool=TEMPLATES.filter(t=>t.id!==project.templateId);
+  const pick=pool[Math.floor(Math.random()*pool.length)]||TEMPLATES[0];
+  await chooseTemplate(pick.id,{undoable:true});
+});
+document.querySelectorAll('.v-format-pill').forEach(btn=>btn.addEventListener('click',safely(()=>{
+  const fmt=btn.dataset.vFormat;if(!fmt||fmt===project.format)return;
+  snapshot();project.format=fmt;changed();
+})));
+on('#v-swap-colors','click',()=>{
+  const {bg,ink}=sceneColors();
+  snapshot();activePaletteId='';
+  project.background=ink;
+  const nextInk=bestInk(ink);
+  for(const item of project.layers){
+    if(item.name==='Фон сцены'||item.name==='Подложка заголовка'){item.color=ink;item.gradient='none';item.gradientColor=ink;}
+    else if(item.type==='text'&&item.role!=='price'){
+      if(item.background&&item.background!=='transparent'){item.background=bg;item.color=bestInk(bg);}
+      else item.color=nextInk;
+    }else if(item.name==='Плашка цены'){item.color=bg;}
+    else if(item.role==='price'){item.color=bestInk(bg);}
+  }
+  changed();toast('Цвета фона и текста поменяны местами.');
+});
+on('#v-fix-contrast','click',()=>{
+  snapshot();
+  const sceneBg=new Map(project.layers.filter(i=>i.name==='Фон сцены').map(i=>[i.scene,i.color]));
+  const sceneVeil=new Map(project.layers.filter(i=>i.name==='Подложка заголовка'&&!i.hidden).map(i=>[i.scene,i.color]));
+  for(const item of project.layers){
+    if(item.type!=='text'&&item.type!=='subtitles')continue;
+    if(item.role==='price'){
+      const plate=project.layers.find(p=>p.scene===item.scene&&p.name==='Плашка цены'&&!p.hidden);
+      const surface=plate?plate.color:(sceneBg.get(item.scene)||project.background);
+      if(contrastRatio(surface,item.color)<4.5)item.color=bestInk(surface);
+      continue;
+    }
+    const baseSurface=item.name==='Заголовок'?(sceneVeil.get(item.scene)||sceneBg.get(item.scene)||project.background):(sceneBg.get(item.scene)||project.background);
+    const surface=(item.background&&item.background!=='transparent')?item.background:baseSurface;
+    if(contrastRatio(surface,item.color)<4.5)item.color=bestInk(surface);
+  }
+  changed();toast('Контраст текста повышен до читаемого уровня.');
 });
 on('#brand-save','click',async()=>{const logoLayer=project.layers.findLast(item=>item.role==='logo'),asset=project.assets.find(item=>item.id===logoLayer?.assetId);await saveBrand({name:project.product.brand,color:$('#brand-color').value,font:$('#brand-font').value,logo:asset?{asset:clone(asset),file:media.files.get(asset.id)}:null});toast('Стиль и логотип магазина сохранены в браузере.');});
 on('#brand-apply','click',async()=>{
@@ -259,6 +447,16 @@ function renderInspector(){
   if(item.type==='text')root.append(control('Текст','text',{type:'textarea',value:item.text}));
   if(item.type!=='audio'){
     const state=activeFrame!==null?item.keyframes[activeFrame]:item;
+    const quickRow=document.createElement('div');quickRow.className='v-quick-grid';
+    const quickBtn=(label,action)=>{const b=document.createElement('button');b.type='button';b.className='subtle';b.textContent=label;b.addEventListener('click',safely(()=>{snapshot();action();changed();}));return b;};
+    quickRow.append(
+      quickBtn('По центру',()=>{state.x=seconds((1-state.w)/2);state.y=seconds((1-state.h)/2);}),
+      quickBtn('Весь кадр',()=>{state.x=0;state.y=0;state.w=1;state.h=1;state.rotation=0;}),
+      quickBtn('↺ −90°',()=>{const next=(state.rotation||0)-90;state.rotation=next<-360?next+360:next;}),
+      quickBtn('↻ +90°',()=>{const next=(state.rotation||0)+90;state.rotation=next>360?next-360:next;}),
+      quickBtn('На весь ролик',()=>{item.start=0;item.end=project.duration;})
+    );
+    root.append(quickRow);
     const grid=document.createElement('div');grid.className='property-grid';
     for(const [key,label,min,max]of [['x','X, %',-300,300],['y','Y, %',-300,300],['w','Ширина, %',.5,600],['h','Высота, %',.5,600],['rotation','Поворот, °',-360,360],['opacity','Непрозрачность, %',0,100]])grid.append(control(label,key,{value:seconds(state[key]*(key==='rotation'?1:100)),min,max,step:1}));
     root.append(grid);
@@ -273,9 +471,38 @@ function renderInspector(){
     }
     if(['image','video'].includes(item.type))root.append(control('Вписывание','fit',{value:item.fit,options:[['cover','Заполнить'],['contain','Вписать целиком']]}));
     if(['image','video'].includes(item.type)){
+      const presets=document.createElement('div');presets.className='v-filter-presets';
+      for(const [label,exp,sat]of [['Оригинал',1,1],['Студия',1.08,1.08],['Сочный',1.05,1.35],['Кино',.92,.85],['Ч/Б',1.04,0]]){
+        const b=document.createElement('button');b.type='button';b.className='subtle';b.textContent=label;
+        b.setAttribute('aria-pressed',String(Math.abs((item.exposure??1)-exp)<.02&&Math.abs((item.saturation??1)-sat)<.02));
+        b.addEventListener('click',()=>{snapshot();item.exposure=exp;item.saturation=sat;changed();});
+        presets.append(b);
+      }
+      root.append(presets);
       const effects=document.createElement('div');effects.className='property-grid';
       for(const [key,label,value,min,max]of [['cropX','Кадр X',item.cropX??.5,0,1],['cropY','Кадр Y',item.cropY??.5,0,1],['shadow','Тень',item.shadow??0,0,1],['exposure','Яркость',item.exposure??1,.2,2],['saturation','Насыщенность',item.saturation??1,0,2]])effects.append(control(label,key,{value,min,max,step:.05}));root.append(effects);
     }
+    const styleRow=document.createElement('div');styleRow.className='button-row v-style-clip-row';
+    const copyStyleBtn=document.createElement('button');copyStyleBtn.type='button';copyStyleBtn.className='subtle';copyStyleBtn.textContent='Копировать стиль';
+    copyStyleBtn.addEventListener('click',()=>{
+      copiedLayerStyle={type:item.type,color:item.color,background:item.background,font:item.font,fontSize:item.fontSize,align:item.align,weight:item.weight,radius:item.radius,fit:item.fit,shadow:item.shadow,exposure:item.exposure,saturation:item.saturation,gradient:item.gradient,gradientColor:item.gradientColor,gradientAngle:item.gradientAngle,entrance:item.entrance,motion:item.motion,exit:item.exit};
+      renderInspector();toast('Стиль слоя скопирован.');
+    });
+    const pasteStyleBtn=document.createElement('button');pasteStyleBtn.type='button';pasteStyleBtn.className='subtle';pasteStyleBtn.textContent='Вставить стиль';pasteStyleBtn.disabled=!copiedLayerStyle;
+    pasteStyleBtn.addEventListener('click',()=>{
+      if(!copiedLayerStyle)return;
+      snapshot();
+      item.entrance=copiedLayerStyle.entrance;item.motion=copiedLayerStyle.motion;item.exit=copiedLayerStyle.exit;
+      if(['text','subtitles'].includes(item.type)&&['text','subtitles'].includes(copiedLayerStyle.type)){
+        Object.assign(item,{color:copiedLayerStyle.color,background:copiedLayerStyle.background,font:copiedLayerStyle.font,fontSize:copiedLayerStyle.fontSize,align:copiedLayerStyle.align,weight:copiedLayerStyle.weight});
+      }else if(['image','video'].includes(item.type)&&['image','video'].includes(copiedLayerStyle.type)){
+        Object.assign(item,{radius:copiedLayerStyle.radius,fit:copiedLayerStyle.fit,shadow:copiedLayerStyle.shadow,exposure:copiedLayerStyle.exposure,saturation:copiedLayerStyle.saturation});
+      }else if(item.type==='shape'&&copiedLayerStyle.type==='shape'){
+        Object.assign(item,{color:copiedLayerStyle.color,radius:copiedLayerStyle.radius,shadow:copiedLayerStyle.shadow,gradient:copiedLayerStyle.gradient,gradientColor:copiedLayerStyle.gradientColor,gradientAngle:copiedLayerStyle.gradientAngle});
+      }
+      changed();toast('Стиль применён к слою.');
+    });
+    styleRow.append(copyStyleBtn,pasteStyleBtn);root.append(styleRow);
     root.append(document.createElement('hr'));
     root.append(control('Появление','entrance',{value:item.entrance,options:[['none','Без эффекта'],['fade','Проявление'],['rise','Подъём'],['slide','Сдвиг'],['pop','Масштаб'],['wipe','Открытие медиа']]}),control('Движение','motion',{value:item.motion,options:[['none','Статично'],['zoom','Приближение'],['pan','Панорама']]}),control('Исчезновение','exit',{value:item.exit,options:[['none','Без эффекта'],['fade','Плавное']]}));
     const keyButton=document.createElement('button');keyButton.className='full subtle';keyButton.textContent='◇ Ключевой кадр в '+clock(time);keyButton.addEventListener('click',safely(()=>{
@@ -453,7 +680,7 @@ on('#project-input','change',async event=>{
       let saved;
       try{saved=await unpackProject(file);}
       catch(error){toast(error.message||'Не удалось прочитать проект. Выберите другой файл.');return;}
-      await switchProject(saved.project,saved.files,expectedRevision);toast('Проект открыт.');
+      await switchProject(saved.project,saved.files,expectedRevision);userCustomizedProduct=true;toast('Проект открыт.');
     }
   }finally{event.target.value='';}
 });
@@ -494,11 +721,12 @@ async function init(){
   if(typeof window.VideoEncoder==='undefined'&&$('#export')){
     $('#export').title='WebCodecs недоступен в этом браузере — для экспорта MP4 откройте Chrome или Edge';
   }
-  try{const saved=await loadProject();if(saved){project=saved.project;media.files=saved.files;}}catch(error){handle(error);}
+  try{const saved=await loadProject();if(saved){project=saved.project;media.files=saved.files;if(saved.project.assets.some(a=>!Object.hasOwn(DEMOS,a.id))||saved.project.product?.title!=='Беспроводные наушники')userCustomizedProduct=true;}}catch(error){handle(error);}
   await loadProjectFonts(project).catch(error=>toast(error.message));
   const brand=await loadBrand().catch(()=>null);if(brand){$('#brand-color').value=brand.color;$('#brand-font').value=brand.font;}
+  renderPaletteGrid();
   await media.prepare(project);await media.seek(project,time,true);productForm();renderControls();renderInspector();renderTimeline();renderMedia();await renderTemplates();
-  await installVideoPlus({project:()=>project,media:()=>media,current,time:()=>time,revision:()=>revision,snapshot,changed,seek,stop,draw,toast,showPanel,confirmReplace,switchProject,addLayer,searchTemplates:query=>renderTemplates(undefined,query),replace:replaceProject,edit:fn=>{const next=clone(project);fn(next);return replaceProject(next,true);}});
+  await installVideoPlus({project:()=>project,media:()=>media,current,time:()=>time,revision:()=>revision,snapshot,changed,seek,stop,draw,toast,showPanel,confirmReplace,switchProject:async(next,files)=>{userCustomizedProduct=true;return switchProject(next,files);},addLayer,searchTemplates:query=>renderTemplates(undefined,query),replace:replaceProject,edit:fn=>{const next=clone(project);fn(next);return replaceProject(next,true);}});
   const help=installVideoHelp({showPanel,stop});
   scheduleSave();await persist();document.body.dataset.ready='true';
   help.startIfNew();

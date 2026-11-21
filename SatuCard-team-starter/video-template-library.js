@@ -21,22 +21,58 @@ export const EXTRA_TEMPLATES=[
   ['ceramic','Ceramic objects','Дом','minimal','#d7bca5','#46372b','split'],
   ['linen','Льняной свет','Одежда','noir','#e7dcc8','#3e3b32','poster'],
 ].map(([id,name,category,base,color,ink,layout])=>({id,name,category,base,color,ink,layout,note:category+' · '+name}));
+function shade(hex,delta){
+  const clean=/^#[0-9a-f]{6}$/i.test(hex)?hex.slice(1):'191b22';
+  const ch=o=>Math.max(0,Math.min(255,parseInt(clean.slice(o,o+2),16)+delta)).toString(16).padStart(2,'0');
+  return '#'+ch(0)+ch(2)+ch(4);
+}
 export function composeExtra(project,template){
   project.name=template.name;project.templateId=template.id;
+  project.background=template.ink;
   const sceneIds=[...new Set(project.layers.map(i=>i.scene).filter(Boolean))];
   for(const [index,id]of sceneIds.entries()){
     const items=project.layers.filter(i=>i.scene===id),hero=items.find(i=>i.role==='product'),heading=items.find(i=>i.name==='Заголовок'),bg=items.find(i=>i.name==='Фон сцены');
-    bg.color=index%2?template.color:template.ink;
-    const ink=index%2?template.ink:'#fffdf5';
+    const light=index%2===1;
+    bg.color=light?template.color:template.ink;
+    bg.gradient=light?'linear':'radial';
+    bg.gradientColor=light?shade(template.color,-18):shade(template.ink,-16);
+    bg.gradientAngle=150;
+    const ink=light?template.ink:'#fffdf5';
     for(const item of items.filter(i=>i.type==='text')){item.color=ink;item.background='transparent';}
-    for(const item of items.filter(i=>i.name==='Подложка заголовка'))item.hidden=true;
-    if(template.layout==='editorial'){Object.assign(hero,{x:.05,y:.12,w:.9,h:.53,rotation:0,radius:0});Object.assign(heading,{x:.07,y:.69,w:.86,h:.12,fontSize:.083,font:'Noto Serif'});}
-    if(template.layout==='split'){Object.assign(hero,{x:.31,y:.18,w:.64,h:.58,rotation:index%2?3:-3});Object.assign(heading,{x:.06,y:.12,w:.6,h:.20,fontSize:.11,font:'Golos Text',background:bg.color});}
-    if(template.layout==='poster'){Object.assign(hero,{x:.12,y:.36,w:.76,h:.38,rotation:0});Object.assign(heading,{x:.055,y:.14,w:.89,h:.20,fontSize:.13,align:'center',font:'Golos Text'});}
-    if(template.layout==='frame'){Object.assign(hero,{x:.05,y:.11,w:.9,h:.66,rotation:0,radius:.12});Object.assign(heading,{x:.10,y:.57,w:.80,h:.14,fontSize:.09,background:template.ink,color:'#fffdf5',font:'Noto Serif'});}
+    for(const item of items.filter(i=>i.name==='Подложка заголовка'||i.name==='Номер преимущества'||i.name==='Шаг распаковки'))item.hidden=true;
+    const second=items.find(i=>i.name==='Второй товар');
+    if(template.layout==='editorial'){
+      if(second){
+        Object.assign(hero,{x:.06,y:.115,w:.56,h:.50,rotation:-2,radius:.042,fit:'cover'});
+        Object.assign(second,{x:.48,y:.225,w:.46,h:.40,rotation:3,radius:.042,shadow:.5,fit:'cover'});
+      }else{
+        Object.assign(hero,{x:.06,y:.115,w:.88,h:.53,rotation:0,radius:.042,fit:'cover'});
+      }
+      Object.assign(heading,{x:.07,y:.68,w:.86,h:.12,fontSize:.082,align:'left',font:'Noto Serif'});
+    }
+    if(template.layout==='split'){
+      Object.assign(hero,{x:.33,y:.20,w:.61,h:.55,rotation:index%2?2.5:-2.5,radius:.042,fit:'cover'});
+      Object.assign(heading,{x:.06,y:.115,w:.58,h:.21,fontSize:.098,align:'left',font:'Golos Text',background:bg.color});
+    }
+    if(template.layout==='poster'){
+      if(second){
+        Object.assign(hero,{x:.07,y:.345,w:.55,h:.41,rotation:-2.5,radius:.045,fit:'cover'});
+        Object.assign(second,{x:.49,y:.415,w:.44,h:.35,rotation:3.5,radius:.045,shadow:.5,fit:'cover'});
+      }else{
+        Object.assign(hero,{x:.09,y:.345,w:.82,h:.415,rotation:0,radius:.045,fit:'cover'});
+      }
+      Object.assign(heading,{x:.06,y:.125,w:.88,h:.19,fontSize:.115,align:'center',font:'Golos Text'});
+    }
+    if(template.layout==='frame'){
+      Object.assign(hero,{x:.06,y:.105,w:.88,h:.66,rotation:0,radius:.06,fit:'cover'});
+      Object.assign(heading,{x:.10,y:.575,w:.80,h:.13,fontSize:.084,align:'center',background:template.ink,color:'#fffdf5',font:'Noto Serif'});
+    }
     const plate=items.find(i=>i.name==='Плашка цены'),price=items.find(i=>i.role==='price');
-    Object.assign(plate,{x:.48,y:.825,w:.435,h:.066,color:template.color,hidden:false});Object.assign(price,{x:.5,y:.838,w:.395,h:.04,fontSize:.045,color:template.ink,align:'center'});
-    for(const item of items.filter(i=>i.role==='product'))item.shadow=.4;
+    const plateColor=light?template.ink:template.color;
+    const priceInk=light?'#fffdf5':template.ink;
+    Object.assign(plate,{x:.46,y:.82,w:.46,h:.07,color:plateColor,radius:.045,shadow:.28,hidden:false});
+    Object.assign(price,{x:.48,y:.834,w:.42,h:.042,fontSize:.046,color:priceInk,align:'center'});
+    for(const item of items.filter(i=>i.role==='product'))item.shadow=.5;
   }
   return project;
 }

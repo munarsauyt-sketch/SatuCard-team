@@ -9,9 +9,91 @@ export const FORMATS = {
   wide: { label: '16:9 · Горизонтальный', width: 1920, height: 1080 },
 };
 export const DEMOS = {
-  'demo-headphones': 'headphones', 'demo-ceramics': 'ceramics',
-  'demo-sneaker': 'sneaker', 'demo-skincare': 'skincare',
+  'demo-headphones': 'headphones',
+  'demo-dark_headphones': 'dark_headphones',
+  'demo-ceramics': 'ceramics',
+  'demo-sneaker': 'sneaker',
+  'demo-skincare': 'skincare',
+  'demo-smartwatch': 'smartwatch',
+  'demo-perfume': 'perfume',
+  'demo-thermos': 'thermos',
+  'demo-botanical_oil': 'botanical_oil',
+  'demo-decor': 'decor',
+  'demo-kitchen': 'kitchen',
+  'demo-studio_tea': 'studio_tea',
+  'demo-lavender_cream': 'lavender_cream',
+  'demo-clay_candle': 'clay_candle',
+  'demo-leather_wallet': 'leather_wallet',
+  'demo-matcha_set': 'matcha_set',
+  'demo-pop_speaker': 'pop_speaker',
+  'demo-bag': 'bag',
+  'demo-jewelry': 'jewelry',
 };
+const DEFAULT_DEMO_IDS = ['demo-dark_headphones', 'demo-ceramics', 'demo-sneaker', 'demo-skincare'];
+export const VIDEO_TEMPLATE_DEMOS = {
+  // 10 base templates
+  launch: { assetId: 'demo-dark_headphones', title: 'Беспроводные наушники', price: '29 990 ₸', cta: 'Чистый студийный звук', features: ['Активное шумоподавление', '40 часов без подзарядки', 'Мягкая посадка на весь день'] },
+  sale: { assetId: 'demo-bag', title: 'Структурная сумка', price: '19 990 ₸', cta: 'Скидка недели −30%', features: ['Плотная экокожа', 'Держит форму весь день', 'Ремень на плечо в комплекте'] },
+  noir: { assetId: 'demo-decor', title: 'Чёрная керамика', price: '22 400 ₸', cta: 'Лимитированная серия', features: ['Ручная формовка', 'Матовая каменная глазурь', 'Акцент для интерьера'] },
+  beat: { assetId: 'demo-pop_speaker', title: 'Акустика Pulse Mini', price: '27 500 ₸', cta: 'Звук в твоём ритме', features: ['Глубокий бас 360°', 'Влагозащита корпуса', 'До 18 часов музыки'] },
+  benefits: { assetId: 'demo-lavender_cream', title: 'Крем с лавандой', price: '14 900 ₸', cta: 'Нежный уход на ночь', features: ['Шёлковая текстура', 'Увлажнение на 24 часа', 'Без отдушек и парабенов'] },
+  collection: { assetId: 'demo-matcha_set', assets: ['demo-matcha_set', 'demo-botanical_oil', 'demo-ceramics', 'demo-studio_tea'], title: 'Чайная коллекция', price: '18 900 ₸', cta: 'Собери свой набор', features: ['Натуральная керамика', 'Подарочная коробка', 'Доставка по Казахстану'] },
+  compare: { assetId: 'demo-clay_candle', title: 'Аромасвеча из глины', price: '9 800 ₸', cta: 'Уют с первого вечера', features: ['100% соевый воск', 'Деревянный фитиль', 'До 45 часов горения'] },
+  unbox: { assetId: 'demo-thermos', title: 'Термобутылка Frost', price: '13 500 ₸', cta: 'Холод 24 ч · тепло 12 ч', features: ['Сталь 18/8 без запаха', 'Герметичная крышка', 'Матовое покрытие'] },
+  review: { assetId: 'demo-skincare', title: 'Сыворотка Glow Drop', price: '16 200 ₸', cta: 'Сияние каждый день', features: ['Витамин C + гиалурон', 'Мгновенно впитывается', 'Подходит под макияж'] },
+  minimal: { assetId: 'demo-perfume', title: 'Парфюм Amber Veil', price: '34 900 ₸', cta: 'Шлейф на весь день', features: ['Ноты амбры и кедра', 'Стойкость до 12 часов', 'Флакон 50 мл в футляре'] },
+  // 20 extra templates
+  beauty: { assetId: 'demo-skincare', title: 'Сыворотка Glow', price: '16 200 ₸', cta: 'Уход нового уровня', features: ['Сияние за 7 дней', 'Лёгкая формула', 'Дерматологически проверено'] },
+  tech: { assetId: 'demo-smartwatch', title: 'Смарт-часы Nova Pro', price: '54 900 ₸', cta: 'Контроль и стиль', features: ['AMOLED-экран 120 Гц', 'Титановый корпус', 'До 14 дней без зарядки'] },
+  fashion: { assetId: 'demo-bag', title: 'Сумка Lime Line', price: '23 900 ₸', cta: 'Главный акцент сезона', features: ['Чёткая геометрия', 'Удобная застёжка', 'Стильная фурнитура'] },
+  food: { assetId: 'demo-kitchen', title: 'Набор для сервировки', price: '18 500 ₸', cta: 'Уютная кухня дома', features: ['Натуральное дерево', 'Прочная глазурь', 'Подходит для посудомойки'] },
+  home: { assetId: 'demo-studio_tea', assets: ['demo-studio_tea', 'demo-clay_candle', 'demo-ceramics', 'demo-decor'], title: 'Чайный сервиз', price: '21 900 ₸', cta: 'Атмосфера тёплого дома', features: ['Ручная керамика', 'Чайник и две пиалы', 'Подарочная упаковка'] },
+  jewel: { assetId: 'demo-jewelry', title: 'Кольцо Atelier Gold', price: '42 000 ₸', cta: 'Тонкий блеск деталей', features: ['Серебро 925 · позолота', 'Ручная полировка', 'Футляр в комплекте'] },
+  sport: { assetId: 'demo-sneaker', title: 'Кроссовки Aero Run', price: '38 900 ₸', cta: 'Лёгкость в каждом шаге', features: ['Дышащая сетка', 'Амортизация пятки', 'Вес всего 240 грамм'] },
+  kids: { assetId: 'demo-thermos', title: 'Термос Kids 500', price: '11 400 ₸', cta: 'Удобно в школу и парк', features: ['Не проливается в рюкзаке', 'Безопасная сталь', 'Держит тепло 10 часов'] },
+  gift: { assetId: 'demo-perfume', title: 'Подарочный парфюм', price: '34 900 ₸', cta: 'Готовый подарок в коробке', features: ['Авторский аромат', 'Премиальный флакон', 'Открытка в комплекте'] },
+  mono: { assetId: 'demo-headphones', title: 'Студийные наушники', price: '24 990 ₸', cta: 'Минимализм и звук', features: ['Сбалансированный бас', 'Складное оголовье', 'Быстрая зарядка USB-C'] },
+  cobalt: { assetId: 'demo-smartwatch', title: 'Часы Cobalt Series', price: '59 900 ₸', cta: 'Точность на запястье', features: ['Сапфировое стекло', 'GPS и пульсометр', 'Водозащита 5 ATM'] },
+  sage: { assetId: 'demo-botanical_oil', title: 'Масло Botanical', price: '17 800 ₸', cta: 'Чистый природный состав', features: ['Холодный отжим', 'Питает без блеска', 'Стеклянная пипетка'] },
+  cafe: { assetId: 'demo-ceramics', title: 'Кружка Espresso', price: '8 900 ₸', cta: 'Идеальное утро с кофе', features: ['Толстые стенки', 'Долго хранит тепло', 'Уникальный узор глазури'] },
+  detail: { assetId: 'demo-lavender_cream', title: 'Крем Velvet Calm', price: '14 900 ₸', cta: 'Рассмотрите текстуру', features: ['Экстракт лаванды', 'Снимает сухость', 'Объём 50 мл'] },
+  duet: { assetId: 'demo-leather_wallet', assets: ['demo-leather_wallet', 'demo-perfume', 'demo-smartwatch', 'demo-decor'], title: 'Набор аксессуаров', price: '31 900 ₸', cta: 'Идеальный дуэт на каждый день', features: ['Натуральная кожа', 'Тонкий профиль', 'Подарочная упаковка'] },
+  weekend: { assetId: 'demo-clay_candle', title: 'Свеча Terracotta', price: '9 800 ₸', cta: 'Предложение выходных', features: ['Тёплый аромат кедра', 'Ручная заливка', 'Скидка до воскресенья'] },
+  paper: { assetId: 'demo-leather_wallet', title: 'Картхолдер из кожи', price: '15 900 ₸', cta: 'Крафт и долговечность', features: ['Итальянская кожа', '6 отделений для карт', 'Ровная ручная строчка'] },
+  night: { assetId: 'demo-dark_headphones', title: 'Наушники Night Pro', price: '32 900 ₸', cta: 'Ночной релиз в наличии', features: ['Пространственный звук', 'Шумоподавление Pro', 'Кейс для поездок'] },
+  ceramic: { assetId: 'demo-ceramics', title: 'Керамика ручной работы', price: '12 400 ₸', cta: 'Живые фактуры дома', features: ['Авторский обжиг', 'Каждое изделие уникально', 'Бережная упаковка'] },
+  linen: { assetId: 'demo-studio_tea', title: 'Льняная серия', price: '26 500 ₸', cta: 'Спокойная эстетика', features: ['Природные оттенки', 'Приятная фактура', 'Для уютных встреч'] },
+  // 24 vivid templates
+  'vivid-orbit-mango': { assetId: 'demo-clay_candle', title: 'Аромасвеча Манго', price: '9 800 ₸', cta: 'Яркий акцент дома', features: ['Натуральный воск', 'Тёплый аромат', '45 часов горения'] },
+  'vivid-orbit-electric': { assetId: 'demo-pop_speaker', title: 'Колонка Neon Pulse', price: '27 500 ₸', cta: 'Включай на полную', features: ['Мощный звук 360°', '18 часов работы', 'Защита от брызг'] },
+  'vivid-orbit-berry': { assetId: 'demo-lavender_cream', title: 'Крем Berry Velvet', price: '14 900 ₸', cta: 'Мягкость с первого касания', features: ['Лёгкая текстура', 'Питание 24 часа', 'Нежный аромат'] },
+  'vivid-orbit-lagoon': { assetId: 'demo-thermos', title: 'Термос Lagoon 750', price: '13 500 ₸', cta: 'Свежесть в пути', features: ['Холод до 24 часов', 'Сталь 18/8', 'Не скользит в руке'] },
+  'vivid-sticker-mango': { assetId: 'demo-bag', title: 'Сумка Solar Drop', price: '23 900 ₸', cta: 'Успей забрать', features: ['Сочный цвет', 'Держит форму', 'Доставка сегодня'] },
+  'vivid-sticker-electric': { assetId: 'demo-dark_headphones', title: 'Наушники Volt X', price: '29 990 ₸', cta: 'Заряд чистого звука', features: ['Глубокий бас', '40 часов работы', 'Быстрый USB-C'] },
+  'vivid-sticker-berry': { assetId: 'demo-sneaker', title: 'Кроссовки Flash', price: '38 900 ₸', cta: 'Скидка на хит', features: ['Лёгкая подошва', 'Дышащий верх', 'Все размеры'] },
+  'vivid-sticker-lagoon': { assetId: 'demo-matcha_set', title: 'Набор Matcha Zen', price: '16 900 ₸', cta: 'Ритуал энергии', features: ['Чаша + венчик', 'Натуральный бамбук', 'Стильная коробка'] },
+  'vivid-postcard-mango': { assetId: 'demo-skincare', title: 'Сыворотка Glow', price: '16 200 ₸', cta: 'Для сияния кожи', features: ['Витамин C', 'Лёгкое нанесение', 'Заметный эффект'] },
+  'vivid-postcard-electric': { assetId: 'demo-headphones', title: 'Аудио Air Studio', price: '24 990 ₸', cta: 'Лёгкость и звук', features: ['Мягкие амбушюры', 'Чистый микрофон', 'Bluetooth 5.3'] },
+  'vivid-postcard-berry': { assetId: 'demo-perfume', title: 'Парфюм Rose Gold', price: '34 900 ₸', cta: 'Тонкий шлейф', features: ['Амбра и цветы', 'Стойкость 12 часов', '50 мл в футляре'] },
+  'vivid-postcard-lagoon': { assetId: 'demo-studio_tea', title: 'Чайный набор', price: '21 900 ₸', cta: 'Уютная пауза', features: ['Керамика ручной работы', 'Чайник и пиалы', 'Подарочный бокс'] },
+  'vivid-ribbon-mango': { assetId: 'demo-kitchen', title: 'Кухонный сет', price: '18 500 ₸', cta: 'Обнови кухню', features: ['Эко-материалы', 'Удобная форма', 'На каждый день'] },
+  'vivid-ribbon-electric': { assetId: 'demo-smartwatch', title: 'Смарт-часы Ultra', price: '54 900 ₸', cta: 'Ритм и технологии', features: ['Экран AMOLED', '14 дней автономности', 'Титановый корпус'] },
+  'vivid-ribbon-berry': { assetId: 'demo-ceramics', title: 'Керамика Craft', price: '12 400 ₸', cta: 'Характер в деталях', features: ['Ручная работа', 'Плотная глазурь', 'Приятно держать'] },
+  'vivid-ribbon-lagoon': { assetId: 'demo-botanical_oil', title: 'Масло Emerald', price: '17 800 ₸', cta: 'Природное сияние', features: ['Органический состав', 'Быстро впитывается', 'Флакон 30 мл'] },
+  'vivid-gallery-mango': { assetId: 'demo-leather_wallet', title: 'Кошелёк Terracotta', price: '15 900 ₸', cta: 'Выбор на каждый день', features: ['Натуральная кожа', 'Компактный размер', 'Аккуратная строчка'] },
+  'vivid-gallery-electric': { assetId: 'demo-pop_speaker', title: 'Спикер Wave 360', price: '27 500 ₸', cta: 'Музыка повсюду', features: ['Чистый стереозвук', 'Защита IP67', 'Компактный корпус'] },
+  'vivid-gallery-berry': { assetId: 'demo-jewelry', title: 'Кольцо Velvet', price: '42 000 ₸', cta: 'Блеск без повода', features: ['Серебро 925', 'Тонкая огранка', 'Фирменный футляр'] },
+  'vivid-gallery-lagoon': { assetId: 'demo-decor', title: 'Ваза Studio Dark', price: '22 400 ₸', cta: 'Современный декор', features: ['Матовая фактура', 'Минимализм', 'Ручной обжиг'] },
+  'vivid-spotlight-mango': { assetId: 'demo-perfume', title: 'Аромат Sunset', price: '34 900 ₸', cta: 'В центре внимания', features: ['Тёплый шлейф', 'Стойкая формула', 'Флакон 50 мл'] },
+  'vivid-spotlight-electric': { assetId: 'demo-smartwatch', title: 'Часы Night Edge', price: '54 900 ₸', cta: 'Новинка сезона', features: ['Яркий дисплей', 'Спортивные режимы', 'Быстрая зарядка'] },
+  'vivid-spotlight-berry': { assetId: 'demo-bag', title: 'Сумка Pop Lime', price: '23 900 ₸', cta: 'Смелый силуэт', features: ['Плотная фактура', 'Стильная форма', 'В наличии сейчас'] },
+  'vivid-spotlight-lagoon': { assetId: 'demo-dark_headphones', title: 'Наушники Deep Bass', price: '29 990 ₸', cta: 'Погрузись в звук', features: ['Шумоподавление', 'Мягкие амбушюры', '40 часов музыки'] },
+};
+function shadeHex(hex, delta) {
+  const clean = /^#[0-9a-f]{6}$/i.test(hex) ? hex.slice(1) : '151821';
+  const part = offset => clamp(parseInt(clean.slice(offset, offset + 2), 16) + delta, 0, 255).toString(16).padStart(2, '0');
+  return '#' + part(0) + part(2) + part(4);
+}
 export const MUSIC = { pulse: { name: 'Pulse', bpm: 120 }, soft: { name: 'Soft', bpm: 100 }, motion: { name: 'Motion', bpm: 128 } };
 export const TEMPLATES = [
   { id: 'launch', name: 'Новый дроп', note: 'Крупный товар и энергичная типографика', color: '#b8c5ff', ink: '#15182c', category: 'Товар' },
@@ -44,32 +126,44 @@ export function emptyProject() {
   return {
     app: 'SatuCardVideo', version: 1, id: uid(), name: 'Новый ролик',
     format: 'vertical', duration: 12, background: '#14161e', fps: 30, bpm: 120,
-    product: { title: 'Беспроводные наушники', price: '24 990 ₸', brand: 'YOUR STORE', cta: 'Найди свой ритм', features: ['Твой звук', 'Твой стиль', 'Твой выбор'] },
-    layers: [], assets: Object.keys(DEMOS).map(id => ({ id, kind: 'image', name: DEMOS[id], duration: 0 })),
+    product: { title: 'Беспроводные наушники', price: '29 990 ₸', brand: 'YOUR STORE', cta: 'Чистый студийный звук', features: ['Активное шумоподавление', '40 часов без подзарядки', 'Мягкая посадка на весь день'] },
+    layers: [], assets: DEFAULT_DEMO_IDS.map(id => ({ id, kind: 'image', name: DEMOS[id], duration: 0 })),
   };
 }
-export function templateProject(id, product, assetId = 'demo-headphones') {
+export function templateProject(id, product, assetId, demoSet) {
   const template = TEMPLATES.find(item => item.id === id);
   if (!template) throw new Error('Выберите шаблон.');
-  if(template.vivid)return composeVivid(templateProject(template.base,product,assetId),template,layer);
-  if(template.base)return composeExtra(templateProject(template.base,product,assetId),template);
+  const demo = VIDEO_TEMPLATE_DEMOS[id];
+  const resolvedAsset = assetId || demo?.assetId || 'demo-dark_headphones';
+  const resolvedProduct = product || (demo ? { title: demo.title, price: demo.price, brand: demo.brand || 'YOUR STORE', cta: demo.cta, features: [...demo.features] } : undefined);
+  const resolvedSet = demoSet || demo?.assets;
+  if(template.vivid)return composeVivid(templateProject(template.base,resolvedProduct,resolvedAsset,resolvedSet),template,layer);
+  if(template.base)return composeExtra(templateProject(template.base,resolvedProduct,resolvedAsset,resolvedSet),template);
   const project = emptyProject();
   project.templateId=id;
-  if (product) project.product = { ...project.product, ...product };
+  if (resolvedSet && resolvedSet.every(item => Object.hasOwn(DEMOS, item))) {
+    project.assets = resolvedSet.slice(0, 4).map(demoId => ({ id: demoId, kind: 'image', name: DEMOS[demoId], duration: 0 }));
+  } else if (Object.hasOwn(DEMOS, resolvedAsset) && !project.assets.some(item => item.id === resolvedAsset)) {
+    project.assets[0] = { id: resolvedAsset, kind: 'image', name: DEMOS[resolvedAsset], duration: 0 };
+  }
+  if (resolvedProduct) project.product = { ...project.product, ...resolvedProduct };
   project.name = template.name;
   project.background = template.ink;
   project.bpm = id === 'beat' ? 128 : id === 'noir' ? 100 : 120;
   const count = ['benefits', 'collection', 'unbox'].includes(id) ? 4 : id === 'beat' ? 6 : 3;
   project.duration = id === 'beat' ? 11.25 : count * 4;
   const sceneLength = project.duration / count;
+  const customAsset = !Object.hasOwn(DEMOS, resolvedAsset);
+  const setAssets = resolvedSet || project.assets.map(a => a.id);
   const add = (type, data) => project.layers.push(layer(type, data));
   for (let index = 0; index < count; index++) {
     const start = index * sceneLength, end = start + sceneLength, scene = 'scene-' + index;
     const common = { start, end, scene };
     const light = ['sale', 'minimal', 'review', 'compare'].includes(id);
-    const bg = light ? (index % 2 ? '#f7f5ee' : template.color) : index % 2 ? template.ink : '#151821';
+    const bg = light ? (index % 2 ? '#f7f4ec' : template.color) : index % 2 ? template.ink : shadeHex(template.ink, 10);
+    const bgSecond = light ? shadeHex(bg, -18) : shadeHex(bg, -14);
     const ink = light ? template.ink : '#f6f5ef';
-    add('shape', { ...common, name: 'Фон сцены', x: 0, y: 0, w: 1, h: 1, color: bg, entrance: 'none', exit: 'none', radius: 0 });
+    add('shape', { ...common, name: 'Фон сцены', x: 0, y: 0, w: 1, h: 1, color: bg, gradient: light ? 'linear' : 'radial', gradientColor: bgSecond, gradientAngle: 155, entrance: 'none', exit: 'none', radius: 0 });
     const titles = [project.product.title, project.product.features[0], project.product.cta];
     let heading = titles[index % 3];
     if (id === 'sale') heading = index === 0 ? 'Твоя новая находка' : index === 1 ? project.product.title : 'Выбери свой';
@@ -77,76 +171,85 @@ export function templateProject(id, product, assetId = 'demo-headphones') {
     if (id === 'unbox') heading = ['Первое впечатление', 'Ближе к деталям', 'В твоём ритме', project.product.cta][index];
     if (id === 'compare') heading = index === 0 ? 'Посмотри на детали' : index === 1 ? 'До / После' : project.product.cta;
     if (id === 'review') heading = index === 1 ? 'Добавьте реальный отзыв' : titles[index % 3];
-    add('text', { ...common, role: index === 0 ? 'title' : index === count - 1 ? 'cta' : '', name: 'Заголовок', text: heading, x: .085, y: .12, w: .83, h: .2, fontSize: .1, color: ink, entrance: id === 'beat' ? 'slide' : 'rise', font: id === 'noir' ? 'Noto Serif' : 'Golos Text' });
-    const selected = id === 'collection' ? ['demo-headphones', 'demo-skincare', 'demo-sneaker', assetId][index] : assetId;
-    add('image', { ...common, role: 'product', name: 'Товар', assetId: selected, x: .085, y: .35, w: .83, h: .43, entrance: id === 'beat' ? 'pop' : 'rise', motion: id === 'noir' ? 'pan' : 'zoom', rotation: id === 'beat' && index % 2 ? -4 : 0 });
+    add('text', { ...common, role: index === 0 ? 'title' : index === count - 1 ? 'cta' : '', name: 'Заголовок', text: heading, x: .08, y: .115, w: .84, h: .19, fontSize: .096, color: ink, entrance: id === 'beat' ? 'slide' : 'rise', font: id === 'noir' ? 'Noto Serif' : 'Golos Text' });
+    const selected = id === 'collection' ? (customAsset ? resolvedAsset : setAssets[index % setAssets.length]) : resolvedAsset;
+    add('image', { ...common, role: 'product', name: 'Товар', assetId: selected, x: .08, y: .335, w: .84, h: .445, radius: .042, shadow: .48, entrance: id === 'beat' ? 'pop' : 'rise', motion: id === 'noir' ? 'pan' : 'zoom', rotation: id === 'beat' && index % 2 ? -3.5 : 0 });
     if (id === 'compare' && index === 1) {
       const original = project.layers.at(-1); original.w = .40; original.motion = 'none';
-      add('image', { ...common, role: 'product', name: 'После', assetId, x: .515, y: .35, w: .4, h: .43, entrance: 'wipe', motion: 'zoom' });
+      add('image', { ...common, role: 'product', name: 'После', assetId: resolvedAsset, x: .52, y: .335, w: .40, h: .445, radius: .042, shadow: .48, entrance: 'wipe', motion: 'zoom' });
     }
-    add('text', { ...common, role: 'brand', name: 'Бренд', text: project.product.brand, x: .085, y: .055, w: .8, h: .035, fontSize: .028, color: ink, weight: 600 });
-    add('shape', { ...common, name: 'Плашка цены', x: .48, y: .825, w: .435, h: .066, color: light ? template.ink : template.color, radius: .025, entrance: 'pop' });
-    add('text', { ...common, role: 'price', name: 'Цена', text: project.product.price, x: .50, y: .838, w: .395, h: .04, align: 'center', fontSize: .045, color: light ? '#ffffff' : template.ink, entrance: 'pop' });
-    add('text', { ...common, name: 'Подпись', text: index === count - 1 ? 'Напиши нам · узнай больше' : 'Товар в центре внимания', x: .085, y: .94, w: .83, h: .03, fontSize: .024, color: ink, weight: 500 });
-    styleScene(project,template,index,scene);
+    add('text', { ...common, role: 'brand', name: 'Бренд', text: project.product.brand, x: .08, y: .052, w: .84, h: .035, fontSize: .028, color: ink, weight: 600 });
+    add('shape', { ...common, name: 'Плашка цены', x: .46, y: .82, w: .46, h: .07, color: light ? template.ink : template.color, radius: .045, shadow: .26, entrance: 'pop' });
+    add('text', { ...common, role: 'price', name: 'Цена', text: project.product.price, x: .48, y: .834, w: .42, h: .042, align: 'center', fontSize: .046, color: light ? '#ffffff' : template.ink, entrance: 'pop' });
+    add('text', { ...common, name: 'Подпись', text: index === count - 1 ? 'Напиши нам · узнай больше' : 'Товар в центре внимания', x: .08, y: .938, w: .84, h: .03, fontSize: .024, color: ink, weight: 500 });
+    styleScene(project,template,index,scene,setAssets,customAsset ? resolvedAsset : null);
   }
   const music=id==='noir'?'soft':id==='beat'?'motion':'pulse';
   add('audio', { name: 'Музыка · ' + MUSIC[music].name, end: project.duration, builtin: music, volume: .32, fadeIn: .4, fadeOut: 1 });
   for (let index = 1; index < count; index++) add('audio', { name: 'Переход', builtin: 'whoosh', followScene:'scene-'+index, start: index * sceneLength - .22, end: index * sceneLength + .3, volume: .35 });
   return project;
 }
-function styleScene(project,template,index,scene){
+function styleScene(project,template,index,scene,setAssets,customAsset){
   const items=project.layers.filter(item=>item.scene===scene),start=project.layers.indexOf(items[0]);
   const [bg,heading,hero]=items,brand=items.find(item=>item.role==='brand'),plate=items.find(item=>item.name==='Плашка цены'),price=items.find(item=>item.role==='price');
   const extra=[];
   if(template.id==='launch'){
-    if(index===1){Object.assign(hero,{y:.13,h:.58,rotation:-2,entrance:'wipe'});Object.assign(heading,{y:.72,h:.085,fontSize:.075});}
-    if(index===2){Object.assign(hero,{x:.15,y:.24,w:.7,h:.40,rotation:2});Object.assign(heading,{y:.67,h:.12,fontSize:.085});}
+    bg.color=index%2?'#192038':'#14192b';bg.gradient='radial';bg.gradientColor='#0b0e18';
+    Object.assign(hero,{radius:.045,shadow:.55});
+    if(index===1){Object.assign(hero,{y:.12,h:.58,rotation:-2,entrance:'wipe'});Object.assign(heading,{y:.72,h:.085,fontSize:.075});}
+    if(index===2){Object.assign(hero,{x:.12,y:.23,w:.76,h:.41,rotation:2});Object.assign(heading,{y:.67,h:.12,fontSize:.085});}
   }
   if(template.id==='sale'){
-    Object.assign(hero,{y:.28,h:.40,rotation:index%2?-3:3,entrance:'pop'});
-    Object.assign(heading,{y:.12,h:.13,fontSize:.105});
-    Object.assign(plate,{x:.085,y:.73,w:.83,h:.115});Object.assign(price,{x:.1,y:.755,w:.8,h:.07,fontSize:.085});
+    Object.assign(hero,{y:.27,h:.41,rotation:index%2?-2.5:2.5,radius:.045,shadow:.5,entrance:'pop'});
+    Object.assign(heading,{y:.115,h:.13,fontSize:.102});
+    Object.assign(plate,{x:.08,y:.725,w:.84,h:.112,radius:.045,shadow:.32});Object.assign(price,{x:.1,y:.75,w:.8,h:.07,fontSize:.082});
   }
   if(template.id==='noir'){
-    Object.assign(hero,{x:0,y:0,w:1,h:.74,radius:0,entrance:'fade',motion:'pan'});
-    const veil=layer('shape',{name:'Подложка заголовка',scene,start:heading.start,end:heading.end,x:0,y:.61,w:1,h:.39,color:'#201d1a',radius:0,entrance:'none',exit:'none'});extra.push(veil);
-    Object.assign(heading,{y:.66,h:.12,align:'center',fontSize:.085});brand.background='#201d1a';
-    Object.assign(plate,{x:.28,y:.825,w:.44});Object.assign(price,{x:.30,w:.40});
+    bg.color='#171411';bg.gradient='linear';bg.gradientColor='#0d0b09';bg.gradientAngle=180;
+    Object.assign(hero,{x:.05,y:.095,w:.90,h:.55,radius:.04,shadow:.55,entrance:'fade',motion:'pan'});
+    const veil=layer('shape',{name:'Подложка заголовка',scene,start:heading.start,end:heading.end,x:.05,y:.665,w:.90,h:.26,color:'#241f1a',gradient:'linear',gradientColor:'#171411',gradientAngle:160,radius:.04,shadow:.35,entrance:'none',exit:'none'});extra.push(veil);
+    Object.assign(heading,{x:.09,y:.69,w:.82,h:.11,align:'center',fontSize:.078,color:'#f6efe3'});
+    Object.assign(brand,{y:.04,align:'center',background:'transparent',color:'#d6c2a2'});
+    Object.assign(plate,{x:.24,y:.825,w:.52,h:.066,color:'#d4ba94',radius:.045,shadow:.25});Object.assign(price,{x:.26,y:.839,w:.48,color:'#1a1510'});
   }
   if(template.id==='beat'){
-    const light=index%2===0;bg.color=light?template.color:'#121722';
+    const light=index%2===0;
+    bg.color=light?template.color:'#12172b';bg.gradient='linear';bg.gradientColor=light?shadeHex(template.color,-26):'#090c18';bg.gradientAngle=145;
     for(const item of [heading,brand,items.at(-1)])item.color=light?template.ink:'#ffffff';
-    Object.assign(heading,{y:index%2?.66:.12,h:.17,fontSize:.13,entrance:'slide'});
-    Object.assign(hero,{x:index%2?.14:.06,y:index%2?.15:.33,w:.82,h:.43,rotation:index%2?-6:4,entrance:'pop'});
+    Object.assign(heading,{y:index%2?.66:.115,h:.16,fontSize:.12,entrance:'slide'});
+    Object.assign(hero,{x:index%2?.12:.08,y:index%2?.14:.32,w:.80,h:.44,rotation:index%2?-4:3,radius:.045,shadow:.52,entrance:'pop'});
     plate.color=light?template.ink:template.color;price.color=light?'#ffffff':template.ink;
   }
   if(template.id==='benefits'){
-    extra.push(layer('text',{name:'Номер преимущества',scene,start:heading.start,end:heading.end,text:String(index+1).padStart(2,'0'),x:.08,y:.105,w:.3,h:.13,fontSize:.20,color:template.color,entrance:'slide'}));
-    Object.assign(heading,{y:.245,h:.13,fontSize:.085});Object.assign(hero,{y:.40,h:.38,entrance:'wipe'});
+    bg.color=index%2?'#2c2342':'#1f1830';bg.gradient='radial';bg.gradientColor='#120e1d';
+    extra.push(layer('text',{name:'Номер преимущества',scene,start:heading.start,end:heading.end,text:String(index+1).padStart(2,'0'),x:.08,y:.095,w:.32,h:.13,fontSize:.19,color:template.color,entrance:'slide'}));
+    Object.assign(heading,{y:.24,h:.13,fontSize:.084});Object.assign(hero,{y:.395,h:.39,radius:.045,shadow:.48,entrance:'wipe'});
   }
   if(template.id==='collection'){
-    Object.assign(hero,{x:.06,y:.33,w:.57,h:.42,rotation:-3});
-    const assetId=['demo-skincare','demo-sneaker','demo-ceramics','demo-headphones'][index];
-    extra.push(layer('image',{name:'Второй товар',role:'product',scene,start:hero.start,end:hero.end,assetId,x:.51,y:.45,w:.43,h:.31,rotation:4,entrance:'slide',motion:'pan'}));
-    heading.fontSize=.085;
+    bg.color=index%2?'#243828':'#19271d';bg.gradient='radial';bg.gradientColor='#0f1811';
+    Object.assign(hero,{x:.06,y:.31,w:.57,h:.44,rotation:-2.5,radius:.042,shadow:.52});
+    const secondAsset=customAsset || setAssets[(index+1)%setAssets.length];
+    extra.push(layer('image',{name:'Второй товар',role:'product',scene,start:hero.start,end:hero.end,assetId:secondAsset,x:.50,y:.44,w:.44,h:.33,rotation:3.5,radius:.042,shadow:.52,entrance:'slide',motion:'pan'}));
+    heading.fontSize=.084;
   }
   if(template.id==='compare'&&index===1){
-    for(const [text,x]of [['ДО',.10],['ПОСЛЕ',.54]])extra.push(layer('text',{name:'Метка сравнения',scene,start:hero.start,end:hero.end,text,x,y:.69,w:.33,h:.04,fontSize:.035,background:'#201d1a',color:'#ffffff',align:'center'}));
+    for(const [text,x]of [['ДО',.10],['ПОСЛЕ',.54]])extra.push(layer('text',{name:'Метка сравнения',scene,start:hero.start,end:hero.end,text,x,y:.71,w:.34,h:.04,fontSize:.034,background:'#201d1a',color:'#ffffff',align:'center'}));
   }
   if(template.id==='unbox'){
-    Object.assign(hero,{x:0,y:.16,w:1,h:.53,radius:0,motion:'pan',entrance:'wipe'});
-    Object.assign(heading,{y:.72,h:.085,fontSize:.072});
-    extra.push(layer('text',{name:'Шаг распаковки',scene,start:hero.start,end:hero.end,text:'0'+(index+1)+' / ДЕТАЛИ',x:.085,y:.11,w:.8,h:.025,fontSize:.026,color:template.color}));
+    bg.color=index%2?'#223552':'#172336';bg.gradient='radial';bg.gradientColor='#0e1624';
+    Object.assign(hero,{x:.06,y:.165,w:.88,h:.52,radius:.042,shadow:.52,motion:'pan',entrance:'wipe'});
+    Object.assign(heading,{y:.715,h:.088,fontSize:.074});
+    extra.push(layer('text',{name:'Шаг распаковки',scene,start:hero.start,end:hero.end,text:'0'+(index+1)+' / ДЕТАЛИ',x:.08,y:.11,w:.84,h:.028,fontSize:.026,color:template.color}));
   }
   if(template.id==='review'){
-    Object.assign(hero,{y:.12,h:.40,entrance:'fade',motion:'pan'});
-    Object.assign(heading,{y:.56,h:.20,fontSize:.085,font:'Noto Serif',text:index===1?'«Добавьте реальный отзыв»':heading.text});
+    Object.assign(hero,{y:.115,h:.41,radius:.045,shadow:.44,entrance:'fade',motion:'pan'});
+    Object.assign(heading,{y:.56,h:.21,fontSize:.082,font:'Noto Serif',text:index===1?'«Добавьте реальный отзыв»':heading.text});
   }
   if(template.id==='minimal'){
-    bg.color='#f7f5ef';Object.assign(hero,{x:.12,y:.31,w:.76,h:.45,fit:'contain',radius:0,motion:'none',entrance:'fade'});
-    Object.assign(heading,{y:.15,h:.12,fontSize:.075,align:'center'});plate.hidden=true;
-    Object.assign(price,{x:.1,w:.8,align:'center',color:template.ink});
+    bg.color='#f8f4ec';bg.gradient='linear';bg.gradientColor='#ebe3d4';bg.gradientAngle=165;
+    Object.assign(hero,{x:.12,y:.285,w:.76,h:.485,fit:'cover',radius:.042,shadow:.34,motion:'zoom',entrance:'fade'});
+    Object.assign(heading,{y:.125,h:.125,fontSize:.076,align:'center',font:'Noto Serif'});plate.hidden=true;
+    Object.assign(price,{x:.1,y:.83,w:.8,align:'center',fontSize:.052,color:template.ink});
   }
   // Media precedes typography so layouts may overlap without obscuring titles.
   const media=items.filter(item=>['image','video'].includes(item.type));
