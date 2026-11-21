@@ -6,6 +6,9 @@
   const samples = window.SATUCARD_SAMPLES;
   const images = new Map();
   const cards = [...document.querySelectorAll('[data-mark-card]')];
+  const deferPreviews = typeof IntersectionObserver === 'function' &&
+    typeof matchMedia === 'function' && matchMedia('(max-width: 767px), (pointer: coarse)').matches;
+  const nearby = new Set();
   const galleryRoot = document.querySelector('.gallery-grid') || document.querySelector('[data-template-item]')?.parentElement;
   if (galleryRoot) {
     const sizeButton = document.getElementById('gallery-size');
@@ -73,7 +76,7 @@
     url.searchParams.set('theme', document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
     link.href = url.href;
     canvas.classList.remove('rendered');
-    renderCard(canvas);
+    if (!deferPreviews || nearby.has(canvas)) renderCard(canvas);
   }
   function updateCatalogStatus() {
     const status = document.getElementById('catalog-status'); if (!status) return;
@@ -111,6 +114,20 @@
   }));
   Promise.resolve(document.fonts?.ready).then(() => {
     updateGallery();
-    cards.filter(canvas => !originalSamples.has(canvas)).forEach(renderCard);
+    if (!deferPreviews) {
+      cards.filter(canvas => !originalSamples.has(canvas)).forEach(renderCard);
+      return;
+    }
+    const observer = new IntersectionObserver(entries => {
+      for (const { target, isIntersecting } of entries) {
+        if (isIntersecting) {
+          nearby.add(target);
+          if (!target.classList.contains('rendered')) renderCard(target);
+        } else {
+          nearby.delete(target);
+        }
+      }
+    }, { rootMargin: '180px 0px' });
+    cards.forEach(card => observer.observe(card));
   });
 })();

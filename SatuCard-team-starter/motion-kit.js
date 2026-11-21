@@ -1,73 +1,7 @@
 'use strict';
 
-// SatuCard Motion Kit — Cross-page vanilla spring-physics engine (0% idle CPU/GPU)
-// Page-distributed micro-interactions:
-//   index.html    -> Rubber dock, Fan cards (zero idle interval)
-//   pricing.html  -> Plan switch spotlight + synced cards, Rubber dock
-//   examples.html -> Command button (24 templates), Rubber dock filters
-//   editor.html   -> Morph tooltip, Rubber dock, File drop, Springy inputs,
-//                    Jelly slider (#photo-zoom), Hold to publish (#download-button),
-//                    Detent dial (#photo-rotation), Exposure sliders (brightness/contrast),
-//                    Scrubbers (saturation/warmth/blur/radius), Copy & Undo pulse
-(() => {
-  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-  const isReduced = () => reduceMotion.matches;
-  const isKk = () => document.documentElement.lang === 'kk';
-  const mountedComponents = [];
-
-  function makeSpring(val = 0, stiffness = 320, damping = 24, mass = 1, eps = 0.002) {
-    return { x: val, v: 0, target: val, k: stiffness, d: damping, m: mass, eps };
-  }
-
-  function stepSpring(s, dt) {
-    if (isReduced()) {
-      s.x = s.target;
-      s.v = 0;
-      return false;
-    }
-    const steps = s.k > 550 ? 3 : 2;
-    const h = Math.min(0.032, dt) / steps;
-    for (let i = 0; i < steps; i++) {
-      const a = (-s.k * (s.x - s.target) - s.d * s.v) / s.m;
-      s.v += a * h;
-      s.x += s.v * h;
-    }
-    const tol = s.eps || 0.002;
-    if (Math.abs(s.x - s.target) < tol && Math.abs(s.v) < tol * 8) {
-      s.x = s.target;
-      s.v = 0;
-      return false;
-    }
-    return true;
-  }
-
-  // Shared RAF loop — sleeps completely (0% CPU/GPU) when no spring is moving
-  const tickers = new Set();
-  let rafId = 0;
-  let lastT = 0;
-
-  function scheduleTick() {
-    if (rafId || tickers.size === 0) return;
-    lastT = performance.now();
-    rafId = requestAnimationFrame(loop);
-  }
-
-  function loop(now) {
-    rafId = 0;
-    const dt = Math.max(0.004, Math.min(0.05, (now - lastT) / 1000));
-    lastT = now;
-    for (const fn of [...tickers]) {
-      const active = fn(dt, now);
-      if (!active) tickers.delete(fn);
-    }
-    if (tickers.size > 0) rafId = requestAnimationFrame(loop);
-  }
-
-  function wake(fn) {
-    tickers.add(fn);
-    scheduleTick();
-  }
-
+// Page-specific interactions for the home page, editor, templates and pricing.
+window.SATUCARD_INIT_PAGE_MOTION = ({makeSpring, stepSpring, wake, mountedComponents, isReduced, isLightweight, isKk, attachRubberDock}) => {
   function dispatchRange(input, value, fireChange = false) {
     const next = String(value);
     if (input.value !== next) {
@@ -90,117 +24,6 @@
     }
   }
 
-  // =========================================================================
-  // 1. RUBBER DOCK — Dual-edge elastic pill highlight (lead 640/38 vs trail 150/16)
-  // =========================================================================
-  function attachRubberDock(container, itemSelector, activeCheck, { lead = [640, 38], trail = [150, 16], followHover = false } = {}) {
-    if (!container) return null;
-    container.classList.add('mk-rubber-host');
-    const pill = document.createElement('span');
-    pill.className = 'mk-rubber-pill';
-    pill.setAttribute('aria-hidden', 'true');
-    container.prepend(pill);
-
-    const sLeft = makeSpring(0, lead[0], lead[1], 1, 0.08);
-    const sRight = makeSpring(0, trail[0], trail[1], 1, 0.08);
-    const sTop = makeSpring(0, 420, 30, 1, 0.08);
-    const sHeight = makeSpring(0, 420, 30, 1, 0.08);
-    let initialized = false;
-    let currentEl = null;
-
-    function measure(el) {
-      const cRect = container.getBoundingClientRect();
-      const eRect = el.getBoundingClientRect();
-      if (!eRect.width || !eRect.height) return null;
-      return {
-        left: eRect.left - cRect.left,
-        right: eRect.right - cRect.left,
-        top: eRect.top - cRect.top,
-        height: eRect.height
-      };
-    }
-
-    const tick = dt => {
-      const a = stepSpring(sLeft, dt);
-      const b = stepSpring(sRight, dt);
-      const c = stepSpring(sTop, dt);
-      const d = stepSpring(sHeight, dt);
-      const x0 = Math.min(sLeft.x, sRight.x);
-      const w = Math.max(8, Math.abs(sRight.x - sLeft.x));
-      pill.style.transform = `translate3d(${x0.toFixed(2)}px, ${sTop.x.toFixed(2)}px, 0)`;
-      pill.style.width = `${w.toFixed(2)}px`;
-      pill.style.height = `${sHeight.x.toFixed(2)}px`;
-      return a || b || c || d;
-    };
-
-    function moveTo(el, instant = false) {
-      if (!el) return;
-      const m = measure(el);
-      if (!m) return;
-      const movingRight = initialized && m.left > sLeft.target;
-      if (movingRight) {
-        sRight.k = lead[0]; sRight.d = lead[1];
-        sLeft.k = trail[0]; sLeft.d = trail[1];
-      } else {
-        sLeft.k = lead[0]; sLeft.d = lead[1];
-        sRight.k = trail[0]; sRight.d = trail[1];
-      }
-      sLeft.target = m.left;
-      sRight.target = m.right;
-      sTop.target = m.top;
-      sHeight.target = m.height;
-      if (!initialized || instant || isReduced()) {
-        sLeft.x = m.left; sLeft.v = 0;
-        sRight.x = m.right; sRight.v = 0;
-        sTop.x = m.top; sTop.v = 0;
-        sHeight.x = m.height; sHeight.v = 0;
-        initialized = true;
-        pill.style.opacity = '1';
-        container.classList.add('mk-rubber-ready');
-      }
-      currentEl = el;
-      wake(tick);
-    }
-
-    function syncActive(instant = false) {
-      const items = [...container.querySelectorAll(itemSelector)];
-      const active = items.find(activeCheck) || items[0];
-      if (active) moveTo(active, instant);
-    }
-
-    container.addEventListener('click', ev => {
-      const item = ev.target.closest(itemSelector);
-      if (item && container.contains(item)) {
-        requestAnimationFrame(() => syncActive(false));
-      }
-    });
-
-    if (followHover) {
-      container.addEventListener('pointerover', ev => {
-        const item = ev.target.closest(itemSelector);
-        if (item && container.contains(item)) moveTo(item, false);
-      });
-      container.addEventListener('pointerleave', () => syncActive(false));
-    }
-
-    const mo = new MutationObserver(() => syncActive(false));
-    mo.observe(container, {
-      attributes: true,
-      subtree: true,
-      attributeFilter: ['aria-pressed', 'aria-checked', 'aria-selected', 'aria-current', 'hidden']
-    });
-
-    const ro = new ResizeObserver(() => {
-      if (currentEl) moveTo(currentEl, true);
-      else syncActive(true);
-    });
-    ro.observe(container);
-    document.fonts?.ready.then(() => syncActive(true));
-    requestAnimationFrame(() => syncActive(true));
-
-    return { syncActive, moveTo };
-  }
-
   function initRubberDocks() {
     let count = 0;
     const add = (el, sel, check, opts) => {
@@ -208,165 +31,19 @@
       attachRubberDock(el, sel, check, opts);
       count += 1;
     };
-    add(document.getElementById('main-nav'), 'a', el => el.getAttribute('aria-current') === 'page', { followHover: true });
+
+    add(document.getElementById('main-nav'), 'a', el => el.getAttribute('aria-current') === 'page', {followHover: true});
     add(document.querySelector('.hero-style-bar'), 'button[data-cover-style]', el => el.getAttribute('aria-pressed') === 'true');
     add(document.querySelector('.quick-styles'), 'button[data-hero-style]', el => el.getAttribute('aria-pressed') === 'true');
     add(document.querySelector('.gallery-filters'), 'button[data-template-filter]', el => el.getAttribute('aria-pressed') === 'true');
     add(document.querySelector('.studio-tabs'), 'button[data-editor-tab]', el => el.getAttribute('aria-selected') === 'true');
     add(document.querySelector('.studio-filters'), 'button[data-photo-filter]', el => el.getAttribute('aria-pressed') === 'true');
     add(document.querySelector('.format-pills'), 'button[data-format-pill]', el => el.getAttribute('aria-pressed') === 'true');
-    if (count) mountedComponents.push('rubber-dock');
+    if (count && !mountedComponents.includes('rubber-dock')) mountedComponents.push('rubber-dock');
   }
 
   // =========================================================================
-  // 2. MORPH TOOLTIP — Shared elastic tooltip + spring tail (Editor rail & toolbar)
-  // =========================================================================
-  function initMorphTooltip() {
-    const items = [...document.querySelectorAll('[data-morph-tip]')];
-    if (!items.length || window.matchMedia('(hover: none)').matches) return;
-    mountedComponents.push('morph-tooltip');
-
-    const tip = document.createElement('div');
-    tip.className = 'mk-morph-tooltip';
-    tip.setAttribute('aria-hidden', 'true');
-    const clip = document.createElement('div');
-    clip.className = 'mk-morph-tooltip-clip';
-    const labelA = document.createElement('span');
-    labelA.className = 'mk-morph-tooltip-label';
-    const labelB = document.createElement('span');
-    labelB.className = 'mk-morph-tooltip-label';
-    labelB.style.opacity = '0';
-    clip.append(labelA, labelB);
-    const tail = document.createElement('span');
-    tail.className = 'mk-morph-tooltip-tail';
-    tip.append(clip, tail);
-    document.body.append(tip);
-
-    const measurer = document.createElement('span');
-    measurer.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;white-space:nowrap;font:600 12px/16px var(--ui-font,Manrope,sans-serif);padding:0 12px;';
-    document.body.append(measurer);
-
-    const sLeft = makeSpring(0, 620, 36, 1, 0.08);
-    const sRight = makeSpring(0, 190, 19, 1, 0.08);
-    const sTop = makeSpring(0, 420, 28, 1, 0.08);
-    const sTail = makeSpring(0, 300, 22, 1, 0.08);
-    const sShow = makeSpring(0, 420, 24);
-    const sSlide = makeSpring(1, 420, 32);
-
-    let activeEl = null;
-    let activeText = '';
-    let prevText = '';
-    let slideDir = 1;
-    let isBelow = false;
-    let hideTimer = 0;
-
-    function getTipText(el) {
-      return (isKk() && el.dataset.morphTipKk) || el.dataset.morphTip || '';
-    }
-
-    const tick = dt => {
-      const a = stepSpring(sLeft, dt);
-      const b = stepSpring(sRight, dt);
-      const c = stepSpring(sTop, dt);
-      const d = stepSpring(sTail, dt);
-      const e = stepSpring(sShow, dt);
-      const f = stepSpring(sSlide, dt);
-
-      const x0 = Math.min(sLeft.x, sRight.x);
-      const w = Math.max(44, Math.abs(sRight.x - sLeft.x));
-      const scale = 0.88 + 0.12 * sShow.x;
-      const yLift = (1 - sShow.x) * (isBelow ? -6 : 6);
-      tip.style.transform = `translate3d(${x0.toFixed(2)}px, ${(sTop.x + yLift).toFixed(2)}px, 0) scale(${scale.toFixed(4)})`;
-      tip.style.width = `${w.toFixed(2)}px`;
-      tip.style.opacity = Math.max(0, Math.min(1, sShow.x)).toFixed(3);
-
-      const tailRel = Math.max(12, Math.min(w - 12, sTail.x - x0));
-      tail.style.transform = `translate3d(${(tailRel - 4).toFixed(2)}px, 0, 0) rotate(45deg)`;
-
-      const p = Math.max(0, Math.min(1, sSlide.x));
-      labelA.style.transform = `translate3d(${((1 - p) * 14 * slideDir).toFixed(2)}px, 0, 0)`;
-      labelA.style.opacity = p.toFixed(3);
-      labelB.style.transform = `translate3d(${(-p * 14 * slideDir).toFixed(2)}px, 0, 0)`;
-      labelB.style.opacity = (prevText ? (1 - p) : 0).toFixed(3);
-
-      return a || b || c || d || e || f;
-    };
-
-    function showFor(el) {
-      clearTimeout(hideTimer);
-      const text = getTipText(el);
-      if (!text) return;
-      const rect = el.getBoundingClientRect();
-      if (!rect.width) return;
-      measurer.textContent = text;
-      const w = Math.ceil(measurer.getBoundingClientRect().width) + 4;
-      const cx = rect.left + rect.width / 2;
-      const clampedLeft = Math.max(10, Math.min(window.innerWidth - w - 10, cx - w / 2));
-      const targetLeft = clampedLeft;
-      const targetRight = clampedLeft + w;
-      const placeBelow = rect.top < 64;
-      isBelow = placeBelow;
-      tip.classList.toggle('is-below', placeBelow);
-      const targetTop = placeBelow ? Math.min(window.innerHeight - 40, rect.bottom + 10) : rect.top - 42;
-
-      const wasVisible = sShow.x > 0.08 && activeEl !== null;
-      if (wasVisible && activeEl !== el) {
-        const movingRight = cx > sTail.target;
-        slideDir = movingRight ? 1 : -1;
-        if (movingRight) {
-          sRight.k = 620; sRight.d = 36;
-          sLeft.k = 190; sLeft.d = 19;
-        } else {
-          sLeft.k = 620; sLeft.d = 36;
-          sRight.k = 190; sRight.d = 19;
-        }
-        prevText = activeText;
-        labelB.textContent = prevText;
-        labelA.textContent = text;
-        sSlide.x = 0; sSlide.v = 0; sSlide.target = 1;
-      } else {
-        prevText = '';
-        labelB.textContent = '';
-        labelA.textContent = text;
-        sLeft.x = targetLeft; sLeft.v = 0;
-        sRight.x = targetRight; sRight.v = 0;
-        sTop.x = targetTop; sTop.v = 0;
-        sTail.x = cx; sTail.v = 0;
-        sSlide.x = 1; sSlide.v = 0; sSlide.target = 1;
-      }
-
-      activeEl = el;
-      activeText = text;
-      sLeft.target = targetLeft;
-      sRight.target = targetRight;
-      sTop.target = targetTop;
-      sTail.target = cx;
-      sShow.target = 1;
-      wake(tick);
-    }
-
-    function hide() {
-      clearTimeout(hideTimer);
-      hideTimer = setTimeout(() => {
-        activeEl = null;
-        sShow.target = 0;
-        wake(tick);
-      }, 65);
-    }
-
-    items.forEach(el => {
-      // Prevent duplicate native browser title tooltip while keeping aria-label intact
-      if (el.hasAttribute('title')) el.removeAttribute('title');
-      el.addEventListener('pointerenter', () => showFor(el));
-      el.addEventListener('focus', () => showFor(el));
-      el.addEventListener('pointerleave', hide);
-      el.addEventListener('blur', hide);
-    });
-    window.addEventListener('scroll', () => { if (activeEl) hide(); }, { passive: true });
-  }
-
-  // =========================================================================
-  // 3. COMMAND BUTTON — Expandable 24-template quick search (examples.html)
+  // Command button for the template gallery
   // =========================================================================
   function initCommandButton() {
     const wrap = document.getElementById('template-cmd');
@@ -505,7 +182,7 @@
     const stage = document.getElementById('fan-deck');
     const renderer = window.SATUCARD_RENDERER;
     const samples = window.SATUCARD_SAMPLES || {};
-    if (!stage || !renderer) return;
+    if (!stage || !renderer || isLightweight()) return;
     const cards = [...stage.querySelectorAll('.mk-fan-card')];
     if (cards.length < 3) return;
     mountedComponents.push('fan-cards');
@@ -610,290 +287,93 @@
   // =========================================================================
   // 5. PLAN SWITCH — Stretchy switch + drum-rolling KZT digits (pricing.html)
   // =========================================================================
-  function initPlanSwitch() {
+
+  async function initPlanSwitch() {
     const switcher = document.getElementById('sai-plan-switch');
-    const drum = document.getElementById('sai-price-drum');
-    const badge = document.getElementById('sai-token-badge');
-    const caption = document.getElementById('sai-plan-caption');
-    const bonusRow = document.getElementById('sai-bonus-row');
-    const bonusText = document.getElementById('sai-bonus-text');
-    const bonusCheck = bonusRow?.querySelector('.mk-plan-bonus-check');
-    const cta = document.getElementById('sai-plan-cta');
-    if (!switcher || !drum || !badge || !caption || !bonusRow || !bonusText || !cta) return;
-    mountedComponents.push('plan-switch');
-
-    const PLANS = {
-      basic: {
-        price: '1 500',
-        tokensRu: '5 млн токенов',
-        tokensKk: '5 млн токен',
-        captionRu: 'Базовые модели sAI для текстов и перевода RU / KZ на 30 дней.',
-        captionKk: 'Мәтін мен RU / KZ аудармасына арналған 30 күндік негізгі sAI модельдері.',
-        bonusRu: '',
-        bonusKk: ''
-      },
-      plus: {
-        price: '2 990',
-        tokensRu: '8 млн токенов',
-        tokensKk: '8 млн токен',
-        captionRu: 'Больше лимитов и моделей для сложных правок на 30 дней.',
-        captionKk: 'Күрделі түзетулерге арналған көбірек лимит пен модельдер (30 күн).',
-        bonusRu: 'Включает «ИИ Старт» + увеличенный лимит токенов sAI',
-        bonusKk: '«ЖИ Старт» + ұлғайтылған sAI токен лимиті кіреді'
-      },
-      max: {
-        price: '4 990',
-        tokensRu: '10 млн токенов',
-        tokensKk: '10 млн токен',
-        captionRu: 'Полный выбор старших моделей sAI на 30 дней.',
-        captionKk: '30 күнге жоғарғы sAI модельдерінің толық таңдауы.',
-        bonusRu: 'Полный выбор старших моделей sAI (GPT-6 Astra, GPT-6.1 Sol, Claude Opus 5.5)',
-        bonusKk: 'Жоғарғы sAI модельдерінің толық таңдауы (GPT-6 Astra, GPT-6.1 Sol, Claude Opus 5.5)'
-      },
-      max3: {
-        price: '9 990',
-        tokensRu: '30 млн токенов',
-        tokensKk: '30 млн токен',
-        captionRu: 'Тройной лимит sAI для одного аккаунта — 30 млн токенов.',
-        captionKk: 'Бір аккаунтқа үш еселенген sAI лимиті — 30 млн токен.',
-        bonusRu: 'Личный лимит sAI ×3 — 30 млн токенов и все старшие модели',
-        bonusKk: 'Жеке sAI ×3 лимиті — 30 млн токен және барлық жоғарғы модельдер'
+    if (!switcher) return;
+    const { BILLING_PLANS } = await import('./billing-plans.js');
+    const drum = document.getElementById('sai-price-drum'), badge = document.getElementById('sai-token-badge');
+    const caption = document.getElementById('sai-plan-caption'), bonus = document.getElementById('sai-bonus-row');
+    const bonusText = document.getElementById('sai-bonus-text'), cta = document.getElementById('sai-plan-cta');
+    const buttons = [...switcher.querySelectorAll('[data-sai-plan]')], cycles = [...document.querySelectorAll('[data-billing-cycle]')];
+    let key = 'max', yearly = false, rollers = [], bonusHeight = 28;
+    const pop = makeSpring(1,520,16), height = makeSpring(1,260,24), choiceFade = makeSpring(1,420,32);
+    const dock = attachRubberDock(switcher, '[data-sai-plan]', el => el.getAttribute('aria-checked') === 'true', {lead:[620,36],trail:[190,19]});
+    attachRubberDock(document.querySelector('.billing-cycle'), '[data-billing-cycle]', el => el.getAttribute('aria-checked') === 'true', {lead:[620,36],trail:[190,19]});
+    const tick = dt => {
+      let active = false;
+      for (const r of rollers) {
+        r.delay -= dt;
+        if (r.delay > 0 && !isReduced()) { active = true; continue; }
+        active = stepSpring(r.s,dt) || active;
+        r.strip.style.transform = 'translateY(' + (-r.s.x * 1.08).toFixed(4) + 'em)';
       }
+      active = stepSpring(choiceFade,dt) || active;
+      caption.style.opacity = Math.max(0,Math.min(1,choiceFade.x)).toFixed(3);
+      active = stepSpring(pop,dt) || active; active = stepSpring(height,dt) || active;
+      badge.style.transform = 'scale(' + pop.x.toFixed(4) + ')';
+      bonus.style.height = Math.max(0, height.x * bonusHeight).toFixed(2) + 'px';
+      bonus.style.opacity = Math.max(0,Math.min(1,height.x)).toFixed(3);
+      return active;
     };
-
-    const dock = attachRubberDock(
-      switcher,
-      'button[data-sai-plan]',
-      el => el.getAttribute('aria-checked') === 'true',
-      { lead: [520, 32], trail: [165, 18] }
-    );
-
-    const buttons = [...switcher.querySelectorAll('button[data-sai-plan]')];
-    const sBonus = makeSpring(1, 240, 22);
-    const sBadgePop = makeSpring(1, 460, 20);
-    const sCheckPop = makeSpring(1, 440, 18);
-    let currentKey = 'max';
-
-    // Build vertical 0..9 digit strips once for smooth odometer drum roll
-    function buildDrum(initialPrice) {
-      drum.innerHTML = '';
-      const chars = [...initialPrice];
-      chars.forEach(ch => {
-        if (ch === ' ') {
-          const sep = document.createElement('span');
-          sep.className = 'mk-digit-sep';
-          sep.textContent = '\u00a0';
-          drum.append(sep);
-        } else {
-          const col = document.createElement('span');
-          col.className = 'mk-digit-col';
-          const strip = document.createElement('span');
-          strip.className = 'mk-digit-strip';
-          for (let d = 0; d <= 9; d++) {
-            const span = document.createElement('span');
-            span.textContent = String(d);
-            strip.append(span);
+    function price(amount, animate) {
+      const chars = new Intl.NumberFormat('ru-RU').format(amount).replace(/\s/g,' ');
+      const digits = chars.replace(/ /g,'').split('').map(Number);
+      if (rollers.length !== digits.length) {
+        drum.replaceChildren(); rollers = [];
+        for (const ch of chars) {
+          const col = document.createElement('span'); col.setAttribute('aria-hidden','true');
+          if (ch === ' ') { col.className = 'mk-digit-sep'; col.textContent = '\u00a0'; }
+          else {
+            col.className = 'mk-digit-col';
+            const strip = document.createElement('span'); strip.className = 'mk-digit-strip';
+            for (let n=0;n<10;n++) { const d=document.createElement('span'); d.textContent=n; strip.append(d); }
+            const s = makeSpring(animate ? 0 : Number(ch),260,22+rollers.length*2,1,.005);
+            rollers.push({strip,s,delay:0}); col.append(strip);
           }
-          strip.style.transform = `translate3d(0, ${-Number(ch) * 1.08}em, 0)`;
-          col.append(strip);
           drum.append(col);
         }
-      });
-      const cur = document.createElement('span');
-      cur.className = 'mk-digit-sep';
-      cur.textContent = '\u00a0';
-      const tenge = document.createElement('span');
-      tenge.textContent = '₸';
-      drum.append(cur, tenge);
-    }
-
-    function rollDrum(priceStr) {
-      const digits = priceStr.replace(/\s+/g, '').split('').map(Number);
-      const strips = [...drum.querySelectorAll('.mk-digit-strip')];
-      if (strips.length !== digits.length) {
-        buildDrum(priceStr);
-        return;
+        const currency=document.createElement('span'); currency.textContent='\u00a0₸'; currency.setAttribute('aria-hidden','true'); drum.append(currency);
       }
-      strips.forEach((strip, idx) => {
-        strip.style.transform = `translate3d(0, ${-digits[idx] * 1.08}em, 0)`;
-      });
+      rollers.forEach((r,i) => { r.s.target=digits[i]; r.delay=animate?i*.045:0; if(!animate){r.s.x=digits[i];r.s.v=0;} });
+      drum.setAttribute('role','img'); drum.setAttribute('aria-label', amount + ' ₸');
     }
-
-    const tick = dt => {
-      const a = stepSpring(sBonus, dt);
-      const b = stepSpring(sBadgePop, dt);
-      const c = stepSpring(sCheckPop, dt);
-      const innerH = bonusRow.firstElementChild?.scrollHeight || 28;
-      const p = Math.max(0, Math.min(1, sBonus.x));
-      bonusRow.style.height = `${(innerH * p).toFixed(1)}px`;
-      bonusRow.style.opacity = p.toFixed(3);
-      badge.style.transform = `scale(${sBadgePop.x.toFixed(4)})`;
-      if (bonusCheck) bonusCheck.style.transform = `scale(${sCheckPop.x.toFixed(4)})`;
-      return a || b || c;
-    };
-
-    function planHref(key) {
-      const url = new URL('dashboard.html#billing-title', location.href);
-      url.searchParams.set('plan', key);
-      const theme = document.documentElement.dataset.theme;
-      if (theme) url.searchParams.set('theme', theme);
+    function href() {
+      const url=new URL('dashboard.html#billing-title',location.href);
+      url.searchParams.set('plan', key+(yearly?'_yearly':''));
+      if(document.documentElement.dataset.theme) url.searchParams.set('theme',document.documentElement.dataset.theme);
       return url.href;
     }
-
-    function syncCardHighlight(key) {
-      const cards = document.querySelectorAll('#pricing-plans .pricing-card[data-plan]');
-      cards.forEach(card => {
-        card.classList.toggle('mk-plan-highlighted', card.dataset.plan === key);
-      });
+    function sync(animate=true) {
+      const plan=BILLING_PLANS.find(p=>p.id===key), kk=isKk();
+      buttons.forEach(b=>{const yes=b.dataset.saiPlan===key;b.setAttribute('aria-checked',yes);b.tabIndex=yes?0:-1;});
+      cycles.forEach(b=>{const yes=(b.dataset.billingCycle==='yearly')===yearly;b.setAttribute('aria-checked',yes);b.tabIndex=yes?0:-1;});
+      price(plan.priceKzt*(yearly?12:1),animate);
+      badge.textContent = Math.round(plan.tokens/1e6)+(kk?' млн токен':' млн токенов');
+      document.querySelector('.mk-plan-period').textContent = yearly ? (kk?'жылға · лимит ай сайын':'за год · лимит каждый месяц') : (kk?'30 күнге · автоматты төлемсіз':'за 30 дней · без автосписания');
+      caption.textContent = yearly ? (kk?'12 айға бір төлем. Лимит қалдығы келесі айға өтпейді.':'Одна оплата на 12 месяцев. Неиспользованный лимит не переносится.') : (kk?'Мәтіндер мен RU / KZ аудармасына арналған sAI.':'sAI для текстов, описаний и перевода RU / KZ.');
+      bonusText.textContent = plan.models.join(' · ');
+      bonusHeight = bonus.firstElementChild?.scrollHeight || 28; height.target=1;
+      cta.href=href(); dock?.syncActive(!animate);
+      document.querySelectorAll('#pricing-plans [data-plan]').forEach(card=>card.classList.toggle('mk-plan-highlighted',card.dataset.plan===key));
+      if(animate){pop.x=.86;pop.v=3;choiceFade.x=.35;choiceFade.v=0;} wake(tick);
     }
-
-    function selectPlan(key, animate = true) {
-      const data = PLANS[key];
-      if (!data) return;
-      currentKey = key;
-      buttons.forEach(btn => btn.setAttribute('aria-checked', String(btn.dataset.saiPlan === key)));
-      rollDrum(data.price);
-      const kk = isKk();
-      badge.textContent = kk ? data.tokensKk : data.tokensRu;
-      caption.textContent = kk ? data.captionKk : data.captionRu;
-      const bonus = kk ? data.bonusKk : data.bonusRu;
-      if (bonus) {
-        bonusText.textContent = bonus;
-        sBonus.target = 1;
-      } else {
-        sBonus.target = 0;
-      }
-      cta.href = planHref(key);
-      syncCardHighlight(key);
-
-      if (animate) {
-        sBadgePop.x = 0.86; sBadgePop.v = 3.2; sBadgePop.target = 1;
-        if (bonus) { sCheckPop.x = 0.45; sCheckPop.v = 5.4; sCheckPop.target = 1; }
-      } else {
-        sBonus.x = sBonus.target;
-        sBadgePop.x = 1;
-        sCheckPop.x = 1;
-      }
-      dock?.syncActive(!animate);
-      wake(tick);
-    }
-
-    buildDrum(PLANS[currentKey].price);
-    selectPlan(currentKey, false);
-
-    buttons.forEach(btn => {
-      btn.addEventListener('click', () => selectPlan(btn.dataset.saiPlan, true));
+    buttons.forEach(b=>b.addEventListener('click',()=>{key=b.dataset.saiPlan;sync();}));
+    cycles.forEach(b=>b.addEventListener('click',()=>{
+      yearly=b.dataset.billingCycle==='yearly';
+      document.dispatchEvent(new CustomEvent('satucard:billing-cycle',{detail:yearly?'yearly':'monthly'}));sync();
+    }));
+    for(const group of [buttons,cycles]) group.forEach((b,i)=>b.addEventListener('keydown',event=>{
+      if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+      event.preventDefault(); const n=event.key==='Home'?0:event.key==='End'?group.length-1:(i+(event.key==='ArrowRight'?1:-1)+group.length)%group.length;
+      group[n].click();group[n].focus();
+    }));
+    cta.addEventListener('click',()=>{cta.href=href();});
+    document.addEventListener('satucard:language-change',()=>sync(false));
+    document.getElementById('pricing-plans')?.addEventListener('click',event=>{
+      const card=event.target.closest('[data-plan]');if(!card||event.target.closest('a,summary,details'))return;key=card.dataset.plan;sync();
     });
-    cta.addEventListener('click', () => { cta.href = planHref(currentKey); });
-
-    // Sync with cards rendered asynchronously by ES module pricing.js
-    const plansGrid = document.getElementById('pricing-plans');
-    if (plansGrid) {
-      const gridMo = new MutationObserver(() => syncCardHighlight(currentKey));
-      gridMo.observe(plansGrid, { childList: true });
-      plansGrid.addEventListener('pointerenter', ev => {
-        const card = ev.target.closest?.('.pricing-card[data-plan]');
-        if (card?.dataset.plan && card.dataset.plan !== currentKey) {
-          // Only highlight passively on click so we don't jump the switch under cursor
-        }
-      }, true);
-      plansGrid.addEventListener('click', ev => {
-        if (ev.target.closest('a, summary, details')) return;
-        const card = ev.target.closest('.pricing-card[data-plan]');
-        if (card?.dataset.plan) selectPlan(card.dataset.plan, true);
-      });
-    }
-
-    document.addEventListener('satucard:language-change', () => selectPlan(currentKey, false));
-  }
-
-  // =========================================================================
-  // 6. FILE DROP — Spring scale + floating file chip + SVG ring (Editor #drop-zone)
-  // =========================================================================
-  function initEditorFileDrop() {
-    const zone = document.getElementById('drop-zone');
-    const fileInput = document.getElementById('photo-input');
-    const symbol = zone?.querySelector('.upload-symbol');
-    if (!zone || !fileInput || !symbol) return;
-    mountedComponents.push('file-drop');
-
-    zone.classList.add('mk-file-drop');
-    symbol.classList.add('mk-upload-ring');
-
-    const chip = document.createElement('span');
-    chip.className = 'mk-drop-chip';
-    chip.setAttribute('aria-hidden', 'true');
-    chip.textContent = 'товар.jpg';
-    zone.append(chip);
-
-    const NS = 'http://www.w3.org/2000/svg';
-    const svg = document.createElementNS(NS, 'svg');
-    svg.setAttribute('class', 'mk-upload-ring-svg');
-    svg.setAttribute('viewBox', '0 0 44 44');
-    svg.setAttribute('aria-hidden', 'true');
-    const track = document.createElementNS(NS, 'circle');
-    track.setAttribute('class', 'mk-upload-ring-track');
-    track.setAttribute('cx', '22'); track.setAttribute('cy', '22'); track.setAttribute('r', '19');
-    const arc = document.createElementNS(NS, 'circle');
-    arc.setAttribute('class', 'mk-upload-ring-arc');
-    arc.setAttribute('cx', '22'); arc.setAttribute('cy', '22'); arc.setAttribute('r', '19');
-    const CIRC = 2 * Math.PI * 19;
-    arc.setAttribute('stroke-dasharray', CIRC.toFixed(1));
-    arc.setAttribute('stroke-dashoffset', CIRC.toFixed(1));
-    svg.append(track, arc);
-    symbol.append(svg);
-
-    const sScale = makeSpring(1, 420, 26);
-    const sChip = makeSpring(0, 340, 22);
-    const sProg = makeSpring(0, 180, 22);
-    let doneTimer = 0;
-
-    const tick = dt => {
-      const a = stepSpring(sScale, dt);
-      const b = stepSpring(sChip, dt);
-      const c = stepSpring(sProg, dt);
-      zone.style.transform = `scale(${sScale.x.toFixed(4)})`;
-      chip.style.opacity = Math.max(0, Math.min(1, sChip.x)).toFixed(3);
-      chip.style.transform = `translate3d(0, ${((1 - sChip.x) * 8).toFixed(2)}px, 0) rotate(${((1 - sChip.x) * 5 - 3).toFixed(2)}deg)`;
-      const p = Math.max(0, Math.min(1, sProg.x));
-      arc.setAttribute('stroke-dashoffset', (CIRC * (1 - p)).toFixed(2));
-      return a || b || c;
-    };
-
-    function playUploadPulse(fileName) {
-      clearTimeout(doneTimer);
-      chip.textContent = (fileName || 'товар.jpg').slice(0, 18);
-      zone.classList.remove('is-uploaded');
-      zone.classList.add('is-uploading');
-      sProg.x = 0.08; sProg.v = 0; sProg.target = 1;
-      sScale.v = -0.35; sScale.target = 1;
-      sChip.target = 1;
-      wake(tick);
-      doneTimer = setTimeout(() => {
-        zone.classList.remove('is-uploading');
-        zone.classList.add('is-uploaded');
-        doneTimer = setTimeout(() => {
-          zone.classList.remove('is-uploaded');
-          sChip.target = 0;
-          sProg.x = 0; sProg.target = 0;
-          wake(tick);
-        }, 1450);
-      }, 420);
-    }
-
-    zone.addEventListener('pointerenter', () => { sScale.target = 1.014; sChip.target = 1; wake(tick); });
-    zone.addEventListener('pointerleave', () => { sScale.target = 1; sChip.target = 0; wake(tick); });
-    zone.addEventListener('dragenter', () => { sScale.target = 1.03; sChip.target = 1; wake(tick); });
-    zone.addEventListener('dragover', () => { sScale.target = 1.03; sChip.target = 1; wake(tick); });
-    zone.addEventListener('dragleave', () => { sScale.target = 1; sChip.target = 0; wake(tick); });
-    zone.addEventListener('drop', ev => {
-      const f = ev.dataTransfer?.files?.[0];
-      playUploadPulse(f?.name);
-    });
-    fileInput.addEventListener('change', () => {
-      const f = fileInput.files?.[0];
-      if (f) playUploadPulse(f.name);
-    });
+    mountedComponents.push('plan-switch'); sync(false);
   }
 
   // =========================================================================
@@ -1709,11 +1189,9 @@
   // =========================================================================
   function boot() {
     initRubberDocks();
-    initMorphTooltip();
     initCommandButton();
     initFanCards();
     initPlanSwitch();
-    initEditorFileDrop();
     initEditorSpringyInputs();
     initEditorJellySlider();
     initEditorHoldToPublish();
@@ -1722,15 +1200,7 @@
     initEditorScrubbers();
     initEditorCopyAndUndo();
 
-    window.__SATUCARD_MOTION_KIT = {
-      components: mountedComponents,
-      activeTickers: () => tickers.size
-    };
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', boot, { once: true });
-  } else {
-    boot();
-  }
-})();
+  boot();
+};

@@ -283,3 +283,17 @@ test('email confirmation scrubs the URL before verification and rejects an uncon
   await assert.rejects(bad.auth.verifyEmailCode({ email: 'seller@example.com', token: '123456' }), /не подтверждена/);
   assert.equal(bad.local.getItem(sessionKey), null);
 });
+
+
+test('annual plan selection survives login and profile navigation without accepting unknown IDs', () => {
+  for (const plan of ['basic_yearly','plus_yearly','max_yearly','max3_yearly']) {
+    const start = harness({url: origin + '/dashboard.html?plan=' + plan + '&theme=dark#billing-title'});
+    const login = start.auth.accountPage('auth.html');
+    assert.equal(new URL(login).searchParams.get('plan'), plan);
+    const signup = harness({url:login});
+    assert.equal(new URL(signup.auth.accountPage('profile.html')).searchParams.get('plan'),plan);
+    assert.equal(new URL(signup.auth.accountPage('dashboard.html')).searchParams.get('plan'),plan);
+  }
+  const invalid = harness({url:origin+'/auth.html?plan=niche10_yearly'});
+  assert.equal(new URL(invalid.auth.accountPage('dashboard.html')).searchParams.get('plan'),null);
+});

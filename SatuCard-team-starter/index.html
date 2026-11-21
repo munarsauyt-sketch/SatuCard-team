@@ -24,15 +24,16 @@
   <script src="studio-project.js?v=studio-refresh-1" defer></script>
   <script src="home-export.js" defer></script>
   <script src="home-studio.js?v=quick-studio" defer></script>
-  <script type="module" src="hero-3d.js"></script>
-  <script src="showcase.js" defer></script>
+  <script src="showcase.js" data-hero-module="hero-3d.js" defer></script>
   <script src="intro.js?v=20261030" defer></script>
   <script src="interface-language.js?v=quick-studio" defer></script>
   <link rel="stylesheet" href="folio.css">
   <link rel="stylesheet" href="hero-depth.css">
-  <link rel="stylesheet" href="motion-kit.css">
   <script src="product-interface.js" defer></script>
   <script src="home-motion.js" defer></script>
+  <link rel="stylesheet" href="motion-core.css">
+  <script src="motion-core.js" defer></script>
+  <link rel="stylesheet" href="motion-kit.css">
   <script src="motion-kit.js" defer></script>
 </head>
 <body class="product-ui preview-home">
@@ -274,7 +275,7 @@
         <a class="button cover-secondary" href="video.html">Открыть видеостудию <span aria-hidden="true">↗</span></a>
       </div>
       <figure class="video-feature-preview">
-        <img src="assets/images/video-workbench.webp" width="1200" height="741" loading="eager" decoding="sync" alt="Видеостудия SatuCard с холстом и монтажной шкалой">
+        <img src="assets/images/video-workbench.webp" width="1200" height="741" loading="lazy" decoding="async" alt="Видеостудия SatuCard с холстом и монтажной шкалой">
       </figure>
     </section>
   </div>

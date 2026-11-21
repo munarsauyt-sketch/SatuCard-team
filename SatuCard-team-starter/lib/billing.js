@@ -1,5 +1,5 @@
 import { AccountError } from './account.js';
-import { ACCESS_DAYS, BILLING_PLANS } from '../billing-plans.js';
+import { ACCESS_DAYS, BILLING_PLANS, YEARLY_BILLING_PLANS } from '../billing-plans.js';
 import { SUPPORT } from '../support.js';
 
 export const billingId = value => typeof value === 'string' && /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(value);
@@ -33,7 +33,7 @@ export async function billingRpc(config, name, args) {
 }
 
 export function billingPlan(id) {
-  return BILLING_PLANS.find(plan => plan.id === id);
+  return [...BILLING_PLANS, ...YEARLY_BILLING_PLANS].find(plan => plan.id === id);
 }
 
 export function publicOrder(row) {
@@ -53,7 +53,7 @@ export function publicGrant(row) {
     throw new AccountError('Не удалось проверить остаток лимита.', 503, 'billing_unavailable');
   }
   return { planId: row.plan_id, planName: billingPlan(row.plan_id)?.name || row.plan_id,
-    startsAt: row.starts_at, expiresAt: row.expires_at,
+    startsAt: row.starts_at, expiresAt: row.expires_at, periodNumber: row.period_number || 1,
     usedPercent: Math.min(100, Math.ceil(used * 100 / limit)),
     reservedPercent: Math.min(100, Math.ceil(reserved * 100 / limit)),
     remainingPercent: Math.max(0, Math.floor((limit - used - reserved) * 100 / limit)),
@@ -71,8 +71,8 @@ export function paymentDetails() {
   return { checkoutUrl: paymentRequestsEnabled() ? checkoutUrl : null, support: SUPPORT };
 }
 
-export const publicPlans = () => BILLING_PLANS.map(({ id, name, priceKzt, models, includes, benefits }) =>
-  ({ id, name, priceKzt, models, includes, benefits, days: ACCESS_DAYS }));
+export const publicPlans = (annualReady = false) => [...BILLING_PLANS, ...(annualReady ? YEARLY_BILLING_PLANS : [])].map(({ id, name, priceKzt, models, includes, benefits, months }) =>
+  ({ id, name, priceKzt, models, includes, benefits, days: ACCESS_DAYS, ...(months ? { months, quotaReset: 'monthly' } : {}) }));
 
 export const quotaFailures = {
   access_expired: [403, 'Срок платного доступа закончился. Выберите новый период.'],

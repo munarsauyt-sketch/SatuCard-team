@@ -632,16 +632,23 @@
       syncForm(); status(idStatus, `${isLogo ? 'Логотип' : 'Фото'}: ${file.name}`); edited(true);
     } catch (error) { if (version === (isLogo ? logoVersion : photoVersion)) status(idStatus, error.message, true); }
   }
+  let presentedPhotoImport = 0;
+  function reportPhotoImport(state, message = '', completed = 0, total = 0) {
+    document.dispatchEvent(new CustomEvent('satucard:photo-import', { detail: { state, message, completed, total } }));
+  }
   async function loadPhotos(files) {
     if (!files.length) return;
-    if (model.libraryIds.length + files.length > 12) { status('file-status', 'В проекте до 12 фото. Удалите ненужные снимки.', true); return; }
-    if (files.some(file => !(window.SATUCARD_PHOTO_IMPORT?.accepts(file) ?? ['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) || file.size > 10 * 1024 * 1024)) { status('file-status', 'Выберите JPG, PNG, WebP или HEIC до 10 МБ каждый.', true); return; }
+    if (model.libraryIds.length + files.length > 12) { status('file-status', 'В проекте до 12 фото. Удалите ненужные снимки.', true); reportPhotoImport('error', 'В проекте до 12 фото.'); return; }
+    if (files.some(file => !(window.SATUCARD_PHOTO_IMPORT?.accepts(file) ?? ['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) || file.size > 10 * 1024 * 1024)) { status('file-status', 'Выберите JPG, PNG, WebP или HEIC до 10 МБ каждый.', true); reportPhotoImport('error', 'Выберите JPG, PNG, WebP или HEIC до 10 МБ.'); return; }
     const version = ++photoVersion, viewId = model.activeViewId, added = [];
+    presentedPhotoImport = version;
     status('file-status', 'Добавляем фотографии…');
+    reportPhotoImport('loading', '', 0, files.length);
     try {
       for (const file of files) {
         const source = await optimizedImage(file, 1800); added.push(await registerAsset(source));
         if (version !== photoVersion || viewId !== model.activeViewId) throw new Error('Выбор карточки или фото изменился. Загрузите файлы ещё раз.');
+        if (added.length < files.length) reportPhotoImport('loading', '', added.length, files.length);
       }
       commit(); model.libraryIds.push(...added); lockedProduct = true;
       // A first real upload must not quietly export the demo product alongside it.
@@ -656,8 +663,12 @@
       status('file-status', newProduct
         ? 'Фото загружено. Укажите название и данные своего товара.'
         : 'Добавлено фото: ' + added.length + '. Нажимайте миниатюры, чтобы выбрать до 3 для этой карточки.');
-    } catch (error) { added.forEach(id => assets.delete(id)); if (version === photoVersion) status('file-status', error.message, true); }
-    finally { added.forEach(id => pendingAssets.delete(id)); releaseUnusedAssets(); }
+      reportPhotoImport('done', '', added.length, files.length);
+    } catch (error) { added.forEach(id => assets.delete(id)); if (version === photoVersion) { status('file-status', error.message, true); reportPhotoImport('error', error.message); } }
+    finally {
+      if (version !== photoVersion && presentedPhotoImport === version) reportPhotoImport('idle');
+      added.forEach(id => pendingAssets.delete(id)); releaseUnusedAssets();
+    }
   }
   async function loadSample(key, initialize = false, options = {}) {
     if (!Object.hasOwn(samples, key)) return;

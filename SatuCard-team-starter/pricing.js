@@ -9,9 +9,10 @@ const purposes = {
   max3: 'Тройной лимит sAI для одного аккаунта — 30 млн токенов.',
 };
 
+let yearly = false;
 function accountUrl(plan) {
   const url = new URL('dashboard.html#billing-title', location.href);
-  url.searchParams.set('plan', plan.id);
+  url.searchParams.set('plan', plan.id + (yearly ? '_yearly' : ''));
   const theme = document.documentElement.dataset.theme;
   if (theme) url.searchParams.set('theme', theme);
   return url.href;
@@ -93,3 +94,17 @@ for (const plan of BILLING_PLANS) {
   card.append(head, priceBlock, meta, purpose, models, link);
   document.getElementById('pricing-plans').append(card);
 }
+
+document.addEventListener('satucard:billing-cycle', event => {
+  yearly = event.detail === 'yearly';
+  for (const plan of BILLING_PLANS) {
+    const card = document.querySelector('[data-plan="' + plan.id + '"]');
+    card.querySelector('.pricing-price').textContent = money(plan.priceKzt * (yearly ? 12 : 1));
+    card.querySelector('.pricing-period').textContent = yearly ? 'за год · лимит каждый месяц' : 'за 30 дней';
+    card.querySelector('.pricing-button').href = accountUrl(plan);
+    card.querySelectorAll('[data-plan-benefit]').forEach((item, index) => {
+      const benefit = plan.benefits[index];
+      item.textContent = yearly ? benefit.replace('на 30 дней', 'за каждый месяц') : benefit;
+    });
+  }
+});

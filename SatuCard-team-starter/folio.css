@@ -473,3 +473,23 @@ body { font-family: var(--ui-font); }
 @supports not ((backdrop-filter: blur(20px)) or (-webkit-backdrop-filter: blur(20px))) {
   .product-ui .site-header, .product-ui .workbench-header { background: var(--brand-bg); }
 }
+
+@media (max-width: 767px), (pointer: coarse) {
+  .product-ui .site-header,
+  .product-ui .workbench-header {
+    background: var(--brand-bg);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .product-ui dialog::backdrop {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  html.js-ready .product-ui [data-reveal] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

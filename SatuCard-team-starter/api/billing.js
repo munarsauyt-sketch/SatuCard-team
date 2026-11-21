@@ -36,7 +36,7 @@ export async function GET(request) {
     if (!Array.isArray(data.orders) || !Array.isArray(data.scheduled)) throw new Error('Invalid billing status');
     return accountJson({ ready: true, ordering: paymentRequestsEnabled(), isAdmin, active: publicGrant(data.active), scheduled: data.scheduled.map(publicGrant),
       orders: data.orders.map(publicOrder), models: availableAiModels({ isAdmin, active: data.active }),
-      plans: publicPlans(), payment: paymentDetails() });
+      annualReady: data.annualReady === true, plans: publicPlans(data.annualReady === true), payment: paymentDetails() });
   } catch (error) { return accountFailure(error); }
 }
 
@@ -53,6 +53,10 @@ export async function POST(request) {
     if (body.action === 'create') {
       if (!paymentRequestsEnabled()) throw new AccountError('Новые заявки на оплату пока закрыты.', 503, 'checkout_unavailable');
       if (!billingPlan(body.planId) || !billingId(body.requestId)) throw new AccountError('Выберите тариф и повторите оформление.', 400, 'invalid_input');
+      if (billingPlan(body.planId).months === 12) {
+        const status = await billingRpc(config, 'get_billing_status', { p_user_id: user.id });
+        if (status.annualReady !== true) throw new AccountError('Годовая покупка пока не подключена. Выберите 30 дней или вернитесь позже.', 503, 'annual_unavailable');
+      }
       data = await billingRpc(config, 'create_billing_order', { p_user_id: user.id, p_plan_id: body.planId, p_request_id: body.requestId });
     } else {
       if (!billingId(body.orderId)) throw new AccountError('Неверный номер заявки.', 400, 'invalid_input');

@@ -36,18 +36,31 @@ try {
  const page=await ctx.newPage(),errors=[];
  page.on('pageerror',e=>errors.push(e.message));
  const idle=()=>page.waitForFunction(()=>window.__SATUCARD_HERO_STATE?.idleSleeping);
+ const checkCadence=sample=>{
+  const targetFrames=sample.ms*60/1000;
+  const availableFrames=Math.min(sample.displayFrames,targetFrames);
+  assert.ok(sample.frames>5 && sample.frames>=Math.floor(availableFrames*.8),sample.name+' fell behind the available display cadence');
+  assert.ok(sample.frames<=Math.ceil(targetFrames)+1,sample.name+' exceeded the 60 FPS budget');
+ };
  const sample=async(name,move=false)=>{
   const result=await page.evaluate(async({name,move})=>{
    const perf=window.__heroPerf,startFrames=perf.frames,start=performance.now();
    const canvas=document.querySelector('.hero-3d-canvas'),box=canvas?.getBoundingClientRect();
+   let displayFrames=0,displayFrameId=0;
+   function countDisplayFrame(){
+    displayFrames++;
+    displayFrameId=requestAnimationFrame(countDisplayFrame);
+   }
+   if(move)displayFrameId=requestAnimationFrame(countDisplayFrame);
    while(performance.now()-start<1100) {
     if(move){const t=(performance.now()-start)/150;canvas.dispatchEvent(new PointerEvent('pointermove',{
      clientX:box.x+box.width*(.5+.2*Math.sin(t)),clientY:box.y+box.height*(.5+.15*Math.cos(t)),bubbles:true
     }));}
     await new Promise(r=>setTimeout(r,16));
    }
+   cancelAnimationFrame(displayFrameId);
    const renderer=perf.renderers.at(-1);
-   return {name,frames:perf.frames-startFrames,ms:performance.now()-start,
+   return {name,frames:perf.frames-startFrames,displayFrames,ms:performance.now()-start,
     triangles:renderer.info.render.triangles,drawCalls:renderer.info.render.calls,
     pixels:renderer.domElement.width*renderer.domElement.height,textures:renderer.info.memory.textures};
   },{name,move});
@@ -56,14 +69,14 @@ try {
  await page.goto(origin+'/index.html');await idle();
  assert.equal((await sample('idle')).frames,0);
  let moving=await sample('hover',true);
- assert.ok(moving.frames>5&&moving.frames<=Math.ceil(moving.ms*32/1000)+1,'Hover rendering must stay within 30fps budget');
+ checkCadence(moving);
  assert.ok(moving.triangles<9000,'Assembled geometry budget');
  assert.ok(moving.pixels<=500000,'Retina drawing-buffer budget');
  await page.mouse.move(0,0);await idle();
  await page.locator('#hero-explode-toggle').click();await idle();
  assert.equal((await sample('exploded-idle')).frames,0);
  moving=await sample('exploded-hover',true);
- assert.ok(moving.frames>5&&moving.frames<=Math.ceil(moving.ms*32/1000)+1,'Exploded hover rendering budget');
+ checkCadence(moving);
  assert.ok(moving.triangles<30000,'Exploded geometry budget');
  await page.mouse.move(0,0);await idle();
 

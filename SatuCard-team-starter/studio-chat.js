@@ -21,6 +21,8 @@
       const paidModel = paidCustomer || modelProviders.has($('ai-model-provider').value);
       $('ai-chat-send').disabled = busy || !configured || !$('ai-chat-input').value.trim();
       $('ai-chat-stop').hidden = !busy;
+      $('ai-chat-send').hidden = busy;
+      $('ai-chat-form').setAttribute('aria-busy', String(busy));
       $('ai-chat-input').readOnly = busy;
       $('ai-translate').disabled = busy || !configured;
       $('ai-build-send').disabled = busy || !configured || !$('ai-build-name').value.trim();
@@ -34,6 +36,7 @@
       resizeInput();
     }
     function resizeInput() {
+      if ($('ai-chat').resizePrompt) { $('ai-chat').resizePrompt(); return; }
       const input = $('ai-chat-input'); input.style.height = 'auto';
       const height = Math.max(44, Math.min(140, input.scrollHeight));
       input.style.height = height + 'px'; input.style.overflowY = input.scrollHeight > 140 ? 'auto' : 'hidden';
@@ -56,6 +59,7 @@
     function closeBuild() { $('ai-build-panel').hidden = true; $('ai-build-toggle').setAttribute('aria-expanded', 'false'); }
     function resetProduct(text) {
       clearChat(text);
+      document.dispatchEvent(new Event('satucard:chat-reset'));
       for (const id of ['ai-facts', 'ai-chat-input', 'ai-build-name', 'ai-build-facts']) $(id).value = '';
       $('ai-photo-consent').checked = false;
       $('ai-fallback-provider').value = $('ai-evaluation-provider').value = '';
@@ -320,7 +324,10 @@
     }
     $('ai-chat-form').addEventListener('submit', async event => {
       event.preventDefault(); if (busy || !configured) return;
-      const message = $('ai-chat-input').value.trim(); if (!message || message.length > 1500) return;
+      let message = $('ai-chat-input').value.trim(); if (!message || message.length > 1500) return;
+      const tags = $('ai-chat').getPromptTags?.() || [];
+      if (tags.length) message += '\nИнструкции по стилю: ' + tags.join('; ');
+      if (message.length > 1500) { status('Сократите сообщение: вместе с инструкциями максимум 1500 символов.', true); return; }
       const modelChoice = $('ai-model-provider').value;
       const selectedProvider = paidCustomer || modelProviders.has(modelChoice) ? 'anymodel' : null;
       if ((paidCustomer || (!selectedProvider && !singleUserPilot)) && !textConsent) {

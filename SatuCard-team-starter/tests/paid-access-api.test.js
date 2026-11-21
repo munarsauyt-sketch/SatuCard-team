@@ -117,4 +117,20 @@ test('verified payment activates one period and an authorized model uses the res
   assert.equal(Number(finalUsage.rows[0].tokens_used), 100);
   assert.equal(Number(finalUsage.rows[0].tokens_reserved), 0);
   assert.equal((await (await billingStatus(request('billing', 'other'))).json()).orders.length, 0);
+
+  const annualCreate = { action: 'create', planId: 'max_yearly', requestId: '55555555-5555-4555-8555-555555555555', amountKzt: 1 };
+  assert.equal((await billing(request('billing','buyer',annualCreate))).status,503, 'unmigrated database must not accept an annual payment');
+  await db.exec(await readFile(new URL('../database/annual-billing.sql', import.meta.url),'utf8'));
+  const annualResponse = await billing(request('billing','buyer',annualCreate));
+  assert.equal(annualResponse.status,201);
+  const annual = (await annualResponse.json()).order;
+  assert.equal(annual.amountKzt,59880);
+  const confirmAnnual = { ...confirmation, orderId: annual.id, receivedAmountKzt:59880, paymentReference:'annual-ref' };
+  assert.equal((await billing(request('billing','buyer',confirmAnnual))).status,403);
+  assert.equal((await billing(request('billing','owner',{...confirmAnnual,receivedAmountKzt:4990}))).status,400);
+  assert.equal((await billing(request('billing','owner',confirmAnnual))).status,200);
+  assert.equal((await billing(request('billing','owner',confirmAnnual))).status,200);
+  const afterAnnual = await (await billingStatus(request('billing','buyer'))).json();
+  assert.equal(afterAnnual.plans.length,8);assert.equal(afterAnnual.scheduled.length,12);
+  assert.ok(afterAnnual.scheduled.every(period=>period.remainingPercent===100));
 });

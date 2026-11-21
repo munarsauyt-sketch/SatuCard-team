@@ -1383,3 +1383,14 @@ html[data-theme=dark] .product-ui.preview-home .hero-style-bar button[aria-press
 @supports not ((backdrop-filter: blur(14px)) or (-webkit-backdrop-filter: blur(14px))) {
   .preview-home .site-header { background: var(--brand-bg); }
 }
+
+@media (max-width: 767px), (pointer: coarse) {
+  .preview-home .hero-stage { perspective: none; }
+  .preview-home .hero-card-rig { transform-style: flat; will-change: auto; }
+  .preview-home .hero-card-shadow { display: none; }
+  .preview-home .hero-style-bar {
+    background: var(--brand-surface);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}

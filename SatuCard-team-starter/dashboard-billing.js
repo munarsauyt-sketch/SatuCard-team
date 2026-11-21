@@ -24,6 +24,7 @@ function renderSelectedPlanBenefits(plans, planId) {
     return;
   }
   const items = [];
+  if (plan.months === 12) items.push('12 месяцев, новый лимит каждый месяц. Неиспользованный остаток не переносится.');
   if (plan.includes) items.push('Включает «' + plan.includes + '»');
   for (const benefit of (plan.benefits || [])) items.push(benefit);
   for (const model of (plan.models || [])) items.push('Модель: ' + model);
@@ -167,7 +168,7 @@ async function refresh() {
     }
     status.textContent = data.isAdmin ? 'Доступ администратора'
       : data.active ? data.active.planName + ' · до ' + date(data.active.expiresAt) + ' по времени Казахстана'
-      : data.message || 'Бесплатный план. Для sAI можно подключить тариф на 30 дней.';
+      : data.message || (data.annualReady ? 'Бесплатный план. Для sAI можно выбрать тариф на 30 дней или на год.' : 'Бесплатный план. Для sAI можно подключить тариф на 30 дней.');
     $('billing-usage').hidden = !data.active;
     if (data.active) {
       const remaining = data.active.remainingPercent;
@@ -176,7 +177,7 @@ async function refresh() {
         : 'Осталось ' + (remaining === 0 ? 'менее 1' : remaining) + '% лимита';
     }
     $('billing-next').hidden = !data.scheduled.length;
-    $('billing-next').textContent = data.scheduled.map(plan => plan.planName + ' начнётся ' + date(plan.startsAt)).join(' · ');
+    $('billing-next').textContent = data.scheduled.length ? 'Следующий лимит: ' + data.scheduled[0].planName + ' · ' + date(data.scheduled[0].startsAt) + (data.scheduled.length > 1 ? ' · следующих периодов: ' + data.scheduled.length : '') : '';
     const activePlan = data.active ? data.plans.find(item => item.id === data.active.planId) : null;
     const activeBenefits = (activePlan?.benefits || []).map(text => element('li', text));
     const modelItems = [...activeBenefits, ...data.models.map(model => element('li', model.label))];
@@ -187,11 +188,15 @@ async function refresh() {
     const select = $('billing-plan');
     const selected = select.value || new URLSearchParams(location.search).get('plan');
     select.replaceChildren(...availablePlans.map(plan => {
-      const option = element('option', plan.name + ' · ' + money(plan.priceKzt) + (plan.permanent ? ' · навсегда' : ' за ' + plan.days + ' дней'));
+      const option = element('option', plan.name + ' · ' + money(plan.priceKzt) + (plan.permanent ? ' · навсегда' : plan.months === 12 ? ' за год · лимит каждый месяц' : ' за ' + plan.days + ' дней'));
       option.value = plan.id;
       return option;
     }));
     if (availablePlans.some(plan => plan.id === selected)) select.value = selected;
+    else if (selected?.endsWith('_yearly')) {
+      const unavailable = element('option', 'Годовая покупка пока не подключена'); unavailable.value = selected; unavailable.disabled = true; select.prepend(unavailable); select.value = selected;
+      status.textContent = 'Годовая покупка пока не подключена. Выберите тариф на 30 дней или вернитесь позже.';
+    }
     renderSelectedPlanBenefits(availablePlans, select.value);
     $('billing-orders').replaceChildren(...(data.orders.length
       ? data.orders.map(order => orderRow(order, data.payment, false)) : [element('p', 'Пока нет покупок.')]));
@@ -251,7 +256,7 @@ $('billing-retry')?.addEventListener('click', refresh);
 $('billing-create').addEventListener('submit', event => {
   event.preventDefault();
   const planId = $('billing-plan').value;
-  if (busy || !planId) return;
+  if (busy || !planId || !availablePlans.some(plan => plan.id === planId)) return;
   if (pendingCreate?.planId !== planId) pendingCreate = { action: 'create', planId, requestId: crypto.randomUUID() };
   update(pendingCreate, () => { pendingCreate = null; });
 });

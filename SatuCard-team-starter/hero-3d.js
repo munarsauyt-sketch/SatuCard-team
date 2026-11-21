@@ -3,19 +3,9 @@
 
 const VENDOR_URL = './assets/vendor/three/three.bundle.min.js';
 
-// Kick off parallel local ESM preload on desktop only (never on phones or reduced-motion).
-let preloadedThreePromise = null;
+let threePromise;
 function loadThree() {
-  if (!preloadedThreePromise) {
-    preloadedThreePromise = import(VENDOR_URL);
-  }
-  return preloadedThreePromise;
-}
-if (
-  typeof window !== 'undefined' &&
-  window.matchMedia?.('(min-width: 768px) and (prefers-reduced-motion: no-preference)').matches
-) {
-  loadThree().catch(() => {});
+  return threePromise ??= import(VENDOR_URL);
 }
 
 const CARD_PX_W = 900;
@@ -518,7 +508,7 @@ function createOpticalGlintTexture(THREE) {
   return tex;
 }
 
-async function mountHero3D({ container, rendererApi, sample, image, initialStyle = 'studio', onStageReady, onExplodeChange, onFallback }) {
+export async function mountHero3D({ container, rendererApi, sample, image, initialStyle = 'studio', onStageReady, onExplodeChange, onFallback }) {
   let THREE;
   try {
     THREE = await loadThree();
@@ -1217,11 +1207,12 @@ async function mountHero3D({ container, rendererApi, sample, image, initialStyle
   // =========================================================================
   const INTRO_HOLD_MS = 640;
   const INTRO_ASSEMBLE_MS = 1850;
+  const FRAME_INTERVAL_MS = 1000 / 60;
+  const FRAME_TOLERANCE_MS = 0.5;
 
   let disposed = false;
   let rafId = 0;
-  let frameTimer = 0;
-  let lastRendered = 0;
+  let nextRenderAt = null;
   let prevNow = 0;
   let isVisible = true;
   let introStart = 0;
@@ -1248,23 +1239,15 @@ async function mountHero3D({ container, rendererApi, sample, image, initialStyle
   let dragReturnTimer = 0;
 
   function requestRender() {
-    if (disposed || !isVisible || document.hidden || rafId || frameTimer) return;
+    if (disposed || !isVisible || document.hidden || rafId) return;
     if (window.__SATUCARD_HERO_STATE?.webglActive) window.__SATUCARD_HERO_STATE.idleSleeping = false;
-    // Decorative motion has a fixed budget on 120/144/240Hz screens.
-    // Direct dragging gets a higher budget for responsive manipulation.
-    const interval = 1000 / (isDragging ? 60 : 30);
-    const delay = Math.max(0, interval - (performance.now() - lastRendered));
-    frameTimer = setTimeout(() => {
-      frameTimer = 0;
-      if (!disposed && isVisible && !document.hidden) rafId = requestAnimationFrame(tick);
-    }, delay);
+    rafId = requestAnimationFrame(tick);
   }
 
   function cancelRender() {
-    clearTimeout(frameTimer);
-    frameTimer = 0;
     cancelAnimationFrame(rafId);
     rafId = 0;
+    nextRenderAt = null;
     prevNow = 0;
   }
 
@@ -1496,7 +1479,15 @@ async function mountHero3D({ container, rendererApi, sample, image, initialStyle
   function tick(now) {
     rafId = 0;
     if (disposed || !isVisible || document.hidden) return;
-    lastRendered = now;
+
+    nextRenderAt ??= now;
+    const elapsed = now + FRAME_TOLERANCE_MS - nextRenderAt;
+    if (elapsed < 0) {
+      requestRender();
+      return;
+    }
+    // Keep the 60 FPS cadence on high-refresh screens and skip missed frames.
+    nextRenderAt += (Math.floor(elapsed / FRAME_INTERVAL_MS) + 1) * FRAME_INTERVAL_MS;
 
     const dt = prevNow ? Math.min(0.05, (now - prevNow) / 1000) : 0.016;
     prevNow = now;
@@ -1680,6 +1671,3 @@ async function mountHero3D({ container, rendererApi, sample, image, initialStyle
   window.__SATUCARD_HERO_3D = controller;
   return controller;
 }
-
-window.SATUCARD_MOUNT_HERO_3D = mountHero3D;
-window.dispatchEvent(new CustomEvent('satucard:hero3d-ready'));

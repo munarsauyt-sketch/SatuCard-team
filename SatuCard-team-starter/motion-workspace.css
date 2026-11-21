@@ -1,0 +1,118 @@
+/* SatuCard adaptations of DesignBookmark motion. No idle animation or permanent GPU promotion. */
+.mk-rubber-pill,.mk-morph-tooltip,.mk-morph-tooltip-label,.mk-morph-tooltip-tail,.mk-digit-strip{will-change:auto}
+.mk-digit-strip{transition:none!important}
+.billing-cycle{position:relative;display:inline-flex;gap:4px;padding:5px;background:var(--mk-surface-elev);border:1px solid var(--mk-edge);border-radius:999px;margin-top:28px}
+.billing-cycle button{position:relative;z-index:1;min-height:44px;min-width:110px;border:0;border-radius:999px;color:var(--motion-ink);background:transparent;font:600 15px var(--ui-font,inherit)}
+.billing-cycle button[aria-checked=true]{color:var(--mk-pill-fg)}
+.billing-cycle-note{max-width:680px;color:var(--ui-muted,var(--muted));font-size:14px;line-height:1.5;margin:12px 0 28px}
+.product-ui.studio-page .studio-layout.has-motion-palette:not(.is-canvas-focus){display:grid;grid-template-columns:minmax(0,1fr) 350px;grid-template-areas:"palette palette" "canvas tools";gap:16px}
+.studio-layout.has-motion-palette>.studio-command-rail{display:none}
+.motion-palette{grid-area:palette;min-width:0;padding:10px 14px 14px;border:1px solid var(--motion-line);border-radius:24px;background:var(--motion-bg);color:var(--motion-ink)}
+.motion-palette-top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.motion-palette-tabs{min-width:0}
+.product-ui .motion-palette .studio-tabs{display:flex;flex-direction:row;gap:4px;margin:0;border:0;padding:4px;overflow:visible}
+.product-ui .motion-palette .studio-tabs button{display:inline-flex;flex-direction:row;align-items:center;justify-content:center;gap:8px;padding:10px 14px;min-width:0;min-height:44px;border:0;border-radius:14px;font-size:13px;background:transparent}
+.product-ui .motion-palette .studio-tabs .studio-icon{width:20px;height:20px}
+.motion-palette-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.motion-palette-actions button{min-height:44px;min-width:44px;flex:none}
+.motion-quick{margin-top:8px}
+.motion-quick summary{font-size:12px;color:var(--ui-muted,var(--muted));padding:6px 4px;cursor:pointer}
+.motion-quick-fields{display:grid;grid-template-columns:minmax(180px,2fr) minmax(110px,1fr) minmax(150px,1fr) 80px;gap:12px;padding-top:8px}
+.motion-quick-fields label{display:grid;gap:5px;font-size:12px;font-weight:600;min-width:0}
+.motion-quick-fields input,.motion-quick-fields select{width:100%;min-width:0;min-height:44px;border:1px solid var(--motion-line);border-radius:12px;background:var(--ui-input,var(--soft,#f4f4f7));color:inherit;padding:9px 12px;font:inherit;font-size:15px}
+.motion-quick-fields input[type=color]{padding:5px;cursor:pointer}
+.motion-quick-error{font-size:13px;color:var(--error,#dc543e)}
+.motion-quick-error:empty{display:none}
+.product-ui.studio-page .studio-layout.has-motion-palette.is-canvas-focus{grid-template-areas:"palette" "canvas"}
+.product-ui.studio-page .studio-start{align-items:center;gap:12px;flex-wrap:wrap}
+#upload-own-photo.motion-drop-entry{display:flex;align-items:center;position:relative;text-align:left;gap:12px;flex-wrap:wrap;min-width:0;width:350px;max-width:100%;padding:14px 16px;border-radius:20px;background:var(--motion-bg);border:1px solid var(--motion-line);color:var(--motion-ink);box-shadow:none}
+.motion-drop-core{flex:none;display:grid;place-items:center;width:48px;height:48px;border-radius:50%;background:color-mix(in srgb,var(--motion-accent) 15%,transparent);color:var(--motion-accent)}
+.motion-drop-core svg{width:24px;height:24px}
+.motion-drop :is(.upload-symbol,.motion-drop-core){position:relative}
+.motion-drop svg.motion-drop-ring{position:absolute;inset:0;width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:2;pointer-events:none;transform:rotate(-90deg);opacity:0}
+.motion-drop:is([data-import-state=loading],[data-import-state=done]) svg.motion-drop-ring{opacity:1}
+.motion-drop-status{overflow-wrap:anywhere}
+.motion-drop-copy{display:grid;gap:4px;flex:1;min-width:0}
+.motion-drop-copy strong{font-size:14px;font-weight:650}
+.motion-drop-copy small{font-size:11px;font-weight:400;color:var(--ui-muted,var(--muted));line-height:1.4}
+.motion-drop-check{display:none;color:var(--mk-green-ink)}
+.motion-drop[data-import-state=done] .motion-drop-check{display:block}
+.motion-drop{position:relative;isolation:isolate}
+.motion-drop::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:color-mix(in srgb,var(--motion-accent) 9%,transparent);opacity:var(--drop-hover,0)}
+.motion-drop-status{display:block;flex-basis:100%;font-size:12px;line-height:1.4;font-weight:500}
+.motion-drop-status:empty{display:none}
+.motion-drop[data-import-state=done]{border-color:var(--mk-green)}
+.motion-drop[data-import-state=error] .motion-drop-status{color:#dc543e}
+#drop-zone .motion-drop-status{padding:0 16px 12px}
+.motion-input{position:relative;width:100%;min-width:0}
+.motion-input>input{width:100%}
+.motion-input-line{position:absolute;bottom:0;left:10%;width:80%;height:2px;border-radius:2px;background:var(--motion-accent);pointer-events:none;opacity:0;transform:scaleX(0)}
+.motion-caret-trail{position:absolute;top:31%;height:38%;width:2px;border-radius:2px;background:var(--motion-accent);opacity:0;pointer-events:none;transform-origin:bottom}
+.product-ui .ai-chat.motion-prompt{width:min(560px,calc(100vw - 40px));height:min(690px,calc(100dvh - 120px));border-radius:26px;background:var(--motion-bg);box-shadow:0 16px 44px #0003}
+.motion-prompt .ai-chat-header{padding:16px 20px}
+.motion-prompt .ai-chat-header h2{font-size:22px}
+.motion-prompt .ai-chat-scroll{padding:16px 20px;gap:12px}
+.motion-prompt .ai-chat-setup{margin-bottom:0}
+.motion-prompt .ai-chat-setup p,.motion-prompt .ai-message p{font-size:14px;line-height:1.6}
+.motion-prompt .ai-editor-actions{gap:6px;margin-bottom:0}
+.motion-prompt .ai-editor-actions button{border-radius:999px;font-size:12px;padding:8px 12px}
+.motion-prompt .ai-chat-options{padding-top:12px}
+.motion-prompt .ai-chat-composer{padding:12px 16px 16px}
+.motion-prompt .ai-input-shell{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:4px 10px;border-radius:22px;padding:12px;background:var(--ui-input,var(--soft));border:1px solid var(--motion-line);box-shadow:0 2px 0 #ffffff08 inset}
+.motion-prompt .ai-input-shell:focus-within{border-color:var(--motion-accent)}
+.motion-prompt #ai-chat-input{flex:1;min-width:0;min-height:56px;max-height:160px;padding:8px 4px;border:0;background:transparent;box-shadow:none;outline-offset:2px;resize:none;font-size:16px;line-height:24px}
+.motion-prompt .ai-chat-send-row{margin:0;align-self:flex-end}
+.motion-prompt #ai-chat-send,.motion-prompt #ai-chat-stop{display:grid;place-items:center;width:42px;height:42px;min-height:42px;padding:0;border-radius:50%;background:var(--motion-accent);color:#19110c;font-size:24px;line-height:1}
+.motion-prompt #ai-chat-send:disabled{opacity:.4}
+.motion-prompt #ai-chat-stop{font-size:0}
+.motion-prompt #ai-chat-stop::before{content:"";width:12px;height:12px;background:currentColor;border-radius:3px}
+.motion-prompt #ai-chat-status{grid-column:1/-1;font-size:12px;line-height:1.45;margin:0;padding:0 4px;overflow-wrap:anywhere}
+.motion-prompt #ai-chat-status:empty{display:none}
+.motion-tags{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px;min-width:0}
+.motion-tags-list{display:contents}
+.motion-tag{display:inline-flex;align-items:center;flex-shrink:0;gap:5px;overflow:hidden;white-space:nowrap;box-sizing:border-box;border-radius:999px;background:color-mix(in srgb,var(--motion-accent) 14%,transparent);font-size:12px}
+.motion-tag>span{padding-left:12px}
+.motion-tag button{flex:none;min-width:32px;min-height:32px;padding:0 6px;border:0;border-radius:50%;font-size:17px;color:inherit;background:transparent}
+.motion-prompt #ai-tag-input{width:160px;flex:1 1 140px;min-width:100px;min-height:36px;padding:6px 8px;font-size:12px;background:transparent;border:0}
+.motion-tags-help{font-size:10px;color:var(--ui-muted,var(--muted))}
+.motion-tag-status{font-size:12px;color:#dc543e}
+.motion-tag-suggestions{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.product-ui .ai-chat.motion-prompt .motion-tag-suggestions button{min-height:32px;border:1px solid var(--motion-line);border-radius:999px;padding:5px 10px;color:var(--ui-muted,var(--muted));background:transparent;font:inherit;font-size:12px}
+@media(max-width:1100px){
+ .product-ui.studio-page .studio-layout.has-motion-palette:not(.is-canvas-focus){grid-template-columns:minmax(0,1fr);grid-template-areas:"palette" "canvas" "tools"}
+ .motion-palette-top{flex-wrap:wrap}
+ .motion-palette-actions{margin-left:auto}
+}
+@media(max-width:800px){
+ .motion-quick-fields{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)}
+ .motion-palette{padding:8px 10px 12px;border-radius:20px}
+ .product-ui .motion-palette .studio-tabs button{padding:10px 8px;gap:5px;font-size:12px}
+ .motion-palette-actions{justify-content:flex-end}
+}
+@media(max-width:480px){
+ .motion-palette-top{gap:4px}
+ .motion-palette-tabs{width:100%}
+ .product-ui .motion-palette .studio-tabs{justify-content:space-between;gap:2px}
+ .product-ui .motion-palette .studio-tabs button{font-size:11px;padding:10px 6px}
+ .product-ui .motion-palette .studio-tabs .studio-icon{width:16px;height:16px}
+ .motion-palette-actions{width:100%;justify-content:space-between}
+ .motion-quick-fields input,.motion-quick-fields select{font-size:16px}
+ .product-ui .ai-chat.motion-prompt{width:calc(100vw - 16px);right:8px;bottom:8px;height:min(720px,calc(100dvh - 80px));border-radius:22px}
+ .motion-prompt .ai-chat-scroll{padding:12px}
+ .motion-prompt .ai-chat-composer{padding:10px 12px 12px}
+ .motion-tags-help{display:none}
+ .billing-cycle{width:100%}
+ .billing-cycle button{flex:1;min-width:0}
+ .mk-pricing-spotlight .mk-price-drum{font-size:40px}
+}
+@media(max-width:620px){
+ .product-ui.studio-page .studio-start{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .product-ui.studio-page .studio-start>:is(#upload-own-photo,#quick-purpose){grid-column:1/-1;width:100%;min-width:0;margin:0}
+ .product-ui.studio-page .studio-start>:is(#open-local-projects,#make-video-button){width:100%;min-width:0;margin:0;white-space:normal}
+}
+@media(prefers-reduced-motion:reduce){.motion-input,.motion-palette,.motion-drop{transition:none!important}}
+
+/* Override the legacy vertical-rail width and generic button fills. */
+.product-ui .motion-palette .studio-tabs button{width:auto;flex:0 1 auto}
+.product-ui .billing-cycle button,.product-ui .billing-cycle button:hover{background:transparent;box-shadow:none;border:0}
+.product-ui .motion-palette .studio-tabs{width:auto;min-width:0}

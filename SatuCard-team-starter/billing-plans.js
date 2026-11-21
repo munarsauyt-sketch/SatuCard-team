@@ -29,3 +29,11 @@ export function createDemoReceipt(planId, outcome, now = Date.now()) {
     accessExampleUntil: outcome === 'success' ? new Date(now + ACCESS_DAYS * 86400000).toISOString() : null
   };
 }
+
+
+// Annual orders prepay twelve monthly allowances; unused quota does not carry over.
+export const YEARLY_BILLING_PLANS = Object.freeze(BILLING_PLANS.map(plan => Object.freeze({
+  ...plan, id: plan.id + '_yearly', basePlanId: plan.id,
+  name: plan.name + ' · год', priceKzt: plan.priceKzt * 12, months: 12,
+  benefits: plan.benefits.map(text => text.replace('на 30 дней', 'за каждый месяц'))
+})));

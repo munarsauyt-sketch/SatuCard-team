@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const targets = document.querySelectorAll('[data-reveal]');
-  if (!('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  if (!('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce), (max-width: 767px), (pointer: coarse)').matches) {
     targets.forEach(target => target.classList.add('is-revealed'));
     return;
   }

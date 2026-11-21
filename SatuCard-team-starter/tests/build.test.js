@@ -18,6 +18,9 @@ test('public build includes browser assets and omits server sources and configur
     assert.equal(publicFile(path), false, path);
   }
   assert.match(await readFile(resolve(output, 'auth.html'), 'utf8'), /auth-client\.js\?v=[a-f0-9]{12}/);
+  const home = await readFile(resolve(output, 'index.html'), 'utf8');
+  assert.match(home, /data-hero-module="hero-3d\.js\?v=[a-f0-9]{12}"/);
+  assert.doesNotMatch(home, /<script[^>]+\ssrc="hero-3d\.js/);
   await assert.rejects(buildSite(output), /EEXIST/);
   } finally {
     if (!temporary.startsWith(resolve(tmpdir()) + sep) || !temporary.split(sep).at(-1).startsWith('satucard-build-test-')) throw new Error('Unsafe test cleanup');

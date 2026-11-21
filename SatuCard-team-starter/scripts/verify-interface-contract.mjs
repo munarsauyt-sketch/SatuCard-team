@@ -44,7 +44,15 @@ for (const page of pages) {
     assert.equal(after.querySelector('canvas:not([hidden]),[data-mark-card]:not([hidden]),[data-template-item]'), null, 'Auth must not require the retired renderer');
     assert.ok(after.querySelector('.auth-card-example img[src]'), 'Auth retains a real image preview');
   }
-  old.scripts = old.scripts.filter(value => !removedScripts.includes(value));
+  // The hero module now loads on desktop demand through the existing coordinator.
+  const deferredScripts = page === 'index.html' ? ['hero-3d.js'] : [];
+  const deferredOriginals = old.scripts.filter(value => deferredScripts.includes((JSON.parse(value).src || '').split('?')[0]));
+  if (deferredScripts.length) {
+    const coordinator = after.querySelector('script[src^="showcase.js"]');
+    assert.equal(coordinator?.getAttribute('data-hero-module')?.split('?')[0], 'hero-3d.js');
+    assert.equal(after.querySelector('script[src^="hero-3d.js"]'), null, 'Mobile must skip the 3D module download');
+  }
+  old.scripts = old.scripts.filter(value => !removedScripts.includes(value) && !deferredOriginals.includes(value));
   const failures = Object.fromEntries(Object.keys(old).map(key => [key, missing(old[key], current[key])]));
   const duplicateIds = [...count([...after.querySelectorAll('[id]')].map(node => node.id))].filter(([, total]) => total > 1);
   const idBindings = [...before.querySelectorAll('[id]')].flatMap(node => {
@@ -58,7 +66,7 @@ for (const page of pages) {
   // Added scripts may occur between original ones, but the original order is stable.
   let at = 0;
   for (const script of current.scripts) if (script === old.scripts[at]) at++;
-  const result = { page, baseline, counts: Object.fromEntries(Object.keys(old).map(key => [key, old[key].length])), retiredScripts, failures, duplicateIds, idBindings, scriptOrderPreserved: at === old.scripts.length };
+  const result = { page, baseline, counts: Object.fromEntries(Object.keys(old).map(key => [key, old[key].length])), retiredScripts, deferredScripts, failures, duplicateIds, idBindings, scriptOrderPreserved: at === old.scripts.length };
   report.push(result);
   console.log(JSON.stringify(result));
 }

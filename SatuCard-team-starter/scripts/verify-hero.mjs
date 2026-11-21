@@ -218,8 +218,16 @@ try {
       const state = await page.evaluate(() => window.__SATUCARD_HERO_STATE);
       assert.equal(state.mode, '2d-canvas');
       assert.equal(state.webglActive, false);
-      assert.ok(!requestedUrls.some(p => p.includes('three.bundle.min.js')), `Phone (${width}px) must NOT download Three.js!`);
+      assert.ok(!requestedUrls.some(p => /(?:hero-3d\.js|three\.bundle\.min\.js)$/.test(p)), `Phone (${width}px) must skip both 3D modules`);
       assert.equal(await page.locator('#hero-explode-toggle').isVisible(), false);
+      assert.equal(await page.locator('#fan-deck').isVisible(), false);
+      assert.equal(await page.locator('#tagline-heading .tagline-word').count(), 0);
+      assert.equal(await page.locator('.site-header').evaluate(header => getComputedStyle(header).backdropFilter), 'none');
+      assert.equal(await page.locator('canvas[data-mark-card].rendered').count(), 0);
+      const sample = page.locator('canvas[data-mark-card]').first();
+      await sample.locator('..').scrollIntoViewIfNeeded();
+      await page.waitForFunction(() => document.querySelector('canvas[data-mark-card]').classList.contains('rendered'));
+      await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
     } else {
       await page.waitForFunction(() => window.__SATUCARD_HERO_STATE?.webglActive === true, null, { timeout: 10000 });
       await page.evaluate(() => window.__SATUCARD_HERO_3D.setPose({ explode: 0, yaw: -0.14, pitch: 0.045 }));
@@ -293,7 +301,21 @@ try {
     await context.close();
   }
 
-  // 3. No-JavaScript fallback
+  // A rotated phone keeps coarse touch input even above the desktop width breakpoint.
+  {
+    const requestedUrls = [];
+    const context = await browser.newContext({ viewport: { width: 900, height: 430 }, isMobile: true, hasTouch: true });
+    await routing(context, requestedUrls);
+    const page = await context.newPage();
+    await page.goto(origin + '/index.html');
+    await page.waitForFunction(() => window.__SATUCARD_HERO_STATE?.mode === '2d-canvas');
+    assert.equal(await page.locator('#fan-deck').isVisible(), false);
+    assert.ok(!requestedUrls.some(p => /(?:hero-3d\.js|three\.bundle\.min\.js)$/.test(p)));
+    await context.close();
+    console.log('Landscape phone skipped both 3D modules.');
+  }
+
+  // No-JavaScript fallback
   {
     const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
     await routing(context);

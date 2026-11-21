@@ -4,11 +4,19 @@
 // Content remains fully visible without JavaScript and under prefers-reduced-motion.
 (() => {
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+  const lightweight = matchMedia('(max-width: 767px), (pointer: coarse)');
   const taglines = [...document.querySelectorAll('[data-tagline-reveal]')];
 
   function currentText(el) {
     const lang = document.documentElement.lang === 'kk' ? 'kk' : 'ru';
     return (lang === 'kk' ? el.dataset.taglineKk : el.dataset.taglineRu) || el.textContent.trim();
+  }
+
+  if (lightweight.matches) {
+    const updateText = () => taglines.forEach(el => { el.textContent = currentText(el); });
+    updateText();
+    document.addEventListener('satucard:language-change', updateText);
+    return;
   }
 
   function splitWords(el) {
@@ -38,7 +46,7 @@
       for (const el of taglines) {
         const words = el._taglineWords || [];
         if (!words.length) continue;
-        if (reduced.matches) {
+        if (reduced.matches || lightweight.matches) {
           words.forEach(w => w.classList.add('is-lit'));
           continue;
         }
@@ -75,7 +83,7 @@
       taglines.forEach(el => active.add(el));
     }
 
-    window.addEventListener('scroll', () => { if (active.size) schedule(); }, { passive: true });
+    window.addEventListener('scroll', () => { if (!lightweight.matches && active.size) schedule(); }, { passive: true });
     window.addEventListener('resize', schedule, { passive: true });
 
     const langObserver = new MutationObserver(() => {

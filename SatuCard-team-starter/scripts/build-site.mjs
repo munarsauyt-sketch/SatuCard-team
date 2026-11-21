@@ -38,7 +38,7 @@ for (const entry of await readdir(output)) {
   if (!entry.endsWith('.html')) continue;
   const file = resolve(output, entry);
   const html = await readFile(file, 'utf8');
-  const refs = [...html.matchAll(/(?:src|href)="([a-zA-Z0-9_./-]+\.(?:js|css))(?:\?[^"]*)?"/g)];
+  const refs = [...html.matchAll(/(?:src|href|data-hero-module)="([a-zA-Z0-9_./-]+\.(?:js|css))(?:\?[^"]*)?"/g)];
   let updated = html;
   for (const [attribute, path] of refs) {
     const asset = resolve(output, path);
