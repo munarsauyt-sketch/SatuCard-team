@@ -422,8 +422,8 @@
   document.body.append(snapGhost, wrap, tipEl, flyoutEl);
 
   // ---- Persistent & Runtime State ----
-  let unlocked = true;
-  let planName = 'free';
+  let unlocked = false;
+  let planName = '';
   let enabledByUser = true;
   try {
     if (localStorage.getItem(STORAGE_ENABLED) === '0') enabledByUser = false;
@@ -1810,11 +1810,40 @@
     if (upsellBox) upsellBox.hidden = true;
   });
 
+  let checkGeneration = 0;
   async function checkEntitlement() {
-    // Draft mode: Fast Toolbar is free and unlocked for all visitors across the site.
-    unlocked = true;
-    planName = 'free';
-    updateVisibility();
+    const token = ++checkGeneration;
+    try {
+      if (location.protocol === 'file:') {
+        unlocked = false;
+        planName = '';
+        updateVisibility();
+        return;
+      }
+      const session = await window.SATUCARD_AUTH?.getSession?.().catch(() => null);
+      if (token !== checkGeneration) return;
+      if (!session?.access_token) {
+        unlocked = false;
+        planName = '';
+        updateVisibility();
+        return;
+      }
+      const res = await fetch('api/billing', {
+        cache: 'no-store',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        ...(typeof AbortSignal.timeout === 'function' ? { signal: AbortSignal.timeout(8000) } : {})
+      });
+      if (token !== checkGeneration) return;
+      const data = res.ok ? await res.json().catch(() => ({})) : {};
+      unlocked = data.fastToolbar === true || data.isAdmin === true || Boolean(data.active);
+      planName = data.isAdmin ? 'Admin' : (data.active?.planName || data.active?.planId || '');
+      updateVisibility();
+    } catch (_) {
+      if (token !== checkGeneration) return;
+      unlocked = false;
+      planName = '';
+      updateVisibility();
+    }
   }
 
   document.addEventListener('satucard:authchange', () => { checkEntitlement(); });

@@ -119,7 +119,7 @@
           <div class="workspace-identity"><span class="workspace-live-dot" aria-hidden="true"></span><h2 id="preview-heading">Холст</h2><span id="format-description">4:5 · 900 × 1125</span></div>
           <div class="ft-header-controls">
             <div class="ft-header-slot">
-              <button id="fast-toolbar-toggle" class="ft-toggle-btn is-unlocked" type="button" aria-pressed="true" aria-controls="fast-toolbar-dock" data-morph-tip="Плавающий быстрый тулбар" data-morph-tip-kk="Қалқымалы жылдам тулбар"><span class="ft-toggle-dot" aria-hidden="true"></span><span class="ft-toggle-label">Быстрый тулбар</span></button>
+              <button id="fast-toolbar-toggle" class="ft-toggle-btn" type="button" aria-pressed="false" aria-controls="fast-toolbar-dock" data-morph-tip="Плавающий тулбар · от ИИ Старт" data-morph-tip-kk="Қалқымалы тулбар · ЖИ Старттан бастап"><span class="ft-toggle-dot" aria-hidden="true"></span><span class="ft-toggle-label">Быстрый тулбар</span><span class="ft-toggle-badge">sAI</span></button>
               <div id="fast-toolbar-upsell" class="ft-upsell" role="dialog" aria-label="Быстрый тулбар" hidden>
                 <div class="ft-upsell-head"><span class="ft-upsell-pill">ИИ Старт · от 1 500 ₸</span><button type="button" class="ft-upsell-close" aria-label="Закрыть">✕</button></div>
                 <h3>Быстрый тулбар на весь сайт</h3>
@@ -416,7 +416,7 @@
       </section>
     </div>
     <button id="ai-scroll-bottom" class="ai-scroll-bottom" type="button" hidden aria-label="Прокрутить к последнему ответу">↓ К ответу</button>
-    <form id="ai-chat-form" class="ai-chat-composer">
+    <div class="ai-composer-anchor">
       <details id="ai-plus-popover" class="ai-chat-options ai-plus-popover"><summary class="ai-sr-only">Факты и фото</summary>
         <div class="ai-plus-head">
           <strong>Контекст и фото</strong>
@@ -438,10 +438,12 @@
           <p id="ai-evaluation-result" class="ai-before" aria-live="polite"></p>
         </div>
       </details>
-      <p id="ai-chat-status" role="status"></p>
-      <div id="ai-data-consent" class="ai-data-consent" role="group" aria-labelledby="ai-data-question" hidden><p id="ai-data-question">Передать OpenAI запрос, тексты карточки, факты и историю этого чата?</p><a id="ai-google-data-policy" href="https://ai.google.dev/gemini-api/terms#unpaid-services" target="_blank" rel="noopener noreferrer" hidden>Как Google использует данные</a><div><button id="ai-data-cancel" class="ai-quiet-button" type="button">Не сейчас</button><button id="ai-data-confirm" class="ai-quiet-button" type="button">Продолжить</button></div></div>
-      <div class="ai-input-shell"><button id="ai-plus-button" class="ai-plus-button" type="button" aria-expanded="false" aria-controls="ai-plus-popover" title="Факты, фото и язык" aria-label="Добавить факты, фото и настройки"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button><label for="ai-chat-input" class="ai-sr-only">Сообщение sAI</label><textarea id="ai-chat-input" maxlength="1500" rows="1" enterkeyhint="send"></textarea><div class="ai-chat-send-row"><button id="ai-chat-stop" class="ai-quiet-button" type="button" hidden>Остановить</button><button id="ai-chat-send" class="ai-send-button" type="submit" aria-label="Отправить сообщение" disabled><span aria-hidden="true">↑</span></button></div></div>
-    </form>
+      <form id="ai-chat-form" class="ai-chat-composer">
+        <p id="ai-chat-status" role="status"></p>
+        <div id="ai-data-consent" class="ai-data-consent" role="group" aria-labelledby="ai-data-question" hidden><p id="ai-data-question">Передать OpenAI запрос, тексты карточки, факты и историю этого чата?</p><a id="ai-google-data-policy" href="https://ai.google.dev/gemini-api/terms#unpaid-services" target="_blank" rel="noopener noreferrer" hidden>Как Google использует данные</a><div><button id="ai-data-cancel" class="ai-quiet-button" type="button">Не сейчас</button><button id="ai-data-confirm" class="ai-quiet-button" type="button">Продолжить</button></div></div>
+        <div class="ai-input-shell"><button id="ai-plus-button" class="ai-plus-button" type="button" aria-expanded="false" aria-controls="ai-plus-popover" title="Факты, фото и язык" aria-label="Добавить факты, фото и настройки"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button><label for="ai-chat-input" class="ai-sr-only">Сообщение sAI</label><textarea id="ai-chat-input" maxlength="1500" rows="1" enterkeyhint="send"></textarea><div class="ai-chat-send-row"><button id="ai-chat-stop" class="ai-quiet-button" type="button" hidden>Остановить</button><button id="ai-chat-send" class="ai-send-button" type="submit" aria-label="Отправить сообщение" disabled><span aria-hidden="true">↑</span></button></div></div>
+      </form>
+    </div>
   </aside>
 
   <nav class="studio-mobile-view" aria-label="Перейти к части редактора">

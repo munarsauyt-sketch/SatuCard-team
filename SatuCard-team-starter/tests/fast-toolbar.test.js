@@ -43,10 +43,12 @@ test('basic paid plan (ИИ Старт 1500 KZT) advertises Fast Toolbar and edi
     assert.match(pageHtml, /fast-toolbar\.js/, `${page} should load fast-toolbar.js`);
   }
 
-  // Dock must mount viewport-wide on document.body (not trapped inside #preview-stage)
+  // Dock must mount viewport-wide on document.body and stay fail-closed via api/billing
   const js = await readFile(new URL('../fast-toolbar.js', import.meta.url), 'utf8');
   assert.match(js, /document\.body\.append\(/);
   assert.doesNotMatch(js, /stage\.append\(/);
+  assert.match(js, /let unlocked = false;/);
+  assert.match(js, /fetch\(['"]api\/billing['"]/);
 });
 
 test('GET /api/billing unlocks fastToolbar for ИИ Старт (1500 KZT) and admin, while keeping free accounts locked', async t => {
