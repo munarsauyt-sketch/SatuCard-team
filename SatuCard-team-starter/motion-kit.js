@@ -296,7 +296,8 @@ window.SATUCARD_INIT_PAGE_MOTION = ({makeSpring, stepSpring, wake, mountedCompon
     const caption = document.getElementById('sai-plan-caption'), bonus = document.getElementById('sai-bonus-row');
     const bonusText = document.getElementById('sai-bonus-text'), cta = document.getElementById('sai-plan-cta');
     const buttons = [...switcher.querySelectorAll('[data-sai-plan]')], cycles = [...document.querySelectorAll('[data-billing-cycle]')];
-    let key = 'max', yearly = false, rollers = [], bonusHeight = 28;
+    const requestedPlan = new URLSearchParams(location.search).get('plan');
+    let key = BILLING_PLANS.some(p => p.id === requestedPlan) ? requestedPlan : 'max', yearly = false, rollers = [], bonusHeight = 28;
     const pop = makeSpring(1,520,16), height = makeSpring(1,260,24), choiceFade = makeSpring(1,420,32);
     const dock = attachRubberDock(switcher, '[data-sai-plan]', el => el.getAttribute('aria-checked') === 'true', {lead:[620,36],trail:[190,19]});
     attachRubberDock(document.querySelector('.billing-cycle'), '[data-billing-cycle]', el => el.getAttribute('aria-checked') === 'true', {lead:[620,36],trail:[190,19]});

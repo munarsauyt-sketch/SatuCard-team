@@ -1,0 +1,655 @@
+/* SatuCard Fast Toolbar (Tool Dock) — Paid tier ("ИИ Старт" 1 500 ₸ and above)
+ * Inspired by Kokonut UI Tool Dock + SatuCard studio floating overlay.
+ * GPU-composited (transform/opacity only), 0% idle GPU, strict CSP safe.
+ */
+
+:root {
+  --ft-bg: rgba(255, 255, 255, 0.94);
+  --ft-bg-solid: #ffffff;
+  --ft-edge: rgba(23, 23, 29, 0.13);
+  --ft-edge-soft: rgba(23, 23, 29, 0.08);
+  --ft-ink: #17171d;
+  --ft-muted: #5c5a66;
+  --ft-hover: rgba(23, 23, 29, 0.07);
+  --ft-plate: #17171d;
+  --ft-plate-ink: #ffffff;
+  --ft-accent: #e06a41;
+  --ft-accent-soft: rgba(224, 106, 65, 0.14);
+  --ft-shadow: 0 10px 28px -8px rgba(18, 18, 24, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --ft-shadow-drag: 0 18px 40px -10px rgba(18, 18, 24, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+html[data-theme=dark] {
+  --ft-bg: rgba(16, 17, 23, 0.92);
+  --ft-bg-solid: #14151c;
+  --ft-edge: rgba(255, 255, 255, 0.14);
+  --ft-edge-soft: rgba(255, 255, 255, 0.08);
+  --ft-ink: #f5f4f8;
+  --ft-muted: #a19eb0;
+  --ft-hover: rgba(255, 255, 255, 0.09);
+  --ft-plate: #f5f4f8;
+  --ft-plate-ink: #14151c;
+  --ft-accent: #ea784e;
+  --ft-accent-soft: rgba(234, 120, 78, 0.18);
+  --ft-shadow: 0 14px 34px -10px rgba(0, 0, 0, 0.62), inset 0 1px 0 rgba(255, 255, 255, 0.09);
+  --ft-shadow-drag: 0 22px 48px -10px rgba(0, 0, 0, 0.78), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+/* =========================================================================
+   WORKSPACE HEADER TOGGLE & LOCKED TIER POPOVER
+   ========================================================================= */
+.ft-header-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ft-header-slot {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.product-ui button.ft-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: #efeee9;
+  font: 600 12px/16px var(--ui-font, system-ui, sans-serif);
+  box-shadow: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease;
+}
+
+.product-ui button.ft-toggle-btn:hover {
+  border-color: rgba(234, 120, 78, 0.55);
+  background: rgba(234, 120, 78, 0.16);
+  color: #ffffff;
+}
+
+.product-ui button.ft-toggle-btn[aria-pressed=true] {
+  border-color: rgba(234, 120, 78, 0.65);
+  background: rgba(234, 120, 78, 0.22);
+  color: #fff6f1;
+}
+
+.ft-toggle-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #71717a;
+  flex: none;
+  transition: background-color 180ms ease, box-shadow 180ms ease;
+}
+
+.ft-toggle-btn[aria-pressed=true] .ft-toggle-dot {
+  background: #4ade80;
+  box-shadow: 0 0 8px rgba(74, 222, 128, 0.65);
+}
+
+.ft-toggle-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(234, 120, 78, 0.22);
+  border: 1px solid rgba(234, 120, 78, 0.42);
+  color: #ffb899;
+  font: 700 10px/14px var(--ui-mono, monospace);
+  letter-spacing: 0.02em;
+}
+
+.ft-toggle-btn.is-unlocked .ft-toggle-badge {
+  display: none;
+}
+
+.ft-upsell {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 45;
+  width: min(300px, calc(100vw - 32px));
+  padding: 15px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--ft-edge);
+  background: var(--ft-bg-solid);
+  color: var(--ft-ink);
+  box-shadow: var(--ft-shadow-drag);
+  display: grid;
+  gap: 10px;
+  text-align: left;
+}
+
+.ft-upsell[hidden] {
+  display: none !important;
+}
+
+.ft-upsell-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ft-upsell-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--ft-accent-soft);
+  color: var(--ft-accent);
+  font: 700 10.5px/15px var(--ui-mono, monospace);
+}
+
+.product-ui button.ft-upsell-close {
+  width: 26px;
+  height: 26px;
+  min-height: 0;
+  padding: 0;
+  border-radius: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--ft-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: none;
+}
+
+.product-ui button.ft-upsell-close:hover {
+  background: var(--ft-hover);
+  color: var(--ft-ink);
+}
+
+.ft-upsell h3 {
+  margin: 0;
+  font: 700 14.5px/1.25 var(--ui-font, system-ui, sans-serif);
+  color: var(--ft-ink);
+}
+
+.ft-upsell p {
+  margin: 0;
+  font: 450 12.5px/1.45 var(--ui-font, system-ui, sans-serif);
+  color: var(--ft-muted);
+}
+
+.ft-upsell-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: linear-gradient(122deg, #ea784e 0%, #ee8e52 62%, #f4a448 100%);
+  color: #1f110b;
+  font: 700 12.5px/16px var(--ui-font, system-ui, sans-serif);
+  text-decoration: none;
+  transition: filter 160ms ease, transform 160ms ease;
+}
+
+.ft-upsell-cta:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+
+/* =========================================================================
+   FLOATING TOOL DOCK OVER #preview-stage (Kokonut UI Tool Dock)
+   ========================================================================= */
+.ft-dock-wrap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 24;
+  pointer-events: auto;
+  will-change: transform;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.ft-dock-wrap[hidden] {
+  display: none !important;
+}
+
+.ft-dock {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 5px;
+  border-radius: 15px;
+  border: 1px solid var(--ft-edge);
+  background: var(--ft-bg);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  box-shadow: var(--ft-shadow);
+  transition: box-shadow 180ms ease;
+}
+
+.ft-dock-wrap.is-vertical .ft-dock {
+  flex-direction: column;
+}
+
+.ft-dock-wrap.is-dragging .ft-dock {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: var(--ft-shadow-drag);
+}
+
+/* Sliding active plate behind selected tool */
+.ft-plate {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--ft-plate);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+  will-change: transform;
+}
+
+/* Drag grip handle */
+.product-ui button.ft-grip {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 36px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ft-muted);
+  box-shadow: none;
+  touch-action: none;
+  cursor: grab;
+  flex: none;
+}
+
+.ft-dock-wrap.is-vertical button.ft-grip {
+  width: 36px;
+  height: 22px;
+}
+
+.ft-dock-wrap.is-dragging button.ft-grip {
+  cursor: grabbing;
+  color: var(--ft-ink);
+}
+
+.product-ui button.ft-grip:hover {
+  background: var(--ft-hover);
+  color: var(--ft-ink);
+  border-color: transparent;
+}
+
+.ft-divider {
+  flex: none;
+  width: 1px;
+  height: 20px;
+  margin-inline: 2px;
+  background: var(--ft-edge);
+}
+
+.ft-dock-wrap.is-vertical .ft-divider {
+  width: 20px;
+  height: 1px;
+  margin-inline: 0;
+  margin-block: 2px;
+}
+
+/* Tool slots */
+.ft-slot {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  z-index: 1;
+}
+
+.product-ui button.ft-btn {
+  position: relative;
+  z-index: 1;
+  width: 36px;
+  height: 36px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ft-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: none;
+  cursor: pointer;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+
+.product-ui button.ft-btn svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+  pointer-events: none;
+}
+
+.product-ui button.ft-btn:hover:not(:disabled) {
+  background: var(--ft-hover);
+  color: var(--ft-ink);
+  border-color: transparent;
+}
+
+.product-ui button.ft-btn[aria-pressed=true],
+.product-ui button.ft-btn[aria-pressed=true]:hover:not(:disabled),
+.product-ui button.ft-btn.is-active,
+.product-ui button.ft-btn.is-active:hover:not(:disabled) {
+  background: transparent;
+  color: var(--ft-plate-ink);
+  border-color: transparent;
+}
+
+.product-ui button.ft-btn:disabled {
+  opacity: 0.34;
+}
+
+/* Tiny corner indicator for tools with flyouts */
+.ft-corner-caret {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 5px;
+  height: 5px;
+  pointer-events: none;
+  color: currentColor;
+  opacity: 0.55;
+}
+
+/* =========================================================================
+   INSTANT-WARM TOOLTIP BUBBLE
+   ========================================================================= */
+.ft-tip {
+  position: absolute;
+  z-index: 32;
+  pointer-events: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 7px;
+  background: var(--ft-plate);
+  color: var(--ft-plate-ink);
+  font: 600 11.5px/15px var(--ui-font, system-ui, sans-serif);
+  white-space: nowrap;
+  box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.42);
+  opacity: 0;
+  transition: opacity 130ms ease, transform 130ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.ft-tip.is-visible {
+  opacity: 1;
+}
+
+.ft-tip kbd {
+  min-width: 16px;
+  padding: 0 4px;
+  border-radius: 4px;
+  border: 1px solid currentColor;
+  border-color: color-mix(in srgb, currentColor 28%, transparent);
+  font: 500 10px/14px var(--ui-mono, monospace);
+  text-align: center;
+  opacity: 0.78;
+}
+
+/* =========================================================================
+   CONTEXTUAL FLYOUT POPOVERS (Colors, Typography Aa, Photo Sliders, Styles)
+   ========================================================================= */
+.ft-flyout {
+  position: absolute;
+  z-index: 35;
+  width: 266px;
+  max-width: calc(100vw - 44px);
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid var(--ft-edge);
+  background: var(--ft-bg-solid);
+  color: var(--ft-ink);
+  box-shadow: var(--ft-shadow-drag);
+  display: grid;
+  gap: 10px;
+  opacity: 0;
+  transform: scale(0.96);
+  pointer-events: none;
+  transition: opacity 150ms cubic-bezier(0.23, 1, 0.32, 1), transform 150ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.ft-flyout.is-open {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+}
+
+.ft-flyout[hidden] {
+  display: none !important;
+}
+
+.ft-flyout-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ft-flyout-title {
+  font: 700 12px/16px var(--ui-font, system-ui, sans-serif);
+  letter-spacing: 0.01em;
+  color: var(--ft-ink);
+}
+
+.ft-flyout-sub {
+  font: 500 11px/14px var(--ui-mono, monospace);
+  color: var(--ft-muted);
+}
+
+/* Color Swatches Grid (video frame 00:01–00:04) */
+.ft-swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.product-ui button.ft-swatch-btn {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  min-height: 0;
+  padding: 0;
+  border-radius: 9px;
+  border: 1.5px solid var(--ft-edge);
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: none;
+  transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.product-ui button.ft-swatch-btn:hover {
+  transform: scale(1.07);
+  border-color: var(--ft-accent);
+}
+
+.product-ui button.ft-swatch-btn[aria-pressed=true] {
+  border-color: var(--ft-accent);
+  box-shadow: 0 0 0 2px var(--ft-accent-soft);
+}
+
+.ft-swatch-corner {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 48%;
+  height: 48%;
+  border-top-left-radius: 7px;
+}
+
+.ft-color-pickers {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.ft-color-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 7px;
+  border-radius: 9px;
+  border: 1px solid var(--ft-edge-soft);
+  background: var(--ft-hover);
+  font: 600 11px/14px var(--ui-font, system-ui, sans-serif);
+  color: var(--ft-muted);
+  cursor: pointer;
+}
+
+.ft-color-chip input[type=color] {
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid var(--ft-edge);
+  border-radius: 5px;
+  background: transparent;
+  cursor: pointer;
+  flex: none;
+}
+
+/* Action rows & compact pills */
+.ft-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ft-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.ft-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.product-ui button.ft-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 4px 9px;
+  border-radius: 9px;
+  border: 1px solid var(--ft-edge-soft);
+  background: var(--ft-hover);
+  color: var(--ft-ink);
+  font: 600 11.5px/15px var(--ui-font, system-ui, sans-serif);
+  box-shadow: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.product-ui button.ft-pill:hover {
+  border-color: color-mix(in srgb, var(--ft-accent) 48%, var(--ft-edge));
+  background: var(--ft-accent-soft);
+}
+
+.product-ui button.ft-pill[aria-pressed=true] {
+  border-color: var(--ft-accent);
+  background: var(--ft-accent-soft);
+  color: var(--ft-accent);
+}
+
+.ft-style-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px solid rgba(128, 128, 128, 0.35);
+  flex: none;
+}
+
+/* Compact Live Sliders inside flyouts (video frames 00:03–00:04) */
+.ft-slider-field {
+  display: grid;
+  gap: 4px;
+}
+
+.ft-slider-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font: 600 11.5px/14px var(--ui-font, system-ui, sans-serif);
+  color: var(--ft-muted);
+}
+
+.ft-slider-head output {
+  font: 600 11px/14px var(--ui-mono, monospace);
+  color: var(--ft-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.ft-slider-field input[type=range] {
+  width: 100%;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--ft-accent);
+  cursor: pointer;
+}
+
+/* Mobile adaptation */
+@media (max-width: 680px) {
+  .ft-dock {
+    padding: 4px;
+    gap: 1px;
+    border-radius: 13px;
+  }
+  .ft-slot,
+  .product-ui button.ft-btn,
+  .ft-plate {
+    width: 32px;
+    height: 32px;
+  }
+  .product-ui button.ft-grip {
+    width: 18px;
+    height: 32px;
+  }
+  .ft-flyout {
+    width: min(240px, calc(100vw - 36px));
+    padding: 10px;
+  }
+  .ft-toggle-label {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ft-flyout,
+  .ft-tip {
+    transition: none;
+  }
+}

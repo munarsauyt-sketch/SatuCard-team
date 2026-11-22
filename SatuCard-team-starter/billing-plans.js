@@ -3,7 +3,7 @@ const maxModels = ['GPT-6 Astra', 'GPT-6.1 Sol', 'Claude Opus 5.5'];
 export const BILLING_PLANS = Object.freeze([
   { id: 'basic', name: 'ИИ Старт', priceKzt: 1500, tokens: 5_000_000,
     models: ['Gemini 2.5 Flash', 'GPT-6 Luna', 'Claude Sonnet 5.5'],
-    benefits: ['Базовый sAI (RU / KZ)', '5 млн токенов на 30 дней'] },
+    benefits: ['Базовый sAI (RU / KZ)', '5 млн токенов на 30 дней', 'Быстрый тулбар поверх холста'] },
   { id: 'plus', name: 'ИИ Плюс', priceKzt: 2990, tokens: 8_000_000, includes: 'ИИ Старт',
     models: ['GPT-6.1 Terra', 'GPT-6 Sol', 'Claude Opus 4.8'],
     benefits: ['Увеличенный лимит токенов sAI'] },

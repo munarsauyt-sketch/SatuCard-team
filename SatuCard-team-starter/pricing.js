@@ -3,10 +3,10 @@ import { ACCESS_DAYS, BILLING_PLANS } from './billing-plans.js';
 const money = value => new Intl.NumberFormat('ru-RU').format(value) + ' ₸';
 const formatTokens = tokens => Math.round(tokens / 1_000_000) + ' млн токенов';
 const purposes = {
-  basic: 'Базовые модели sAI для текстов и перевода RU / KZ.',
-  plus: 'Больше лимитов и моделей для сложных правок.',
-  max: 'Полный выбор старших моделей sAI.',
-  max3: 'Тройной лимит sAI для одного аккаунта — 30 млн токенов.',
+  basic: 'Базовые модели sAI (RU / KZ) + быстрый тулбар поверх холста.',
+  plus: 'Больше лимитов и моделей для сложных правок + быстрый тулбар.',
+  max: 'Полный выбор старших моделей sAI + быстрый тулбар.',
+  max3: 'Тройной лимит sAI (30 млн токенов) + быстрый тулбар.',
 };
 
 let yearly = false;

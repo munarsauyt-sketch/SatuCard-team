@@ -16,7 +16,7 @@ export async function GET(request) {
   try {
     const { config, user, isAdmin } = await account(request);
     if (!paidAccessEnabled()) return accountJson({
-      ready: false, ordering: false, isAdmin, active: null, scheduled: [], orders: [],
+      ready: false, ordering: false, isAdmin, fastToolbar: Boolean(isAdmin), active: null, scheduled: [], orders: [],
       models: availableAiModels({ isAdmin }), plans: publicPlans(), payment: paymentDetails(),
       message: 'Платные тарифы готовятся к запуску.'
     });
@@ -30,11 +30,12 @@ export async function GET(request) {
     try { data = await billingRpc(config, 'get_billing_status', { p_user_id: user.id }); }
     catch (error) {
       if (error.code !== 'billing_unavailable') throw error;
-      return accountJson({ ready: false, ordering: false, isAdmin, active: null, scheduled: [], orders: [],
+      return accountJson({ ready: false, ordering: false, isAdmin, fastToolbar: Boolean(isAdmin), active: null, scheduled: [], orders: [],
         models: availableAiModels({ isAdmin }), plans: publicPlans(), payment: paymentDetails(), message: error.message });
     }
     if (!Array.isArray(data.orders) || !Array.isArray(data.scheduled)) throw new Error('Invalid billing status');
-    return accountJson({ ready: true, ordering: paymentRequestsEnabled(), isAdmin, active: publicGrant(data.active), scheduled: data.scheduled.map(publicGrant),
+    const activeGrant = publicGrant(data.active);
+    return accountJson({ ready: true, ordering: paymentRequestsEnabled(), isAdmin, fastToolbar: Boolean(isAdmin || activeGrant), active: activeGrant, scheduled: data.scheduled.map(publicGrant),
       orders: data.orders.map(publicOrder), models: availableAiModels({ isAdmin, active: data.active }),
       annualReady: data.annualReady === true, plans: publicPlans(data.annualReady === true), payment: paymentDetails() });
   } catch (error) { return accountFailure(error); }

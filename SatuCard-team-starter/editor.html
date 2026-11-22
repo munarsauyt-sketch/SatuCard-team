@@ -35,8 +35,10 @@
   <script src="motion-core.js" defer></script>
   <link rel="stylesheet" href="motion-kit.css">
   <link rel="stylesheet" href="motion-workspace.css">
+  <link rel="stylesheet" href="fast-toolbar.css">
   <script src="motion-workspace.js" defer></script>
   <script src="motion-kit.js" defer></script>
+  <script src="fast-toolbar.js" defer></script>
   <link rel="stylesheet" href="logo-wordmark.css?v=3">
 </head>
 <body class="product-ui studio-page">
@@ -115,11 +117,22 @@
       <section id="preview" class="studio-workspace" aria-labelledby="preview-heading">
         <div class="workspace-heading">
           <div class="workspace-identity"><span class="workspace-live-dot" aria-hidden="true"></span><h2 id="preview-heading">Холст</h2><span id="format-description">4:5 · 900 × 1125</span></div>
-          <details class="canvas-tools-menu"><summary>Вид и кадрирование</summary><div class="studio-canvas-tools"><a href="#studio-settings" class="studio-quiet-button tool-settings-link">Инструменты ↓</a>
-            <button id="crop-photo" class="studio-quiet-button" type="button" aria-pressed="false">Кадрировать</button><button id="safe-zone-toggle" class="studio-quiet-button" type="button" aria-pressed="false" title="Показать безопасные поля маркетплейса">Безопасные зоны</button><button id="card-text-preview" class="studio-quiet-button" type="button">Текст карточки</button><button id="canvas-focus-mode" class="studio-quiet-button" type="button" aria-pressed="false">Фокус</button>
-            <button id="phone-preview-button" class="studio-quiet-button" type="button" title="Предпросмотр на телефоне">На телефоне</button>
-            <button id="fullscreen-button" class="studio-icon-button" type="button" title="Открыть крупно" aria-label="Развернуть предварительный просмотр"><svg class="studio-icon" aria-hidden="true"><use href="#i-expand"/></svg></button>
-          </div></details>
+          <div class="ft-header-controls">
+            <div class="ft-header-slot">
+              <button id="fast-toolbar-toggle" class="ft-toggle-btn" type="button" aria-pressed="false" aria-controls="fast-toolbar-dock" data-morph-tip="Плавающий тулбар · от ИИ Старт" data-morph-tip-kk="Қалқымалы тулбар · ЖИ Старттан бастап"><span class="ft-toggle-dot" aria-hidden="true"></span><span class="ft-toggle-label">Быстрый тулбар</span><span class="ft-toggle-badge">sAI</span></button>
+              <div id="fast-toolbar-upsell" class="ft-upsell" role="dialog" aria-label="Быстрый тулбар" hidden>
+                <div class="ft-upsell-head"><span class="ft-upsell-pill">ИИ Старт · от 1 500 ₸</span><button type="button" class="ft-upsell-close" aria-label="Закрыть">✕</button></div>
+                <h3>Быстрый тулбар поверх холста</h3>
+                <p>Перетаскиваемый док к любому краю холста с быстрыми палитрами, шрифтом, фильтрами и форматами. Основной редактор остаётся бесплатным навсегда.</p>
+                <a class="ft-upsell-cta" href="pricing.html?plan=basic#sai-plan-switch">Выбрать тариф ↗</a>
+              </div>
+            </div>
+            <details class="canvas-tools-menu"><summary>Вид и кадрирование</summary><div class="studio-canvas-tools"><a href="#studio-settings" class="studio-quiet-button tool-settings-link">Инструменты ↓</a>
+              <button id="crop-photo" class="studio-quiet-button" type="button" aria-pressed="false">Кадрировать</button><button id="safe-zone-toggle" class="studio-quiet-button" type="button" aria-pressed="false" title="Показать безопасные поля маркетплейса">Безопасные зоны</button><button id="card-text-preview" class="studio-quiet-button" type="button">Текст карточки</button><button id="canvas-focus-mode" class="studio-quiet-button" type="button" aria-pressed="false">Фокус</button>
+              <button id="phone-preview-button" class="studio-quiet-button" type="button" title="Предпросмотр на телефоне">На телефоне</button>
+              <button id="fullscreen-button" class="studio-icon-button" type="button" title="Открыть крупно" aria-label="Развернуть предварительный просмотр"><svg class="studio-icon" aria-hidden="true"><use href="#i-expand"/></svg></button>
+            </div></details>
+          </div>
         </div>
         <details id="language-compare" hidden><summary>Сравнить RU / KZ</summary>
           <div class="language-pair">
