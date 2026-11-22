@@ -1,0 +1,2 @@
+.brand .brand-full-logo, .wordmark .brand-full-logo { display:block; width:158px; height:auto; max-width:100%; margin:0; border-radius:7px; flex:none; }
+@media (max-width:600px) { .brand .brand-full-logo, .wordmark .brand-full-logo { width:130px; height:auto; margin:0; } }
