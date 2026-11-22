@@ -146,11 +146,11 @@ window.SATUCARD_MOTION_WORKSPACE = ({makeSpring:S, stepSpring:step, wake, mounte
     // Exposed only to the existing submit controller; no separate AI request path.
     chat.getPromptTags = () => { if (tagInput.value.trim()) add(tagInput.value); return values.slice(); };
     document.addEventListener('satucard:chat-reset',()=>{values.length=0;list.replaceChildren();tagInput.value='';});
-    const h=S(56,420,34,1,.1),pop=S(1,520,30),sendRow=form.querySelector('.ai-chat-send-row');
-    const tick=dt=>{const a=step(h,dt),b=step(pop,dt);input.style.height=Math.max(44,h.x).toFixed(2)+'px';sendRow.style.transform='scale('+pop.x.toFixed(4)+')';return a||b;};
+    const h=S(38,420,34,1,.1),pop=S(1,520,30),sendRow=form.querySelector('.ai-chat-send-row');
+    const tick=dt=>{const a=step(h,dt),b=step(pop,dt);input.style.height=Math.max(36,h.x).toFixed(2)+'px';sendRow.style.transform='scale('+pop.x.toFixed(4)+')';return a||b;};
     chat.resizePrompt=()=>{
       if(chat.hidden)return;
-      input.style.height='auto';const height=input.scrollHeight;h.target=Math.max(56,Math.min(160,height));input.style.height=h.x+'px';input.style.overflowY=height>160?'auto':'hidden';wake(tick);
+      input.style.height='auto';const height=input.scrollHeight;h.target=Math.max(38,Math.min(132,height));input.style.height=h.x+'px';input.style.overflowY=height>132?'auto':'hidden';wake(tick);
     };
     let busy=form.getAttribute('aria-busy');
     new MutationObserver(()=>{const next=form.getAttribute('aria-busy');if(next!==busy&&!chat.hidden){pop.x=.75;wake(tick);}busy=next;}).observe(form,{attributes:true,attributeFilter:['aria-busy']});

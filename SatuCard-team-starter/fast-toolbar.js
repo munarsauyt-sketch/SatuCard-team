@@ -604,6 +604,30 @@
     grip.innerHTML = vert ? ICONS.gripH : ICONS.gripV;
   }
 
+  function publishDockLayout() {
+    const rootStyle = document.documentElement.style;
+    if (wrap.hidden) {
+      rootStyle.setProperty('--ft-avoid-top', '0px');
+      rootStyle.setProperty('--ft-avoid-bottom', '0px');
+      rootStyle.setProperty('--ft-avoid-left', '0px');
+      rootStyle.setProperty('--ft-avoid-right', '0px');
+      document.dispatchEvent(new CustomEvent('satucard:dock-layout', {
+        detail: { visible: false, edge, collapsed, width: 0, height: 0, topInset: getTopInset() }
+      }));
+      return;
+    }
+    const w = dock.offsetWidth || 0;
+    const h = dock.offsetHeight || 0;
+    const topInset = getTopInset();
+    rootStyle.setProperty('--ft-avoid-top', edge === 'top' ? `${Math.round(topInset + h + 12)}px` : '0px');
+    rootStyle.setProperty('--ft-avoid-bottom', edge === 'bottom' ? `${Math.round(h + EDGE_GAP + 12)}px` : '0px');
+    rootStyle.setProperty('--ft-avoid-left', edge === 'left' ? `${Math.round(w + EDGE_GAP + 12)}px` : '0px');
+    rootStyle.setProperty('--ft-avoid-right', edge === 'right' ? `${Math.round(w + EDGE_GAP + 12)}px` : '0px');
+    document.dispatchEvent(new CustomEvent('satucard:dock-layout', {
+      detail: { visible: true, edge, collapsed, width: w, height: h, topInset }
+    }));
+  }
+
   function settleDock(velocity = null) {
     if (wrap.hidden) return;
     applyEdgeClass(edge);
@@ -627,6 +651,7 @@
     }
     syncPlate(true);
     if (openFlyoutId) positionFlyout();
+    publishDockLayout();
   }
 
   function dockTo(nextEdge, velocity = { x: 0, y: 0 }) {
@@ -1584,7 +1609,13 @@
         btn.addEventListener('click', () => {
           activeTool = 'sai';
           closeFlyout();
-          clickNative('open-ai-chat');
+          const chatEl = $('ai-chat');
+          const chatApi = window.__SATUCARD_AI_CHAT;
+          if (chatEl && !chatEl.hidden && chatApi?.setCollapsed) {
+            chatApi.setCollapsed(!chatEl.classList.contains('is-collapsed'));
+          } else {
+            clickNative('open-ai-chat');
+          }
           syncButtonStates();
           syncPlate(false);
         });
@@ -1689,7 +1720,7 @@
     if (!unlocked || !enabledByUser || wrap.hidden || collapsed) return;
     if (ev.metaKey || ev.ctrlKey || ev.altKey || ev.repeat || ev.defaultPrevented || isTyping(ev)) return;
     const aiChat = $('ai-chat');
-    if (aiChat && !aiChat.hidden) return;
+    if (aiChat && !aiChat.hidden && !aiChat.classList.contains('is-collapsed')) return;
 
     const k = ev.key.toLowerCase();
     if (mode === 'editor') {
@@ -1759,6 +1790,7 @@
       closeFlyout();
       hideTip();
       hideSnapGhost();
+      publishDockLayout();
     }
   }
 

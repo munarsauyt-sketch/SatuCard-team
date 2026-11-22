@@ -245,7 +245,7 @@ button.ft-upsell-close:hover {
   position: fixed;
   top: 0;
   left: 0;
-  z-index: 85;
+  z-index: 88;
   pointer-events: auto;
   will-change: transform;
   user-select: none;
@@ -536,7 +536,7 @@ button.ft-btn svg.ft-corner-caret,
    ========================================================================= */
 .ft-flyout {
   position: fixed;
-  z-index: 88;
+  z-index: 92;
   width: 288px;
   max-width: calc(100vw - 24px);
   max-height: calc(100dvh - 104px);

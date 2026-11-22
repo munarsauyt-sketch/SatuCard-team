@@ -66,11 +66,226 @@
       $('ai-fallback-provider').value = $('ai-evaluation-provider').value = '';
       $('ai-model-provider').value = '';
       $('ai-evaluation-result').textContent = '';
-      closeBuild(); buttons();
+      closeBuild(); buttons(); syncPlusState();
     }
     function trimMessages() {
       while ($('ai-chat-messages').children.length > 8) $('ai-chat-messages').firstElementChild.remove();
     }
+    const chatEl = $('ai-chat');
+    const scrollBox = $('ai-chat-scroll') || chatEl.querySelector('.ai-chat-scroll');
+    const scrollBottomBtn = $('ai-scroll-bottom');
+    const plusBtn = $('ai-plus-button');
+    const plusPopover = $('ai-plus-popover');
+    const collapseBtn = $('ai-chat-collapse');
+    const dragHandle = $('ai-chat-drag-handle');
+
+    const CHAT_EDGE_KEY = 'satucard-ai-chat-edge';
+    const CHAT_COLLAPSED_KEY = 'satucard-ai-chat-collapsed';
+    let dockEdge = 'right';
+    let collapsed = false;
+    try {
+      const savedEdge = localStorage.getItem(CHAT_EDGE_KEY);
+      if (savedEdge === 'left' || savedEdge === 'right') dockEdge = savedEdge;
+    } catch {}
+    chatEl.dataset.dockEdge = dockEdge;
+
+    function updateScrollCue() {
+      if (!scrollBox || !scrollBottomBtn) return;
+      const dist = scrollBox.scrollHeight - scrollBox.scrollTop - scrollBox.clientHeight;
+      scrollBottomBtn.hidden = chatEl.hidden || collapsed || dist < 64;
+    }
+
+    function revealLatest(targetEl, instant = false) {
+      if (!scrollBox) return;
+      const run = () => {
+        if (!scrollBox || chatEl.hidden || collapsed) return;
+        const behavior = instant ? 'auto' : 'smooth';
+        if (targetEl && targetEl.offsetHeight > scrollBox.clientHeight * 0.85) {
+          const top = Math.max(0, targetEl.offsetTop - 12);
+          if (typeof scrollBox.scrollTo === 'function') scrollBox.scrollTo({ top, behavior });
+          else scrollBox.scrollTop = top;
+        } else if (typeof scrollBox.scrollTo === 'function') {
+          scrollBox.scrollTo({ top: scrollBox.scrollHeight, behavior });
+        } else {
+          scrollBox.scrollTop = scrollBox.scrollHeight;
+        }
+        updateScrollCue();
+      };
+      if (typeof requestAnimationFrame === 'function') requestAnimationFrame(run);
+      else run();
+    }
+
+    scrollBox?.addEventListener('scroll', updateScrollCue, { passive: true });
+    scrollBottomBtn?.addEventListener('click', () => revealLatest(null, false));
+
+    function syncPlusState() {
+      if (!plusBtn || !plusPopover) return;
+      const isOpen = Boolean(plusPopover.open);
+      plusBtn.setAttribute('aria-expanded', String(isOpen));
+      plusBtn.classList.toggle('is-open', isOpen);
+      const hasCtx = Boolean(
+        $('ai-facts')?.value.trim() ||
+        $('ai-photo-consent')?.checked ||
+        $('ai-language')?.value === 'kk' ||
+        $('ai-tone')?.value !== 'neutral'
+      );
+      plusBtn.classList.toggle('has-context', hasCtx);
+    }
+
+    plusBtn?.addEventListener('click', () => {
+      if (!plusPopover) return;
+      plusPopover.open = !plusPopover.open;
+      syncPlusState();
+      if (plusPopover.open) $('ai-facts')?.focus();
+    });
+    plusPopover?.addEventListener('toggle', syncPlusState);
+    $('ai-plus-upload')?.addEventListener('click', () => {
+      if (plusPopover) { plusPopover.open = false; syncPlusState(); }
+      $('photo-input')?.click();
+    });
+
+    function syncHeaderInset() {
+      const header = document.querySelector('header.site-header');
+      const bottom = header ? Math.round(header.getBoundingClientRect().bottom) : 64;
+      const inset = bottom > 0 && bottom < 140 ? bottom + 12 : 76;
+      chatEl.style.setProperty('--ai-header-inset', inset + 'px');
+    }
+
+    function setDockEdge(next) {
+      dockEdge = next === 'left' ? 'left' : 'right';
+      chatEl.dataset.dockEdge = dockEdge;
+      try { localStorage.setItem(CHAT_EDGE_KEY, dockEdge); } catch {}
+    }
+
+    function setCollapsed(next) {
+      collapsed = Boolean(next);
+      chatEl.classList.toggle('is-collapsed', collapsed);
+      document.body.classList.toggle('ai-chat-collapsed', collapsed);
+      try { localStorage.setItem(CHAT_COLLAPSED_KEY, collapsed ? '1' : '0'); } catch {}
+      if (collapseBtn) {
+        collapseBtn.setAttribute('aria-expanded', String(!collapsed));
+        collapseBtn.setAttribute('aria-label', collapsed ? 'Развернуть чат sAI' : 'Свернуть чат sAI');
+        collapseBtn.title = collapsed ? 'Развернуть чат' : 'Свернуть чат';
+        collapseBtn.innerHTML = collapsed
+          ? '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>'
+          : '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+      }
+      if (collapsed && plusPopover) { plusPopover.open = false; syncPlusState(); }
+      if (!collapsed) {
+        syncHeaderInset();
+        resizeInput();
+        revealLatest(null, true);
+        $('ai-chat-input')?.focus();
+      }
+      updateScrollCue();
+    }
+
+    collapseBtn?.addEventListener('click', event => {
+      event.stopPropagation();
+      setCollapsed(!collapsed);
+    });
+
+    // Drag header (or collapsed pill) to snap between left & right viewport edges
+    let snapGhost = null;
+    let chatDrag = null;
+    function ensureSnapGhost() {
+      if (snapGhost) return snapGhost;
+      snapGhost = document.createElement('div');
+      snapGhost.className = 'ai-chat-snap-ghost';
+      snapGhost.setAttribute('aria-hidden', 'true');
+      document.body.append(snapGhost);
+      return snapGhost;
+    }
+
+    function showChatGhost(targetEdge) {
+      const ghost = ensureSnapGhost();
+      ghost.dataset.dockEdge = targetEdge;
+      ghost.classList.toggle('is-collapsed', collapsed);
+      ghost.classList.add('is-visible');
+    }
+
+    function hideChatGhost() {
+      snapGhost?.classList.remove('is-visible');
+    }
+
+    dragHandle?.addEventListener('pointerdown', event => {
+      if (event.button !== 0 || chatEl.hidden) return;
+      if (event.target instanceof Element && event.target.closest('button, a, input, select, textarea')) return;
+      if (window.innerWidth <= 700 && !collapsed) return;
+      const rect = chatEl.getBoundingClientRect();
+      chatDrag = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        rectLeft: rect.left,
+        rectWidth: rect.width,
+        moved: false
+      };
+      dragHandle.setPointerCapture?.(event.pointerId);
+    });
+
+    dragHandle?.addEventListener('pointermove', event => {
+      if (!chatDrag || event.pointerId !== chatDrag.pointerId) return;
+      const dx = event.clientX - chatDrag.startX;
+      const dy = event.clientY - chatDrag.startY;
+      if (!chatDrag.moved && Math.hypot(dx, dy) < 6) return;
+      if (!chatDrag.moved) {
+        chatDrag.moved = true;
+        chatEl.classList.add('is-dragging');
+        if (plusPopover) { plusPopover.open = false; syncPlusState(); }
+      }
+      const maxX = Math.max(0, window.innerWidth - chatDrag.rectWidth);
+      const clampedDx = Math.min(maxX - chatDrag.rectLeft, Math.max(-chatDrag.rectLeft, dx));
+      const clampedDy = Math.max(-140, Math.min(140, dy));
+      chatEl.style.transform = `translate3d(${Math.round(clampedDx)}px, ${Math.round(clampedDy)}px, 0)`;
+      const midX = chatDrag.rectLeft + clampedDx + chatDrag.rectWidth / 2;
+      showChatGhost(midX < window.innerWidth / 2 ? 'left' : 'right');
+    });
+
+    function finishChatDrag(event) {
+      if (!chatDrag) return;
+      const d = chatDrag;
+      chatDrag = null;
+      const wasMoved = d.moved;
+      chatEl.classList.remove('is-dragging');
+      chatEl.style.transform = '';
+      hideChatGhost();
+      if (wasMoved) {
+        const dx = (event?.clientX ?? d.startX) - d.startX;
+        const midX = d.rectLeft + dx + d.rectWidth / 2;
+        setDockEdge(midX < window.innerWidth / 2 ? 'left' : 'right');
+      } else if (collapsed) {
+        setCollapsed(false);
+      }
+    }
+
+    dragHandle?.addEventListener('pointerup', event => {
+      if (!chatDrag) return;
+      dragHandle.releasePointerCapture?.(event.pointerId);
+      finishChatDrag(event);
+    });
+    dragHandle?.addEventListener('lostpointercapture', finishChatDrag);
+
+    document.addEventListener('pointerdown', event => {
+      if (plusPopover?.open && !plusPopover.contains(event.target) && !plusBtn?.contains(event.target)) {
+        plusPopover.open = false;
+        syncPlusState();
+      }
+    });
+    document.addEventListener('satucard:dock-layout', syncHeaderInset);
+    window.addEventListener('resize', () => { syncHeaderInset(); updateScrollCue(); }, { passive: true });
+
+    window.__SATUCARD_AI_CHAT = {
+      getState: () => ({
+        open: !chatEl.hidden,
+        collapsed,
+        dockEdge,
+        plusOpen: Boolean(plusPopover?.open)
+      }),
+      setEdge: setDockEdge,
+      setCollapsed
+    };
+
     function append(role, content, modelLabel) {
       const row = document.createElement('div'), label = document.createElement('strong'), paragraph = document.createElement('p');
       row.className = 'ai-message'; row.dataset.role = role; row.setAttribute('aria-label', role === 'user' ? 'Вы' : 'sAI'); label.textContent = role === 'user' ? 'Вы' : 'sAI'; paragraph.textContent = content;
@@ -82,27 +297,48 @@
         row.append(model);
       }
       $('ai-chat-messages').append(row);
+      revealLatest(row, false);
       return row;
     }
     function open(event) {
-      if (!$('ai-chat').hidden) { $('ai-chat-input').focus(); return; }
+      if (!chatEl.hidden) {
+        if (collapsed) setCollapsed(false);
+        else $('ai-chat-input').focus();
+        return;
+      }
       opener = event?.currentTarget || $('open-ai-chat');
-      $('ai-chat').hidden = false; document.body.classList.add('ai-chat-open');
+      syncHeaderInset();
+      chatEl.hidden = false; document.body.classList.add('ai-chat-open');
+      if (collapsed) setCollapsed(false);
       if (Date.now() - statusCheckedAt > 30000) checkConnection();
       document.querySelectorAll('[data-open-ai]').forEach(button => button.setAttribute('aria-expanded', 'true'));
-      resizeInput(); $('ai-chat-input').focus();
+      syncPlusState();
+      resizeInput(); revealLatest(null, true); $('ai-chat-input').focus();
     }
     function close(restoreFocus = true) {
       const wasBusy = busy; invalidate(wasBusy ? 'Запрос остановлен. Попытка могла учитываться в лимите.' : '', true);
-      $('ai-chat').hidden = true; document.body.classList.remove('ai-chat-open');
+      if (plusPopover) { plusPopover.open = false; syncPlusState(); }
+      collapsed = false;
+      chatEl.classList.remove('is-collapsed');
+      document.body.classList.remove('ai-chat-collapsed');
+      chatEl.hidden = true; document.body.classList.remove('ai-chat-open');
       document.querySelectorAll('[data-open-ai]').forEach(button => button.setAttribute('aria-expanded', 'false'));
       if (restoreFocus) opener.focus();
     }
     document.querySelectorAll('[data-open-ai]').forEach(button => button.addEventListener('click', open));
     $('ai-chat-close').addEventListener('click', () => close());
     document.addEventListener('satucard:preflight-open', () => close(false));
-    $('ai-chat').addEventListener('keydown', event => {
-      if (event.key === 'Escape') { event.preventDefault(); close(); }
+    chatEl.addEventListener('keydown', event => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        if (plusPopover?.open) {
+          plusPopover.open = false;
+          syncPlusState();
+          plusBtn?.focus();
+          return;
+        }
+        close();
+      }
     });
     function providerOptions(key, entries, known) {
       const select = $('ai-' + key + '-provider'), selected = select.value;
@@ -189,6 +425,7 @@
     $('ai-chat-stop').addEventListener('click', () => invalidate('Ожидание остановлено. Уже отправленный запрос может учитываться в лимите.', true));
     $('ai-dismiss').addEventListener('click', () => { discardProposal(); buttons(); status('Предложение отклонено. Можно уточнить запрос.'); });
     ['ai-language', 'ai-tone', 'ai-facts', 'ai-photo-consent', 'ai-fallback-provider'].forEach(id => $(id).addEventListener('input', () => {
+      syncPlusState();
       if (busy || proposal) invalidate('Данные обновлены. Отправь следующий запрос, чтобы учесть изменения.');
     }));
     $('ai-evaluation-provider').addEventListener('change', () => { $('ai-evaluation-result').textContent = ''; buttons(); });
@@ -286,6 +523,7 @@
       $('ai-proposal-target').textContent = translate ? 'Перевод сохранится в отдельной карточке комплекта.' : 'Отметь поля, которые хочешь применить.';
       $('ai-apply').textContent = translate ? 'Создать копию на қазақша' : 'Применить к карточке';
       $('ai-chat-proposal').hidden = false; preview();
+      revealLatest($('ai-chat-proposal'), false);
     }
     function preview() {
       if (!proposal) return;
@@ -398,8 +636,10 @@
         if (result.proposal) {
           showProposal(result.proposal, revision, snapshot, { translate, newProduct, suggestTemplate: mode === 'build' });
           status('Черновик готов. Проверь изменения перед применением.');
-        } else status('');
-        $('ai-chat-messages').lastElementChild?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+        } else {
+          status('');
+          revealLatest($('ai-chat-messages').lastElementChild, false);
+        }
       } catch (error) { if (current()) { pendingRow?.remove(); pendingRow = null; status(error.name === 'AbortError' ? 'Время ожидания истекло. Попытка могла учитываться в лимите. Повторите позже.' : error.message, true); } }
       finally { clearTimeout(timer); if (token === generation) { controller = null; busy = false; buttons(); } }
     });
