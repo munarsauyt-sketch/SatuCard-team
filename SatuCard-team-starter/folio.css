@@ -465,6 +465,26 @@ body { font-family: var(--ui-font); }
   .product-ui .header-account { min-height: 44px; padding-inline: 8px; max-width: 84px; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .product-ui button:not([class]) { min-height: 44px; }
 }
+@media (max-width: 360px) {
+  body .site-header .header-inner,
+  body .studio-header .studio-header-actions { gap: 4px; }
+  body .site-header .brand,
+  body .studio-header .brand { font-size: 18px; letter-spacing: -.05em; }
+  body :is(.site-header, .studio-header) .account-menu summary.header-account {
+    display: block;
+    max-inline-size: 66px;
+    padding-inline: 6px;
+    font-size: 11px;
+    line-height: 42px;
+    padding-block: 0;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  body :is(.site-header, .studio-header) .account-menu summary::after { content: none; }
+  .product-ui.dashboard-page .collection-section-heading { flex-wrap: wrap; }
+}
 @media (prefers-reduced-motion: reduce) {
   .product-ui, .product-ui * { scroll-behavior: auto; }
   .product-ui :is(button, a, input, textarea, select), .product-ui .segmented-enhanced::before { transition: none; }
@@ -475,6 +495,10 @@ body { font-family: var(--ui-font); }
 }
 
 @media (max-width: 767px), (pointer: coarse) {
+  body :is(input:not([type]), input:is([type=text], [type=search], [type=email], [type=password], [type=tel], [type=url], [type=number]), textarea) {
+    font-size: max(1rem, 16px) !important; /* Prevent focus zoom on touch browsers. */
+  }
+
   .product-ui .site-header,
   .product-ui .workbench-header {
     background: var(--brand-bg);
