@@ -35,6 +35,18 @@ test('basic paid plan (ИИ Старт 1500 KZT) advertises Fast Toolbar and edi
   assert.match(html, /id="fast-toolbar-toggle"/);
   assert.match(html, /id="fast-toolbar-upsell"/);
   assert.match(html, /pricing\.html\?plan=basic#sai-plan-switch/);
+
+  // Site-wide floating Fast Toolbar assets wired across all primary pages
+  for (const page of ['index.html', 'video.html', 'examples.html', 'pricing.html', 'dashboard.html']) {
+    const pageHtml = await readFile(new URL(`../${page}`, import.meta.url), 'utf8');
+    assert.match(pageHtml, /fast-toolbar\.css/, `${page} should load fast-toolbar.css`);
+    assert.match(pageHtml, /fast-toolbar\.js/, `${page} should load fast-toolbar.js`);
+  }
+
+  // Dock must mount viewport-wide on document.body (not trapped inside #preview-stage)
+  const js = await readFile(new URL('../fast-toolbar.js', import.meta.url), 'utf8');
+  assert.match(js, /document\.body\.append\(/);
+  assert.doesNotMatch(js, /stage\.append\(/);
 });
 
 test('GET /api/billing unlocks fastToolbar for ИИ Старт (1500 KZT) and admin, while keeping free accounts locked', async t => {
