@@ -39,13 +39,21 @@ async function setup(options = {}) {
 const draft = { title: 'Terra title', subtitle: 'Subtitle', description: 'Cotton', features: ['Cotton', 'M', 'Blue'], template: 'studio', source: 'ai' };
 async function aiApp(options = {}) {
   const requests = [];
+  const capabilityRequests = [];
   const app = await setup({ ...options, fetch: async (url, init = {}) => {
-    if (!init.method) return Response.json({ available: true, hasAccess: true, adminOnly: true });
+    if (!init.method) {
+      if (String(url).startsWith('api/copy')) capabilityRequests.push(url);
+      return Response.json({ available: true, hasAccess: true, adminOnly: true });
+    }
     requests.push(JSON.parse(init.body)); return options.reply ? options.reply(init) : Response.json(draft);
   } });
+  assert.equal(capabilityRequests.length, 0, 'closed assistant must not fetch copy capabilities');
+  const assistant = app.$('copy-facts').closest('details');
+  assistant.open = true;
+  assistant.dispatchEvent(new app.w.Event('toggle'));
   await until(() => !app.$('copy-ai').disabled);
   app.input('copy-facts', 'Material: cotton\nSize: M');
-  return { ...app, requests };
+  return { ...app, requests, capabilityRequests };
 }
 function check(app, id, value = true) { app.$(id).checked = value; app.$(id).dispatchEvent(new app.w.Event('input', { bubbles: true })); }
 async function generate(app) { app.$('copy-ai').click(); await until(() => !app.$('copy-result').hidden); }
@@ -118,16 +126,43 @@ test('server errors leave manual and offline editing usable', async () => {
   } finally { app.dom.window.close(); }
 });
 
-test('AI timeout is 35 seconds and never applies a late response', async () => {
+test('AI timeout is 75 seconds and never applies a late response', async () => {
   let expire, signal;
   const app = await aiApp({reply: init => { signal = init.signal; return new Promise((resolve, reject) => signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')))); }});
   try {
     const original = app.w.setTimeout;
-    app.w.setTimeout = (callback, delay, ...args) => { if (delay === 35000) { expire = callback; return 999; } return original(callback, delay, ...args); };
+    app.w.setTimeout = (callback, delay, ...args) => { if (delay === 75000) { expire = callback; return 999; } return original(callback, delay, ...args); };
     app.$('copy-ai').click(); await until(() => !!signal); assert.ok(expire); expire();
     await until(() => /вовремя/.test(app.$('copy-status').textContent));
     assert.equal(signal.aborted, true); assert.equal(app.$('copy-result').hidden, true); assert.equal(app.$('copy-offline').disabled, false);
   } finally { app.dom.window.close(); }
+});
+
+test('copy capabilities load on opening and are reused for 30 seconds', async () => {
+  const app = await aiApp();
+  const { w, $, capabilityRequests } = app;
+  const originalNow = w.Date.now;
+  try {
+    assert.equal(capabilityRequests.length, 1);
+    const assistant = $('copy-facts').closest('details');
+    const reopen = () => {
+      assistant.open = false;
+      assistant.dispatchEvent(new w.Event('toggle'));
+      assistant.open = true;
+      assistant.dispatchEvent(new w.Event('toggle'));
+    };
+    reopen();
+    await sleep(20);
+    assert.equal(capabilityRequests.length, 1);
+    const later = originalNow() + 30001;
+    w.Date.now = () => later;
+    reopen();
+    await until(() => capabilityRequests.length === 2 && !$('copy-ai').disabled);
+    assert.equal(capabilityRequests.length, 2);
+  } finally {
+    w.Date.now = originalNow;
+    app.dom.window.close();
+  }
 });
 test('invalid AI template fails closed rather than rendering an unknown layout', async () => {
   const app = await aiApp({reply: async () => Response.json({...draft, template:'invented'})});

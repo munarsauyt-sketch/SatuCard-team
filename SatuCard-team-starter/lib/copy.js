@@ -1,5 +1,6 @@
 import '../studio-copy.js';
 import { numericEvidence } from './numeric-claims.js';
+import { assertSupportedClaims } from './factual-claims.js';
 
 export const COPY_MODEL = 'gpt-6.1-terra';
 export const MAX_IMAGE_DATA_LENGTH = 750000;
@@ -67,6 +68,7 @@ export function validateOutput(value, input, titleModelCodes) {
   const checkNumbers = numericEvidence([input.title, input.facts]);
   checkNumbers(value.title, { modelCodes: titleModelCodes });
   checkNumbers([value.subtitle, value.description, ...value.features].join('\n'));
+  assertSupportedClaims(output, [input.title, input.facts].join('\n'));
   return { title: value.title.trim(), subtitle: value.subtitle.trim(), description: value.description.trim(),
     features: value.features.map(item => item.trim()), template: value.template, source: 'ai' };
 }

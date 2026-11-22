@@ -38,6 +38,27 @@ async function setup(options = {}) {
 
 const proposal = { title: 'Новая чашка', subtitle: 'Лаконичный вариант', description: 'Керамика', features: ['Керамика'], template: 'noir' };
 const reply = { reply: 'Предлагаю короче. Можно уточнить оформление.', proposal };
+
+test('closed AI tools make no capability requests until opened and chat caches its status', async () => {
+  const calls = [];
+  const app = await setup({ fetch: async url => { calls.push(url); return Response.json({ available: false, hasAccess: false }); } });
+  try {
+    await sleep(15);
+    assert.equal(calls.filter(url => ['api/chat', 'api/copy'].includes(url)).length, 0);
+    app.$('open-ai-chat').click();
+    await until(() => calls.includes('api/chat'));
+    await until(() => !app.$('ai-chat-recheck').disabled);
+    app.$('ai-chat-close').click(); app.$('open-ai-chat').click();
+    await sleep(10);
+    assert.equal(calls.filter(url => url === 'api/chat').length, 1);
+    const section = app.$('copy-facts').closest('details');
+    section.open = true; section.dispatchEvent(new app.w.Event('toggle'));
+    await until(() => calls.includes('api/copy'));
+    section.open = false; section.open = true; section.dispatchEvent(new app.w.Event('toggle'));
+    await sleep(10);
+    assert.equal(calls.filter(url => url === 'api/copy').length, 1);
+  } finally { await sleep(10); app.dom.window.close(); }
+});
 async function chatApp(options = {}) {
   const requests = [];
   const evaluations = [];
@@ -49,8 +70,8 @@ async function chatApp(options = {}) {
     }
     requests.push(JSON.parse(init.body)); return options.reply ? options.reply(init) : Response.json(reply);
   }});
-  await until(() => !app.$('ai-chat-recheck').disabled && app.$('ai-chat-setup').hidden === (options.available !== false && options.hasAccess !== false));
   app.$('open-ai-chat').click();
+  await until(() => !app.$('ai-chat-recheck').disabled && app.$('ai-chat-setup').hidden === (options.available !== false && options.hasAccess !== false));
   return { ...app, requests, evaluations };
 }
 function check(app, id, value = true) { app.$(id).checked = value; app.$(id).dispatchEvent(new app.w.Event('input', { bubbles: true })); }

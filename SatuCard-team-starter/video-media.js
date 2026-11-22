@@ -6,6 +6,7 @@ export class MediaStore {
   constructor() {
     this.files = new Map();
     this.images = new Map();
+    this.imageRequests = new Map();
     this.videos = new Map();
     this.urls = new Map();
     this.audio = new Map();
@@ -21,7 +22,8 @@ export class MediaStore {
     return this.urls.get(asset.id);
   }
   async image(asset) {
-    if (!this.images.has(asset.id)) {
+    if (this.images.has(asset.id)) return this.images.get(asset.id);
+    if (!this.imageRequests.has(asset.id)) this.imageRequests.set(asset.id, (async () => {
       const image = new Image();
       const file = this.files.get(asset.id);
       if (file) await checkImageHeader(file);
@@ -29,8 +31,9 @@ export class MediaStore {
       await image.decode();
       if (image.naturalWidth * image.naturalHeight > MAX_IMAGE_PIXELS) throw new Error('Изображение слишком большое: до 40 мегапикселей.');
       this.images.set(asset.id, image);
-    }
-    return this.images.get(asset.id);
+      return image;
+    })().finally(() => this.imageRequests.delete(asset.id)));
+    return this.imageRequests.get(asset.id);
   }
   async video(asset, layerId) {
     const key = layerId + ':' + asset.id;

@@ -12,7 +12,14 @@ function text(value, limit, required = false) {
 }
 function card(value, titleRequired = false) {
   if (!value || typeof value !== 'object' || Array.isArray(value) || !TEMPLATE_IDS.includes(value.template) || !Array.isArray(value.features) || value.features.length > 3) throw new Error('Invalid card');
-  return { title: text(value.title, 60, titleRequired), subtitle: text(value.subtitle, 90), description: text(value.description, 180), features: value.features.map(item => text(item, 38, true)), template: value.template };
+  const result = { title: text(value.title, 60, titleRequired), subtitle: text(value.subtitle, 90), description: text(value.description, 180), features: value.features.map(item => text(item, 38, true)), template: value.template };
+  if (value.price !== undefined) {
+    if (value.price !== null && (typeof value.price !== 'number' || !Number.isFinite(value.price) || value.price < 0 || value.price > 999999999.99 || Math.abs(value.price * 100 - Math.round(value.price * 100)) > 0.0001)) throw new Error('Invalid price');
+    if (value.currency !== undefined && value.currency !== 'KZT') throw new Error('Invalid currency');
+    if (value.showPrice !== undefined && typeof value.showPrice !== 'boolean') throw new Error('Invalid price visibility');
+    Object.assign(result, { price: value.showPrice === false ? null : value.price, currency: 'KZT', showPrice: value.showPrice !== false });
+  }
+  return result;
 }
 export function validateChatInput(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value) || !['ru', 'kk'].includes(value.language) || !['neutral', 'friendly', 'premium'].includes(value.tone)) throw new Error('Invalid request');
@@ -60,7 +67,8 @@ export function validateChatOutput(value, input) {
   const reply = text(value.reply, 1400, true);
   if (/[<>]|https?:\/\/|www\.|javascript:|data:|```/i.test(reply)) throw new Error('Unsafe reply');
   // History, previous assistant guesses and image OCR are not evidence for claims.
-  const grounding = { title: input.card.title, facts: [input.facts, input.card.subtitle, input.card.description, ...input.card.features].join('\n') };
+  const priceFact = input.card.showPrice !== false && input.card.price != null ? `Цена / бағасы: ${input.card.price} ₸` : '';
+  const grounding = { title: input.card.title, facts: [input.facts, input.card.subtitle, input.card.description, ...input.card.features, priceFact].filter(Boolean).join('\n') };
   const checkNumbers = numericEvidence([grounding.title, grounding.facts]);
   // A model code typed by the seller can be repeated verbatim without treating its digits as a specification.
   const modelCodes = modelCodesIn(input.message);

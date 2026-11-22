@@ -3,20 +3,29 @@ import { AccountError } from './account.js';
 import { generateChat } from './chat.js';
 import { billingRpc, quotaFailures } from './billing.js';
 
-export async function generatePaidChat(input, { config, user, model, key }) {
+export async function generatePaidChat(input, { config, user, model, key, requireProposal = false }) {
   const requestId = randomUUID();
-  let reserveAttempted = false, providerStarted = false, settled = false, totalTokens = null, tokenCap;
+  let reserveAttempted = false, providerStarted = false, settled = false, totalTokens = null, customerTokens = null, tokenCap;
   async function settle(total, outcome) {
     const response = await billingRpc(config, 'settle_paid_ai_attempt', {
       p_request_id: requestId, p_total_tokens: total, p_outcome: outcome
     });
     if (response.settled !== true) throw new AccountError('Не удалось завершить учёт запроса.', 503, 'paid_quota_unavailable');
+    customerTokens = Number.isSafeInteger(response.customerTokens) ? response.customerTokens : total === 0 ? 0 : null;
     settled = true;
   }
   try {
     const result = await generateChat({ ...input, history: input.history.slice(-4), selectedProvider: 'anymodel', selectedModel: model.id }, {
       key, provider: 'anymodel', providerModel: model.id, timeoutMs: 45000,
       beforeRequest: async ({ maxTokens }) => {
+        // Check the accounting contract before creating even a temporary hold.
+        // A missing migration must never leave an old-style charged reservation.
+        let accounting;
+        try { accounting = await billingRpc(config, 'get_paid_ai_accounting_version', {}); }
+        catch { throw new AccountError('Учёт ИИ-запросов обновляется. Попробуйте позже или используйте локальный шаблон.', 503, 'paid_settlement_upgrade_required'); }
+        if (accounting.settlementVersion !== 2) {
+          throw new AccountError('Учёт ИИ-запросов обновляется. Попробуйте позже или используйте локальный шаблон.', 503, 'paid_settlement_upgrade_required');
+        }
         tokenCap = maxTokens;
         reserveAttempted = true;
         const reservation = await billingRpc(config, 'reserve_paid_ai_attempt', {
@@ -28,26 +37,33 @@ export async function generatePaidChat(input, { config, user, model, key }) {
           const [status, message] = Object.hasOwn(quotaFailures, code) ? quotaFailures[code] : [503, 'Не удалось проверить лимит тарифа.'];
           throw new AccountError(message, status, reservation.code || 'paid_quota_unavailable');
         }
+        // An older database charges the customer for invalid/uncertain output.
+        // Release that unused reservation before contacting the provider.
+        if (reservation.settlementVersion !== 2) {
+          await settle(0, 'rejected');
+          throw new AccountError('Учёт ИИ-запросов обновляется. Попробуйте позже или используйте локальный шаблон.', 503, 'paid_settlement_upgrade_required');
+        }
         providerStarted = true;
       },
       onUsage: async usage => {
         if (usage.totalTokens > tokenCap) {
-          await settle(null, 'uncertain');
           throw new AccountError('Провайдер превысил резерв запроса. Обратитесь в поддержку.', 502, 'usage_out_of_range');
         }
         totalTokens = usage.totalTokens;
-        await settle(totalTokens, 'completed');
       }
     });
-    if (!settled) await settle(null, 'uncertain');
+    if (totalTokens === null) throw new AccountError('Не удалось подтвердить расход модели. Лимит тарифа не списан. Попробуйте позже.', 502, 'usage_unavailable');
+    if (requireProposal && !result.proposal) throw new AccountError('Модель не подготовила черновик. Добавьте проверенные факты и повторите запрос. Лимит тарифа не списан.', 502, 'proposal_unavailable');
+    await settle(totalTokens, 'completed');
     return result;
   } catch (error) {
     if (reserveAttempted && !settled) {
       const rejected = !providerStarted || [400, 401, 402, 403, 404, 415, 422, 429].includes(error.providerStatus);
       try {
-        await settle(rejected ? 0 : totalTokens, rejected ? 'rejected' : totalTokens === null ? 'uncertain' : 'completed');
+        await settle(rejected ? 0 : totalTokens, rejected ? 'rejected' : totalTokens === null ? 'uncertain' : 'invalid');
       } catch { console.warn('sAI usage settlement pending', { requestId }); }
     }
+    error.customerQuotaReleased = settled && customerTokens === 0;
     throw error;
   }
 }

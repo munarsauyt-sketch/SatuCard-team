@@ -71,6 +71,7 @@
     let exportingSet = false, checking = false, removing = false, copyInputVersion = 0;
     let copyController = null;
     let aiStatusGeneration = 0;
+    let aiStatusCheckedAt = 0, copyPaidCustomer = false;
     let knownUserId;
     let pendingExport = null;
     const review = $('export-review');
@@ -233,7 +234,8 @@
       const userId = event.detail?.user?.id || null;
       if (knownUserId !== undefined && userId !== knownUserId) { detachCloud(); $('copy-photo').checked = false; $('cloud-project-list').replaceChildren(); invalidateCopy('Аккаунт изменился. Создайте подсказку заново.'); }
       knownUserId = userId;
-      checkAiAccess();
+      aiStatusCheckedAt = 0;
+      if ($('copy-facts').closest('details').open) checkAiAccess();
     });
 
     function invalidateCopy(text) {
@@ -270,8 +272,8 @@
         window.SATUCARD_COPY.validate(input);
         let draft;
         if (ai) {
-          const controller = new AbortController(); copyController = controller; timer = setTimeout(() => controller.abort(), 35000);
-          if ($('copy-photo').checked) input.imageDataUrl = photoForAI(snapshot.images.photo);
+          const controller = new AbortController(); copyController = controller; timer = setTimeout(() => controller.abort(), 75000);
+          if (!copyPaidCustomer && $('copy-photo').checked) input.imageDataUrl = photoForAI(snapshot.images.photo);
           const session = await window.SATUCARD_AUTH?.getSession();
           if (!current()) return;
           if (!session) throw new Error('Для ИИ войдите в аккаунт и завершите профиль. Шаблон доступен без входа.');
@@ -323,6 +325,7 @@
     });
     $('copy-dismiss').addEventListener('click', () => invalidateCopy('Черновик закрыт.'));
     async function checkAiAccess() {
+      aiStatusCheckedAt = Date.now();
       const token = ++aiStatusGeneration;
       aiAvailable = false; $('copy-ai').disabled = true;
       if (location.protocol === 'file:') {
@@ -337,6 +340,15 @@
         const result = response.ok ? await response.json() : {};
         if (token !== aiStatusGeneration) return;
         aiAvailable = result.available === true && result.hasAccess === true;
+        copyPaidCustomer = result.paidCustomer === true;
+        $('copy-photo').disabled = copyPaidCustomer;
+        if (copyPaidCustomer) $('copy-photo').checked = false;
+        const explanation = $('copy-facts').nextElementSibling;
+        if (explanation?.classList.contains('studio-help')) {
+          explanation.textContent = copyPaidCustomer
+            ? 'Шаблон работает без сети. После нажатия «Создать с ИИ» название и проверенные факты будут переданы AnyModel. Используется модель ' + (result.defaultModel?.label || 'вашего тарифа') + '. Проверьте результат перед применением.'
+            : 'Шаблон работает без сети и не переводит ваши факты. После нажатия «Создать с ИИ» название и проверенные факты будут переданы OpenAI. Проверьте результат перед применением.';
+        }
         if (!copyBusy && !copyDraft) message('copy-status', result.adminOnly && !result.hasAccess
           ? 'ИИ доступен в платной версии. Сейчас доступ открыт только администратору.'
           : aiAvailable ? 'ИИ доступен. Шаблон работает локально.' : 'ИИ пока не подключён.');
@@ -346,7 +358,9 @@
         if (token === aiStatusGeneration) $('copy-ai').disabled = copyBusy || !aiAvailable;
       }
     }
-    checkAiAccess();
+    $('copy-facts').closest('details').addEventListener('toggle', event => {
+      if (event.currentTarget.open && Date.now() - aiStatusCheckedAt > 30000) checkAiAccess();
+    });
 
     $('background-tolerance').addEventListener('input', () => { $('background-tolerance-value').value = $('background-tolerance').value; });
     $('remove-background').addEventListener('click', async () => {

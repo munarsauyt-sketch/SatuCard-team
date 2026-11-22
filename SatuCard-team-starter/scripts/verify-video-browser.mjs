@@ -69,6 +69,16 @@ try{
   await advanced.close();console.log('Card handoff, scenes, adaptation, CSV batch ZIP, microphone recording and cancellation passed.');
   const desktop=await context(1512),page=await desktop.newPage();
   await page.goto(origin+'/video.html');await page.locator('body[data-ready=true]').waitFor({timeout:30000});
+  // Opening the studio must leave offscreen template media unloaded. Focusing
+  // a distant template still prepares its preview before keyboard scrubbing.
+  assert.ok(await page.locator('.template-card[data-preview-state="ready"]').count()<54);
+  const distantTemplate=page.locator('.template-card').last();
+  await distantTemplate.scrollIntoViewIfNeeded();
+  await distantTemplate.focus();
+  await page.waitForFunction(()=>[...document.querySelectorAll('.template-card')].at(-1)?.dataset.previewState==='ready');
+  await page.keyboard.press('ArrowRight');
+  await page.locator('.template-card').first().scrollIntoViewIfNeeded();
+  await distantTemplate.blur();
   await page.screenshot({path:artifacts+'/studio-desktop.png',fullPage:true});
   assert.equal(await page.locator('.template-card').count(),54);
   await page.getByRole('button',{name:'Помощь',exact:true}).click();

@@ -2,7 +2,11 @@ import { configuration } from '../lib/supabase.js';
 import { readAccount, accountFailure, accountJson } from '../lib/account.js';
 import { validateInput, generateCopy, COPY_MODEL, MAX_REQUEST_BYTES } from '../lib/copy.js';
 import { reserveCopyQuota } from '../lib/copy-quota.js';
-import { AI_ACCESS_MESSAGE, hasAiAccess, isAiAdmin } from '../lib/ai-access.js';
+import { AI_ACCESS_MESSAGE, hasAiAccess, accountAiAccess } from '../lib/ai-access.js';
+import { configuredSol } from '../lib/chat-providers.js';
+import { defaultAiModel } from '../lib/ai-models.js';
+import { paidAccessEnabled } from '../lib/billing.js';
+import { generatePaidChat } from '../lib/paid-chat.js';
 
 // Paid generation is closed by default. Only explicitly trusted account UUIDs
 // may use it; self-service signup is not permission to spend the owner's key.
@@ -15,19 +19,29 @@ function enabled() {
 }
 export async function GET(request) {
   const config = configuration();
+  if (paidAccessEnabled() && config && request?.headers.get('authorization')) {
+    try {
+      const { user } = await readAccount(request, config, { complete: true });
+      const access = await accountAiAccess(config, user);
+      if (!access.isAdmin) return accountJson({ available: Boolean(configuredSol()), hasAccess: access.hasAccess,
+        adminOnly: false, paidCustomer: access.hasAccess, provider: 'anymodel', defaultModel: defaultAiModel(access) });
+    } catch {}
+  }
   const available = Boolean(enabled() && config && process.env.OPENAI_API_KEY?.trim() && allowedUsers().size);
-  return accountJson({ available, hasAccess: await hasAiAccess(request, config), adminOnly: true });
+  return accountJson({ available, hasAccess: await hasAiAccess(request, config), adminOnly: !paidAccessEnabled() });
 }
 export async function POST(request) {
   const config = configuration();
-  if (!config || !enabled()) return accountJson({ error: 'ИИ-помощник пока не настроен.', code: 'ai_unavailable' }, 503);
+  if (!config || (!enabled() && !paidAccessEnabled())) return accountJson({ error: 'ИИ-помощник пока не настроен.', code: 'ai_unavailable' }, 503);
   let user;
   try { ({ user } = await readAccount(request, config, { complete: true })); }
   catch (error) { return accountFailure(error); }
-  if (!isAiAdmin(user)) return accountJson({ error: AI_ACCESS_MESSAGE, code: 'ai_subscription_required' }, 403);
+  const access = await accountAiAccess(config, user);
+  if (!access.hasAccess) return accountJson({ error: access.ready ? AI_ACCESS_MESSAGE : 'Не удалось проверить платный доступ.',
+    code: access.ready ? 'ai_subscription_required' : 'billing_unavailable' }, access.ready ? 403 : 503);
   const key = process.env.OPENAI_API_KEY?.trim();
-  if (!key) return accountJson({ error: 'ИИ-помощник пока не настроен. Можно использовать локальный шаблон.', code: 'ai_unavailable' }, 503);
-  if (!allowedUsers().has(user.id.toLowerCase())) return accountJson({ error: 'ИИ доступен только аккаунтам, подключённым владельцем сайта. Используйте локальный шаблон.', code: 'ai_access_required' }, 403);
+  if (access.isAdmin && (!enabled() || !key)) return accountJson({ error: 'ИИ-помощник пока не настроен. Можно использовать локальный шаблон.', code: 'ai_unavailable' }, 503);
+  if (access.isAdmin && !allowedUsers().has(user.id.toLowerCase())) return accountJson({ error: 'ИИ доступен только аккаунтам, подключённым владельцем сайта. Используйте локальный шаблон.', code: 'ai_access_required' }, 403);
   if (!/^application\/json(?:\s*;|$)/i.test(request.headers.get('content-type') || '')) return accountJson({ error: 'Ожидается JSON.', code: 'invalid_input' }, 415);
   let input;
   try {
@@ -46,6 +60,23 @@ export async function POST(request) {
     } finally { reader.releaseLock(); }
     input = validateInput(JSON.parse(Buffer.concat(parts).toString('utf8')));
   } catch { return accountJson({ error: 'Проверьте название, факты, язык и тон.', code: 'invalid_input' }, 400); }
+  if (!access.isAdmin) {
+    const provider = configuredSol(), model = defaultAiModel(access);
+    if (!provider || !model) return accountJson({ error: 'ИИ пока не подключён в этой сборке. Используйте локальный шаблон.', code: 'ai_unavailable' }, 503);
+    if (input.imageDataUrl) return accountJson({ error: 'Для этого тарифа используйте текстовые факты без отправки фото.', code: 'invalid_input' }, 400);
+    try {
+      const result = await generatePaidChat({
+        message: 'Подготовь краткий черновик карточки из подтверждённых данных.', mode: 'build', history: [],
+        card: { title: input.title, subtitle: '', description: '', features: [], template: 'studio' },
+        facts: input.facts, language: input.language, tone: input.tone
+      }, { config, user, model, key: provider.key, requireProposal: true });
+      return accountJson({ ...result.proposal, source: 'ai', providerUsed: 'anymodel', modelUsed: model.id });
+    } catch (error) {
+      if (error.status && error.code) return accountFailure(error);
+      const quotaNote = error.customerQuotaReleased ? ' Лимит тарифа не списан.' : '';
+      return accountJson({ error: 'Модель не подготовила корректный черновик. Попробуйте позже.' + quotaNote, code: 'ai_failed' }, 502);
+    }
+  }
   let allowed;
   try { allowed = await reserveCopyQuota(config, user.id); }
   catch { return accountJson({ error: 'Общий лимит ИИ недоступен. Используйте локальный шаблон.', code: 'ai_quota_unavailable' }, 503); }

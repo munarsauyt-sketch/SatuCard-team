@@ -386,7 +386,11 @@
       'Сократите ' + (field === 'product-name' ? 'заголовок' : 'пункт ' + field.slice(-1)) + ' в KZ: кегль меньше на ' + reduction + '%.').join(' ')
       : 'Заголовок и пункты KZ укладываются в допуск 20% относительно RU.';
   }
-  $('language-compare').addEventListener('toggle', () => { if (initialized) { if (!$('language-compare').open) fitPreview(false); requestRender(); } });
+  $('language-compare').addEventListener('toggle', event => {
+    if (!initialized || !globalThis.document || !event.currentTarget.isConnected) return;
+    if (!event.currentTarget.open) fitPreview(false);
+    requestRender();
+  });
   document.fonts?.addEventListener?.('loadingdone', () => requestRender());
   function renderNow() {
     framePending = false; geometry = renderer.render(canvas, model.settings, imageAssets());

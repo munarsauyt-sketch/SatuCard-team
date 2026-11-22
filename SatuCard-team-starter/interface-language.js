@@ -493,6 +493,7 @@
     'Тарифы sAI · без автосписания': 'sAI тарифтері · автошегерімсіз',
     'Популярный': 'Танымал'
   });
+  Object.assign(translations, window.SATUCARD_GUIDE_TRANSLATIONS || {});
   const originals = new WeakMap();
   const attrOriginals = new WeakMap();
   const TRANSLATED_ATTRS = ['placeholder', 'title', 'aria-label', 'alt'];
@@ -518,10 +519,10 @@
     const target = language === 'kk' ? translations[source] : source;
     if (target !== clean) node.nodeValue = value.replace(clean, target);
   }
-  function translateAttributes(element) {
+  function translateAttributes(element, attributes = TRANSLATED_ATTRS) {
     if (!element || element.nodeType !== Node.ELEMENT_NODE) return;
     let map = attrOriginals.get(element);
-    for (const attr of TRANSLATED_ATTRS) {
+    for (const attr of attributes) {
       const current = element.getAttribute(attr);
       if (!current) continue;
       const clean = current.trim();
@@ -544,6 +545,11 @@
   const skipAttributes = element => element.closest(protectedContent) || sellerContent(element);
   function update(root = document.body) {
     if (!root) return;
+    if (root === document.body && window.SATUCARD_GUIDE_TRANSLATIONS) {
+      const title = document.querySelector('title')?.firstChild;
+      if (title) translate(title);
+      translateAttributes(document.querySelector('meta[name="description"]'), ['content']);
+    }
     if (root.nodeType === Node.TEXT_NODE) {
       if (root.parentElement && !skipText(root.parentElement)) translate(root);
       return;

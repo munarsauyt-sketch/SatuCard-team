@@ -256,16 +256,28 @@
           if (url.protocol === 'https:') {
             const host = url.hostname.toLowerCase();
             const isWhatsApp = host === 'wa.me' || host === 'whatsapp.com' || host.endsWith('.whatsapp.com');
-            if (isWhatsApp && !url.searchParams.has('text')) {
-              const priceNote = card.showPrice !== false && card.price != null ? ` (${formatter.format(Number(card.price))} ₸)` : '';
-              url.searchParams.set('text', `Здравствуйте! Интересует товар «${card.title}»${priceNote}: ${shareUrl}`);
-            }
             contact.id = isWhatsApp ? 'card-whatsapp-link' : 'card-contact-link';
-            contact.href = url.href;
             contact.className = 'button button-dark';
             contact.rel = 'noopener noreferrer';
             contact.target = '_blank';
-            contact.textContent = isWhatsApp ? 'Написать в WhatsApp ↗' : 'Связаться с продавцом ↗';
+            function updateContact() {
+              const language = window.SATUCARD_LANGUAGE?.getLanguage() || document.documentElement.lang;
+              const kazakh = language === 'kk';
+              const destination = new URL(url.href);
+              if (isWhatsApp && !url.searchParams.has('text')) {
+                const priceNote = card.showPrice !== false && card.price != null ? ` (${formatter.format(Number(card.price))} ₸)` : '';
+                const message = kazakh
+                  ? `Сәлеметсіз бе! «${card.title}»${priceNote} тауарына қызығушылық танытып отырмын. ${shareUrl}`
+                  : `Здравствуйте! Интересует товар «${card.title}»${priceNote}: ${shareUrl}`;
+                destination.searchParams.set('text', message);
+              }
+              contact.href = destination.href;
+              contact.textContent = isWhatsApp
+                ? (kazakh ? 'WhatsApp арқылы жазу ↗' : 'Написать в WhatsApp ↗')
+                : (kazakh ? 'Сатушымен байланысу ↗' : 'Связаться с продавцом ↗');
+            }
+            updateContact();
+            document.addEventListener('satucard:language-change', updateContact);
             document.querySelector('.shared-card-actions').prepend(contact);
           }
         } catch (_) {}

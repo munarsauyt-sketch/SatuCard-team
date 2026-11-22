@@ -4,6 +4,36 @@ import { readFile } from 'node:fs/promises';
 import { templateProject, validateProject } from '../video-model.js';
 import { unpackProject } from '../video-storage.js';
 import { checkImageHeader, checkImportQuota, checkMediaBundle, MAX_FILE, MAX_TOTAL } from '../video-file-safety.js';
+import { MediaStore } from '../video-media.js';
+
+test('parallel template layers decode each demo image once and failed previews can retry', async () => {
+  const previousImage = globalThis.Image;
+  let decodes = 0, release;
+  globalThis.Image = class {
+    naturalWidth = 800;
+    naturalHeight = 1000;
+    decode() { decodes++; return new Promise(resolve => { release = resolve; }); }
+  };
+  try {
+    const store = new MediaStore(), asset = { id: 'demo-headphones', kind: 'image' };
+    const first = store.image(asset), second = store.image(asset);
+    assert.equal(decodes, 1);
+    release();
+    const images = await Promise.all([first, second]);
+    assert.equal(images[0], images[1]);
+    assert.equal(await store.image(asset), images[0]);
+    assert.equal(decodes, 1);
+    const unavailable = new MediaStore();
+    globalThis.Image.prototype.decode = async () => { throw new Error('offline'); };
+    await assert.rejects(unavailable.image(asset), /offline/);
+    globalThis.Image.prototype.decode = async () => { decodes++; };
+    assert.ok(await unavailable.image(asset));
+    assert.equal(decodes, 2);
+  } finally {
+    if (previousImage === undefined) delete globalThis.Image;
+    else globalThis.Image = previousImage;
+  }
+});
 
 function portable(bytes, {kind='image',type='image/png'}={}) {
   const project=templateProject('launch');

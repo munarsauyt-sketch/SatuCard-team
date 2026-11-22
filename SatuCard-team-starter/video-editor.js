@@ -205,11 +205,22 @@ async function chooseTemplate(id,{undoable=false}={}){
 }
 let activeTemplateFilter='Все',activeTemplateQuery='',templateGeneration=0;
 const templateMedia=new MediaStore();
+let templateObserver=null,templatePreviewCleanup=[];
 async function renderTemplates(filter=activeTemplateFilter,query=activeTemplateQuery){
   activeTemplateFilter=filter;activeTemplateQuery=query;
   const generation=++templateGeneration;
+  templateObserver?.disconnect();
+  templatePreviewCleanup.forEach(cleanup=>cleanup());
+  templatePreviewCleanup=[];
   const list=$('#template-list');list.replaceChildren();
   const portrait=document.createElement('canvas');portrait.width=216;portrait.height=384;
+  const previews=new Map();
+  templateObserver=typeof IntersectionObserver==='function'?new IntersectionObserver(entries=>{
+    for(const entry of entries)if(entry.isIntersecting){
+      templateObserver.unobserve(entry.target);
+      previews.get(entry.target)?.().catch(()=>{});
+    }
+  },{rootMargin:'160px 0px'}):null;
   document.querySelector('[data-library="templates"] .panel-heading>span').textContent=TEMPLATES.length;
   const filtered=TEMPLATES.filter(item=>{
     const matchesCat=filter==='Все'?true:filter==='★ Избранные'?favoriteTemplates.has(item.id):item.category===filter;
@@ -220,24 +231,42 @@ async function renderTemplates(filter=activeTemplateFilter,query=activeTemplateQ
     const tile=document.createElement('div');tile.className='v-template-tile';
     const button=document.createElement('button');button.className='template-card'+(project.templateId===template.id?' is-active':'');button.title=template.note;button.dataset.templateId=template.id;
     const thumb=document.createElement('canvas');thumb.width=216;thumb.height=288;
-    const temp=templateProject(template.id);await templateMedia.prepare(temp);
-    if(generation!==templateGeneration)return;
+    const temp=templateProject(template.id);
     // Reuse one drawing surface for the library. Only the inspected thumbnail repaints.
-    let previewTime=.9, pending=0;
+    let previewTime=.9,pending=0,ready=false,preparing=null;
     const paint=()=>{
       pending=0;
-      if(generation!==templateGeneration)return;
+      if(!ready||generation!==templateGeneration||!button.isConnected)return;
       drawProject(portrait,temp,templateMedia,previewTime,{deferFonts:true});
       thumb.getContext('2d').drawImage(portrait,0,0,216,384,0,-25,216,384);
     };
+    const prepare=()=>{
+      if(generation!==templateGeneration||!button.isConnected)return Promise.resolve();
+      if(!preparing){
+        button.setAttribute('aria-busy','true');
+        button.dataset.previewState='loading';
+        preparing=templateMedia.prepare(temp).then(()=>{
+          if(generation!==templateGeneration||!button.isConnected)return;
+          ready=true;paint();button.dataset.previewState='ready';
+        }).catch(error=>{
+          preparing=null;
+          if(generation===templateGeneration&&button.isConnected)button.dataset.previewState='error';
+          throw error;
+        }).finally(()=>button.removeAttribute('aria-busy'));
+      }
+      return preparing;
+    };
     const scrub=time=>{
       previewTime=clamp(time,.15,temp.duration-.15);
+      if(!ready){prepare().catch(()=>{});return;}
       if(!pending)pending=requestAnimationFrame(paint);
     };
-    paint();
-    const exactFonts=()=>loadProjectFonts(temp).then(paint).catch(error=>toast(error.message));
-    button.addEventListener('pointerenter',exactFonts,{once:true});
-    button.addEventListener('focus',exactFonts,{once:true});
+    const exactFonts=()=>prepare().then(()=>{
+      if(generation===templateGeneration&&button.isConnected)return loadProjectFonts(temp).then(paint);
+    }).catch(error=>toast(error.message));
+    button.addEventListener('pointerenter',exactFonts);
+    button.addEventListener('focus',exactFonts);
+    templatePreviewCleanup.push(()=>{if(pending)cancelAnimationFrame(pending);});
     button.addEventListener('pointermove',event=>{
       if(event.pointerType!=='mouse')return;
       const rect=thumb.getBoundingClientRect();
@@ -270,6 +299,9 @@ async function renderTemplates(filter=activeTemplateFilter,query=activeTemplateQ
     }));
     tile.append(button,fav);
     list.append(tile);
+    previews.set(button,prepare);
+    if(templateObserver)templateObserver.observe(button);
+    else prepare().catch(()=>{});
   }
   if(!list.children.length){const empty=document.createElement('p');empty.className='muted';empty.textContent=filter==='★ Избранные'?'Отметьте звёздочкой шаблоны, которые хотите сохранить.':'Шаблоны не найдены. Измените поиск или категорию.';list.append(empty);}
 }

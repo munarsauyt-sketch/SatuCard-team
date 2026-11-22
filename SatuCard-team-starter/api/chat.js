@@ -6,7 +6,7 @@ import { validateChatInput as validateInput, generateChat as generateCopy, MAX_C
 import { COPY_MODEL } from '../lib/copy.js';
 import { reserveCopyQuota } from '../lib/copy-quota.js';
 import { AI_ACCESS_MESSAGE, accountAiAccess, isAiAdmin } from '../lib/ai-access.js';
-import { availableAiModels } from '../lib/ai-models.js';
+import { availableAiModels, defaultAiModel } from '../lib/ai-models.js';
 import { generatePaidChat } from '../lib/paid-chat.js';
 import { paidAccessEnabled } from '../lib/billing.js';
 import { ANYMODEL_MODEL } from '../lib/anymodel.js';
@@ -72,7 +72,8 @@ export async function GET(request) {
   const sol = !paidCustomer && available && geminiSelected() && hasAccess ? anymodel : null;
   return accountJson({ available, hasAccess, adminOnly: !paidEnabled, modelVerified: false,
     ...(hasAccess && (paidEnabled || sol) ? {
-      paidCustomer, models: (paidCustomer ? anymodel : sol) ? availableAiModels(access) : []
+      paidCustomer, models: (paidCustomer ? anymodel : sol) ? availableAiModels(access) : [],
+      defaultModel: (paidCustomer ? anymodel : sol) ? defaultAiModel(access) : null
     } : {}),
     ...(geminiSelected() ? { provider: 'gemini', model: geminiModel(), singleUserPilot: available && userCount === 1 } : {}),
     ...(fallbackProviders.length ? { fallbackProviders } : {}),
@@ -120,7 +121,7 @@ export async function POST(request) {
   const sol = wantsSol && (!access.isAdmin || geminiSelected()) ? configuredSol() : null;
   if (wantsSol && !sol) return accountJson({ error: 'AnyModel пока не подключён в этой сборке.', code: 'sol_unavailable' }, 503);
   const models = wantsSol ? availableAiModels(access) : [];
-  const modelId = input?.selectedModel || (access.isAdmin ? ANYMODEL_MODEL : models[0]?.id);
+  const modelId = input?.selectedModel || (access.isAdmin ? ANYMODEL_MODEL : defaultAiModel(access)?.id);
   const selectedModel = models.find(model => model.id === modelId);
   if (wantsSol && !selectedModel) return accountJson({ error: 'Для выбранной модели нужен другой тариф.', code: 'plan_required' }, 403);
   if (wantsSol && (input.imageDataUrl || input.fallbackProvider || input.groqFallbackConsent)) {
@@ -155,10 +156,12 @@ export async function POST(request) {
     } catch (error) {
       if (error.status && error.code) return accountFailure(error);
       const status = logFailure('anymodel', error);
-      if (status === 402) return accountJson({ error: 'AnyModel отклонил запрос из-за баланса или лимита ключа.', code: 'sol_balance' }, 402);
-      if (status === 429) return accountJson({ error: 'AnyModel ограничивает запросы. Попробуйте позже.', code: 'sol_quota' }, 429);
+      const quotaNote = error.customerQuotaReleased ? ' Лимит тарифа не списан.' : '';
+      if (status === 402) return accountJson({ error: 'AnyModel отклонил запрос из-за баланса или лимита ключа.' + quotaNote, code: 'sol_balance' }, 402);
+      if (status === 429) return accountJson({ error: 'AnyModel ограничивает запросы. Попробуйте позже.' + quotaNote, code: 'sol_quota' }, 429);
+      if (error.message === 'Provider timeout' && error.customerQuotaReleased) return accountJson({ error: `Модель ${selectedModel.label} не успела ответить. Лимит тарифа не списан.`, code: 'sol_timeout' }, 504);
       if (error.message === 'Provider timeout') return accountJson({ error: `Модель ${selectedModel.label} не успела ответить. Запрос мог учитываться в расходе токенов.`, code: 'sol_timeout' }, 504);
-      return accountJson({ error: `Модель ${selectedModel.label} не вернула подходящий ответ. Попробуйте позже.`, code: 'sol_failed' }, 502);
+      return accountJson({ error: `Модель ${selectedModel.label} не вернула подходящий ответ. Попробуйте позже.` + quotaNote, code: 'sol_failed' }, 502);
     }
   }
   const primary = geminiSelected() ? 'gemini' : 'openai';

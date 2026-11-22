@@ -8,6 +8,7 @@
     started = true;
     const editor = window.SATUCARD_EDITOR, renderer = window.SATUCARD_RENDERER;
     let activeProvider = null, singleUserPilot = false, paidCustomer = false;
+    let statusCheckedAt = 0;
     let fallbackProviders = new Map(), evaluationProviders = new Map(), modelProviders = new Map();
     let configured = false, busy = false, generation = 0, controller = null, proposal = null, proposalRevision = -1;
     let pendingRow = null, proposalIsTranslation = false, proposalStartsProduct = false, pendingMode = null, buildName = '', evaluationRunning = false;
@@ -87,6 +88,7 @@
       if (!$('ai-chat').hidden) { $('ai-chat-input').focus(); return; }
       opener = event?.currentTarget || $('open-ai-chat');
       $('ai-chat').hidden = false; document.body.classList.add('ai-chat-open');
+      if (Date.now() - statusCheckedAt > 30000) checkConnection();
       document.querySelectorAll('[data-open-ai]').forEach(button => button.setAttribute('aria-expanded', 'true'));
       resizeInput(); $('ai-chat-input').focus();
     }
@@ -117,6 +119,7 @@
       return choices;
     }
     async function checkConnection() {
+      statusCheckedAt = Date.now();
       const token = ++statusGeneration; $('ai-chat-recheck').disabled = true;
       try {
         if (location.protocol === 'file:') throw new Error('Local mode');
@@ -144,7 +147,8 @@
         const modelOptions = models.length ? models : nextProvider === 'gemini' ? result.selectableProviders : [];
         modelProviders = providerOptions('model', modelOptions, ['anymodel', ...models.map(model => model.id)]);
         const select = $('ai-model-provider');
-        select.options[0].textContent = paidCustomer ? 'Автовыбор по тарифу' : 'Gemini';
+        const defaultLabel = result.defaultModel && models.find(model => model.id === result.defaultModel.id)?.label;
+        select.options[0].textContent = paidCustomer ? (defaultLabel ? 'По тарифу · ' + defaultLabel : 'Автовыбор по тарифу') : 'Gemini';
         const providerName = paidCustomer ? 'AnyModel' : activeProvider === 'gemini' ? 'Google Gemini' : 'OpenAI';
         $('ai-data-question').textContent = `Передать ${providerName} запрос, тексты карточки, факты и историю этого чата?`;
         $('ai-google-data-policy').hidden = paidCustomer || activeProvider !== 'gemini';
@@ -354,7 +358,7 @@
         }
         account = session.user?.id;
         const settings = newProduct ? snapshot.productSettings : snapshot.model.settings;
-        const body = { message, history: history.slice(-8), card: { title: settings.title, subtitle: settings.subtitle, description: settings.description, features: [...settings.features].filter(Boolean), template: settings.template }, facts: $('ai-facts').value, language: $('ai-language').value, tone: $('ai-tone').value };
+        const body = { message, history: history.slice(-8), card: { title: settings.title, subtitle: settings.subtitle, description: settings.description, features: [...settings.features].filter(Boolean), template: settings.template, price: settings.showPrice === false ? null : settings.price ?? null, currency: 'KZT', showPrice: settings.showPrice !== false }, facts: $('ai-facts').value, language: $('ai-language').value, tone: $('ai-tone').value };
         if (mode === 'build' && buildName) {
           if (buildName !== body.card.title) Object.assign(body.card, { title: buildName, subtitle: '', description: '', features: [] });
         }
@@ -443,10 +447,10 @@
         resetProduct('Аккаунт изменился. Переписка очищена.');
       }
       account = next;
-      checkConnection();
+      statusCheckedAt = 0;
+      if (!$('ai-chat').hidden) checkConnection();
     });
     window.addEventListener('pagehide', () => resetProduct(''));
-    checkConnection();
   }
   document.addEventListener('satucard:editor-ready', start);
   if ($('editor-form')?.dataset.editorReady === 'true') start();
