@@ -7,9 +7,9 @@
     if (started || !window.SATUCARD_EDITOR || !$('ai-chat')) return;
     started = true;
     const editor = window.SATUCARD_EDITOR, renderer = window.SATUCARD_RENDERER;
-    let activeProvider = null, singleUserPilot = false, paidCustomer = false;
+    let activeProvider = null, singleUserPilot = false, paidCustomer = false, freeChatOnly = false;
     let statusCheckedAt = 0;
-    let fallbackProviders = new Map(), evaluationProviders = new Map(), modelProviders = new Map();
+    let fallbackProviders = new Map(), evaluationProviders = new Map(), modelProviders = new Map(), freeModelIds = new Set();
     let configured = false, busy = false, generation = 0, controller = null, proposal = null, proposalRevision = -1;
     let pendingRow = null, proposalIsTranslation = false, proposalStartsProduct = false, pendingMode = null, buildName = '', evaluationRunning = false;
     let history = [], textConsent = false, applying = false, account, statusGeneration = 0, opener = $('open-ai-chat');
@@ -18,8 +18,24 @@
     const fieldChoices = [...$('ai-chat-proposal').querySelectorAll('[data-ai-field]')];
     const selectedFields = () => fieldChoices.filter(field => field.checked).map(field => field.dataset.aiField);
     const status = (text, error = false) => { $('ai-chat-status').textContent = text; $('ai-chat-status').classList.toggle('error', error); };
+    const isFreeChoice = value => freeModelIds.has(value) || (freeChatOnly && !value);
+    function updateModelCopy() {
+      const choice = $('ai-model-provider').value;
+      const usingFree = isFreeChoice(choice);
+      const details = $('ai-model-details');
+      if (details) {
+        details.textContent = usingFree
+          ? 'Модель sAI получает текст карточки, факты, сообщение и последние реплики.'
+          : 'Модели AnyModel получают текст карточки, факты, сообщение и последние реплики.';
+      }
+      const providerName = usingFree ? 'sAI' : paidCustomer ? 'AnyModel' : activeProvider === 'gemini' ? 'Google Gemini' : 'OpenAI';
+      $('ai-data-question').textContent = `Передать ${providerName} запрос, тексты карточки, факты и историю этого чата?`;
+      $('ai-google-data-policy').hidden = usingFree || paidCustomer || activeProvider !== 'gemini';
+      $('ai-photo-consent').parentElement.lastChild.textContent = ` Разрешаю отправить уменьшенное основное фото ${providerName} для выбора оформления. Не для определения свойств товара.`;
+    }
     function buttons() {
-      const paidModel = paidCustomer || modelProviders.has($('ai-model-provider').value);
+      const choice = $('ai-model-provider').value;
+      const textOnlyModel = paidCustomer || isFreeChoice(choice) || modelProviders.has(choice);
       $('ai-chat-send').disabled = busy || !configured || !$('ai-chat-input').value.trim();
       $('ai-chat-stop').hidden = !busy;
       $('ai-chat-send').hidden = busy;
@@ -29,8 +45,8 @@
       $('ai-build-send').disabled = busy || !configured || !$('ai-build-name').value.trim();
       $('ai-evaluation-provider').disabled = busy;
       $('ai-model-provider').disabled = busy;
-      $('ai-photo-consent').disabled = paidModel;
-      $('ai-fallback-provider').disabled = paidModel;
+      $('ai-photo-consent').disabled = textOnlyModel;
+      $('ai-fallback-provider').disabled = textOnlyModel;
       $('ai-evaluation-run').disabled = busy || !configured || !evaluationProviders.has($('ai-evaluation-provider').value);
       $('ai-apply').disabled = busy || !proposal || !$('ai-reviewed').checked ||
         (!proposalIsTranslation && !selectedFields().length && !$('ai-apply-template').checked);
@@ -378,17 +394,28 @@
         fallbackProviders = providerOptions('fallback', nextProvider === 'gemini' ? fallback : [], ['groq', 'mistral', 'cloudflare', 'cohere']);
         evaluationProviders = providerOptions('evaluation', nextProvider === 'gemini' ? result.evaluationProviders : [], ['alibaba', 'scaleway']);
         paidCustomer = result.paidCustomer === true;
+        freeChatOnly = result.freeChat === true;
         const models = Array.isArray(result.models) ? result.models.filter(model =>
-          typeof model?.id === 'string' && /^(?:ag|cx|cc)\/[a-z0-9.-]+$/.test(model.id)) : [];
+          typeof model?.id === 'string' && /^(?:ag|cx|cc|free)\/[a-z0-9.-]+$/.test(model.id)) : [];
+        freeModelIds = new Set(models.filter(model => model.id.startsWith('free/')).map(model => model.id));
         const modelOptions = models.length ? models : nextProvider === 'gemini' ? result.selectableProviders : [];
         modelProviders = providerOptions('model', modelOptions, ['anymodel', ...models.map(model => model.id)]);
         const select = $('ai-model-provider');
         const defaultLabel = result.defaultModel && models.find(model => model.id === result.defaultModel.id)?.label;
-        select.options[0].textContent = paidCustomer ? (defaultLabel ? 'По тарифу · ' + defaultLabel : 'Автовыбор по тарифу') : 'Gemini';
-        const providerName = paidCustomer ? 'AnyModel' : activeProvider === 'gemini' ? 'Google Gemini' : 'OpenAI';
-        $('ai-data-question').textContent = `Передать ${providerName} запрос, тексты карточки, факты и историю этого чата?`;
-        $('ai-google-data-policy').hidden = paidCustomer || activeProvider !== 'gemini';
-        $('ai-photo-consent').parentElement.lastChild.textContent = ` Разрешаю отправить уменьшенное основное фото ${providerName} для выбора оформления. Не для определения свойств товара.`;
+        if (freeChatOnly && freeModelIds.size) {
+          select.options[0].hidden = true;
+          select.options[0].disabled = true;
+          if (!modelProviders.has(select.value)) {
+            select.value = (result.defaultModel && modelProviders.has(result.defaultModel.id))
+              ? result.defaultModel.id
+              : [...freeModelIds][0];
+          }
+        } else {
+          select.options[0].hidden = false;
+          select.options[0].disabled = false;
+          select.options[0].textContent = paidCustomer ? (defaultLabel ? 'По тарифу · ' + defaultLabel : 'Автовыбор по тарифу') : 'Gemini';
+        }
+        updateModelCopy();
         configured = result.available === true && result.hasAccess === true;
         $('ai-chat-access-note').textContent = result.adminOnly && !result.hasAccess
           ? 'ИИ доступен в платной версии. Сейчас доступ открыт только администратору.'
@@ -399,6 +426,8 @@
         if (token !== statusGeneration) return;
         configured = false;
         paidCustomer = false;
+        freeChatOnly = false;
+        freeModelIds = new Set();
         $('ai-chat-plans').hidden = true;
         $('ai-chat-access-note').textContent = 'Не удалось проверить доступ к sAI. Попробуйте позже.';
         fallbackProviders = providerOptions('fallback', [], []);
@@ -432,6 +461,7 @@
     $('ai-model-provider').addEventListener('change', () => {
       $('ai-data-consent').hidden = true;
       if (modelProviders.has($('ai-model-provider').value)) $('ai-photo-consent').checked = false;
+      updateModelCopy();
       buttons();
     });
     $('ai-evaluation-run').addEventListener('click', async () => {
@@ -571,8 +601,9 @@
       if (tags.length) message += '\nИнструкции по стилю: ' + tags.join('; ');
       if (message.length > 1500) { status('Сократите сообщение: вместе с инструкциями максимум 1500 символов.', true); return; }
       const modelChoice = $('ai-model-provider').value;
-      const selectedProvider = paidCustomer || modelProviders.has(modelChoice) ? 'anymodel' : null;
-      if ((paidCustomer || (!selectedProvider && !singleUserPilot)) && !textConsent) {
+      const usingFree = isFreeChoice(modelChoice);
+      const selectedProvider = usingFree ? 'sai_free' : (paidCustomer || modelProviders.has(modelChoice) ? 'anymodel' : null);
+      if (!usingFree && (paidCustomer || (!selectedProvider && !singleUserPilot)) && !textConsent) {
         $('ai-data-consent').hidden = false; $('ai-data-confirm').focus(); return;
       }
       const snapshot = editor.snapshot(), revision = editor.revision;
@@ -586,15 +617,16 @@
       const ownController = new AbortController(); controller = ownController;
       const timer = setTimeout(() => ownController.abort(), 75000);
       try {
-        const session = await window.SATUCARD_AUTH?.getSession();
+        const session = await window.SATUCARD_AUTH?.getSession().catch(() => null);
         if (!current()) return;
-        if (!session) throw new Error('Войдите в аккаунт и завершите профиль. Бесплатный редактор доступен без входа.');
-        if (account !== undefined && session.user?.id !== account) {
-          account = session.user?.id;
+        if (!session && !usingFree) throw new Error('Войдите в аккаунт и завершите профиль. Бесплатный редактор доступен без входа.');
+        const nextUserId = session?.user?.id || null;
+        if (account !== undefined && nextUserId !== account) {
+          account = nextUserId;
           resetProduct('Аккаунт изменился. Начните новый чат.');
           return;
         }
-        account = session.user?.id;
+        account = nextUserId;
         const settings = newProduct ? snapshot.productSettings : snapshot.model.settings;
         const body = { message, history: history.slice(-8), card: { title: settings.title, subtitle: settings.subtitle, description: settings.description, features: [...settings.features].filter(Boolean), template: settings.template, price: settings.showPrice === false ? null : settings.price ?? null, currency: 'KZT', showPrice: settings.showPrice !== false }, facts: $('ai-facts').value, language: $('ai-language').value, tone: $('ai-tone').value };
         if (mode === 'build' && buildName) {
@@ -605,6 +637,7 @@
         if (selectedProvider) {
           body.selectedProvider = selectedProvider;
           if (modelProviders.has(modelChoice) && modelChoice !== 'anymodel') body.selectedModel = modelChoice;
+          else if (usingFree && freeModelIds.size) body.selectedModel = [...freeModelIds][0];
         }
         else {
           const fallback = $('ai-fallback-provider').value;
@@ -612,7 +645,8 @@
           if (!newProduct && $('ai-photo-consent').checked) { body.imageDataUrl = thumbnail(snapshot.images.photo); body.imageConsent = true; }
         }
         pendingRow = append('user', message);
-        const response = await fetch('api/chat', { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}`, 'content-type': 'application/json' }, body: JSON.stringify(body), signal: ownController.signal });
+        const reqHeaders = { 'content-type': 'application/json', ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}) };
+        const response = await fetch('api/chat', { method: 'POST', headers: reqHeaders, body: JSON.stringify(body), signal: ownController.signal });
         const result = await response.json().catch(() => null);
         if (!current()) return;
         if (!response.ok) {
@@ -625,8 +659,11 @@
         if (!validReply(result)) throw new Error('Некорректный ответ sAI. Карточка не изменена.');
         pendingRow = null;
         const anyModelLabel = modelProviders.get(result.modelUsed) || modelProviders.get(result.providerUsed);
-        const modelLabel = result.providerUsed === 'anymodel' ? (anyModelLabel ? anyModelLabel + ' · AnyModel' : 'AnyModel') :
-          fallbackProviders.get(result.providerUsed) || (activeProvider === 'gemini' ? 'Google Gemini' : 'OpenAI');
+        const modelLabel = result.providerUsed === 'sai_free'
+          ? (anyModelLabel || 'sAI')
+          : result.providerUsed === 'anymodel'
+            ? (anyModelLabel ? anyModelLabel + ' · AnyModel' : 'AnyModel')
+            : fallbackProviders.get(result.providerUsed) || (activeProvider === 'gemini' ? 'Google Gemini' : 'OpenAI');
         append('assistant', result.reply, modelLabel);
         trimMessages();
         history.push({ role: 'user', content: message }, { role: 'assistant', content: result.reply });

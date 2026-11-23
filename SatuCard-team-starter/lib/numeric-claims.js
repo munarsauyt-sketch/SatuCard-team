@@ -19,7 +19,7 @@ const properties = {
   diameter: 'диаметр(?:а|ом)?|диаметрі|diameter', thickness: 'толщин[ауы]|қалыңдығы|thickness',
   capacity: 'об[ъь][её]м(?:а|ом)?|к[өо]лемі|volume|вместимост[ьи]',
   weight: 'вес(?:а|ом)?|масс[ауы]|салмағы|weight|mass',
-  runtime: 'автономност[ьи]|работ(?:ает|ы)|жұмыс\s+уақыты|runtime|battery\s+life',
+  runtime: 'автономн(?:ост[ьи]|ой\\s+работы|о)|работ(?:ает|ы)|без\\s+подзарядки|зарядсыз|жұмыс\\s+уақыты|runtime|battery\\s+life',
   warranty: 'гаранти[яию]|кепілдік|warranty',
   charging: 'зарядк[аиу]|заряжается|қуаттау|charg(?:e|es|ing)',
   discount: 'скидк[аиу]|жеңілдік|discount',

@@ -10,6 +10,48 @@ import { availableAiModels, defaultAiModel } from '../lib/ai-models.js';
 import { generatePaidChat } from '../lib/paid-chat.js';
 import { paidAccessEnabled } from '../lib/billing.js';
 import { ANYMODEL_MODEL } from '../lib/anymodel.js';
+import { FREE_CHAT_CATALOG, FREE_CHAT_DEFAULT_MODEL, configuredFreeChat, freeChatModelLabel, isFreeChatModel } from '../lib/free-chat-models.js';
+
+const FREE_WINDOW_MS = 60000;
+const FREE_LIMIT_PER_IP = 8;
+const MAX_FREE_REQUEST_BYTES = 32000;
+const freeRateHits = new Map();
+
+function allowFreeIp(request) {
+  const raw = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'local';
+  const ip = raw.split(',')[0].trim().slice(0, 64) || 'local';
+  const now = Date.now();
+  if (freeRateHits.size > 500) {
+    for (const [key, times] of freeRateHits) {
+      const fresh = times.filter(t => now - t < FREE_WINDOW_MS);
+      if (fresh.length) freeRateHits.set(key, fresh);
+      else freeRateHits.delete(key);
+    }
+  }
+  const recent = (freeRateHits.get(ip) || []).filter(t => now - t < FREE_WINDOW_MS);
+  if (recent.length >= FREE_LIMIT_PER_IP) return false;
+  recent.push(now);
+  freeRateHits.set(ip, recent);
+  return true;
+}
+
+async function readBoundedJson(request, limit) {
+  if (Number(request.headers.get('content-length')) > limit) throw new Error('Too large');
+  const reader = request.body?.getReader();
+  if (!reader) throw new Error('Missing body');
+  const parts = [];
+  let length = 0;
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      length += value.length;
+      if (length > limit) { await reader.cancel(); throw new Error('Too large'); }
+      parts.push(value);
+    }
+  } finally { reader.releaseLock(); }
+  return JSON.parse(Buffer.concat(parts).toString('utf8'));
+}
 
 const GEMINI_TIMEOUT_MS = 60000;
 const RESERVE_TIMEOUT_MS = 12000;
@@ -56,6 +98,7 @@ export async function GET(request) {
   const legacyAvailable = Boolean(enabled() && config && apiKey() && userCount);
   const paidEnabled = paidAccessEnabled();
   const anymodel = configuredSol();
+  const freeChat = configuredFreeChat();
   let access = { isAdmin: false, hasAccess: false, ready: false, active: null };
   if (config && request?.headers.get('authorization')) {
     try {
@@ -66,28 +109,111 @@ export async function GET(request) {
   }
   const { hasAccess } = access;
   const paidCustomer = paidEnabled && hasAccess && !access.isAdmin;
-  const available = paidCustomer ? Boolean(anymodel) : legacyAvailable;
-  const fallbackProviders = !paidCustomer && available && geminiSelected() ? availableFallbacks() : [];
-  const evaluationProviders = !paidCustomer && available && geminiSelected() ? availableEvaluations() : [];
-  const sol = !paidCustomer && available && geminiSelected() && hasAccess ? anymodel : null;
-  return accountJson({ available, hasAccess, adminOnly: !paidEnabled, modelVerified: false,
-    ...(hasAccess && (paidEnabled || sol) ? {
-      paidCustomer, models: (paidCustomer ? anymodel : sol) ? availableAiModels(access) : [],
-      defaultModel: (paidCustomer ? anymodel : sol) ? defaultAiModel(access) : null
+  const baseAvailable = paidCustomer ? Boolean(anymodel) : legacyAvailable;
+  const fallbackProviders = !paidCustomer && baseAvailable && geminiSelected() ? availableFallbacks() : [];
+  const evaluationProviders = !paidCustomer && baseAvailable && geminiSelected() ? availableEvaluations() : [];
+  const sol = !paidCustomer && baseAvailable && geminiSelected() && hasAccess ? anymodel : null;
+  const paidModels = hasAccess && (paidCustomer ? anymodel : sol) ? availableAiModels(access) : [];
+  const freeModels = freeChat ? FREE_CHAT_CATALOG : [];
+  const freeOnly = Boolean(freeChat && (!hasAccess || !baseAvailable));
+  const combinedModels = [...paidModels, ...freeModels];
+  const defaultModel = paidModels.length
+    ? defaultAiModel(access)
+    : (freeModels[0] || null);
+  const effectiveHasAccess = hasAccess || Boolean(freeChat);
+  const available = baseAvailable || Boolean(freeChat);
+  return accountJson({
+    available,
+    hasAccess: effectiveHasAccess,
+    adminOnly: !paidEnabled && !freeChat,
+    modelVerified: false,
+    ...(freeChat ? { freeChatAvailable: true, ...(freeOnly ? { freeChat: true } : {}) } : {}),
+    ...(effectiveHasAccess && (paidEnabled || sol || freeChat) ? {
+      paidCustomer,
+      models: combinedModels,
+      defaultModel
     } : {}),
-    ...(geminiSelected() ? { provider: 'gemini', model: geminiModel(), singleUserPilot: available && userCount === 1 } : {}),
+    ...(geminiSelected() && !freeOnly ? { provider: 'gemini', model: geminiModel(), singleUserPilot: baseAvailable && userCount === 1 } : {}),
     ...(fallbackProviders.length ? { fallbackProviders } : {}),
     ...(evaluationProviders.length ? { evaluationProviders } : {}),
     ...(sol ? { selectableProviders: [{ id: 'anymodel', label: sol.label }] } : {}),
-    ...(fallbackProviders.some(item => item.id === 'groq') ? { groqFallbackAvailable: true } : {}) });
+    ...(fallbackProviders.some(item => item.id === 'groq') ? { groqFallbackAvailable: true } : {})
+  });
 }
 export async function POST(request) {
   const config = configuration();
-  if (!config || (!enabled() && !paidAccessEnabled())) return accountJson({ error: 'ИИ-помощник пока не настроен.', code: 'ai_unavailable' }, 503);
-  let user;
-  try { ({ user } = await readAccount(request, config, { complete: true })); }
-  catch (error) { return accountFailure(error); }
-  const access = await accountAiAccess(config, user);
+  const freeChat = configuredFreeChat();
+  if (!freeChat && (!config || (!enabled() && !paidAccessEnabled()))) {
+    return accountJson({ error: 'ИИ-помощник пока не настроен.', code: 'ai_unavailable' }, 503);
+  }
+  const evaluationId = new URL(request.url).searchParams.get('previewEvaluation');
+  let user = null;
+  let authError = null;
+  let access = { isAdmin: false, hasAccess: false, ready: true, active: null };
+  if (config && request.headers.get('authorization')) {
+    try {
+      ({ user } = await readAccount(request, config, { complete: true }));
+      access = await accountAiAccess(config, user);
+    } catch (error) {
+      authError = error;
+    }
+  } else if (!freeChat) {
+    try { ({ user } = await readAccount(request, config, { complete: true })); }
+    catch (error) { return accountFailure(error); }
+  }
+  if (!freeChat) {
+    if (authError) return accountFailure(authError);
+    if (!access.hasAccess) return accountJson({
+      error: access.ready ? AI_ACCESS_MESSAGE : 'Не удалось проверить платный доступ. Обратитесь в поддержку.',
+      code: access.ready ? 'ai_subscription_required' : 'billing_unavailable'
+    }, access.ready ? 403 : 503);
+  }
+  if (!/^application\/json(?:\s*;|$)/i.test(request.headers.get('content-type') || '')) return accountJson({ error: 'Ожидается JSON.', code: 'invalid_input' }, 415);
+  if (evaluationId !== null && (!user || !access.isAdmin)) return accountJson({ error: 'Проверки провайдеров доступны администратору.', code: 'admin_required' }, 403);
+  const evaluation = evaluationId !== null && geminiSelected() ? configuredEvaluation(evaluationId) : null;
+  if (evaluationId !== null && !evaluation) return accountJson({ error: 'Этот тест недоступен в текущей сборке.', code: 'evaluation_unavailable' }, 404);
+  let input;
+  if (!evaluation) try {
+    const byteLimit = user ? MAX_REQUEST_BYTES : MAX_FREE_REQUEST_BYTES;
+    input = validateInput(await readBoundedJson(request, byteLimit));
+  } catch { return accountJson({ error: 'Проверьте сообщение, историю, карточку, язык и согласие на фото.', code: 'invalid_input' }, 400); }
+
+  const wantsFree = Boolean(freeChat && !evaluation && (
+    input?.selectedProvider === 'sai_free' ||
+    isFreeChatModel(input?.selectedModel) ||
+    (!user || !access.hasAccess)
+  ));
+
+  if (wantsFree) {
+    const requestedModel = input?.selectedModel || FREE_CHAT_DEFAULT_MODEL;
+    if (!isFreeChatModel(requestedModel)) {
+      return accountJson({ error: 'Для выбранной модели нужен активный тариф.', code: 'plan_required' }, 403);
+    }
+    if (input.imageDataUrl || input.fallbackProvider || input.groqFallbackConsent) {
+      return accountJson({ error: 'Для этой модели отправьте текстовый запрос без фото и резерва.', code: 'invalid_input' }, 400);
+    }
+    if (!allowFreeIp(request)) {
+      return accountJson({ error: 'Слишком много запросов к sAI. Подождите минуту и повторите.', code: 'ai_rate_limited' }, 429);
+    }
+    const label = freeChatModelLabel(requestedModel) || 'sAI';
+    try {
+      const result = await generateCopy(
+        { ...input, history: input.history.slice(-4), selectedProvider: 'sai_free', selectedModel: requestedModel },
+        { key: freeChat.key, provider: 'sai_free', providerModel: requestedModel, timeoutMs: 45000 }
+      );
+      return accountJson({ ...result, providerUsed: 'sai_free', modelUsed: requestedModel });
+    } catch (error) {
+      const status = logFailure('sai_free', error);
+      if (status === 429) return accountJson({ error: `Модель ${label} сейчас перегружена. Подождите несколько секунд или выберите другую модель.`, code: 'ai_rate_limited' }, 429);
+      if (status === 402) return accountJson({ error: `Модель ${label} сейчас недоступна. Выберите другую модель в списке.`, code: 'ai_model_unavailable' }, 503);
+      if (error.message === 'Provider timeout') return accountJson({ error: `Модель ${label} не успела ответить. Попробуйте ещё раз или выберите другую модель.`, code: 'ai_timeout' }, 504);
+      if (error.message === 'Unsupported numeric claim') return accountJson({ error: 'В ответе sAI появилось неподтверждённое число. Добавьте характеристики в «Проверенные факты о товаре» и повторите.', code: 'ai_failed' }, 502);
+      return accountJson({ error: `Модель ${label} не вернула подходящий ответ. Попробуйте ещё раз или выберите другую модель.`, code: 'ai_failed' }, 502);
+    }
+  }
+
+  if (authError) return accountFailure(authError);
+  if (!user) return accountJson({ error: 'Войдите в аккаунт для выбранной модели.', code: 'auth_required' }, 401);
   if (!access.hasAccess) return accountJson({
     error: access.ready ? AI_ACCESS_MESSAGE : 'Не удалось проверить платный доступ. Обратитесь в поддержку.',
     code: access.ready ? 'ai_subscription_required' : 'billing_unavailable'
@@ -95,28 +221,6 @@ export async function POST(request) {
   const key = apiKey();
   if (access.isAdmin && (!key || !enabled())) return accountJson({ error: 'ИИ-помощник пока не настроен. Можно использовать локальный шаблон.', code: 'ai_unavailable' }, 503);
   if (access.isAdmin && !allowedUsers().has(user.id.toLowerCase())) return accountJson({ error: 'ИИ доступен только аккаунтам, подключённым владельцем сайта. Используйте локальный шаблон.', code: 'ai_access_required' }, 403);
-  if (!/^application\/json(?:\s*;|$)/i.test(request.headers.get('content-type') || '')) return accountJson({ error: 'Ожидается JSON.', code: 'invalid_input' }, 415);
-  const evaluationId = new URL(request.url).searchParams.get('previewEvaluation');
-  if (evaluationId !== null && !access.isAdmin) return accountJson({ error: 'Проверки провайдеров доступны администратору.', code: 'admin_required' }, 403);
-  const evaluation = evaluationId !== null && geminiSelected() ? configuredEvaluation(evaluationId) : null;
-  if (evaluationId !== null && !evaluation) return accountJson({ error: 'Этот тест недоступен в текущей сборке.', code: 'evaluation_unavailable' }, 404);
-  let input;
-  if (!evaluation) try {
-    // Bound streamed bytes too; Content-Length alone is not trustworthy.
-    if (Number(request.headers.get('content-length')) > MAX_REQUEST_BYTES) throw new Error('Too large');
-    const reader = request.body?.getReader();
-    if (!reader) throw new Error('Missing body');
-    const parts = []; let length = 0;
-    try {
-      while (true) {
-        const { value, done } = await reader.read(); if (done) break;
-        length += value.length;
-        if (length > MAX_REQUEST_BYTES) { await reader.cancel(); throw new Error('Too large'); }
-        parts.push(value);
-      }
-    } finally { reader.releaseLock(); }
-    input = validateInput(JSON.parse(Buffer.concat(parts).toString('utf8')));
-  } catch { return accountJson({ error: 'Проверьте сообщение, историю, карточку, язык и согласие на фото.', code: 'invalid_input' }, 400); }
   const wantsSol = !access.isAdmin || input?.selectedProvider === 'anymodel';
   const sol = wantsSol && (!access.isAdmin || geminiSelected()) ? configuredSol() : null;
   if (wantsSol && !sol) return accountJson({ error: 'AnyModel пока не подключён в этой сборке.', code: 'sol_unavailable' }, 503);

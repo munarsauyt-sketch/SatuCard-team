@@ -3,6 +3,7 @@ import { isFallbackProvider, textProviderAdapter } from './chat-providers.js';
 import { modelCodesIn, numericEvidence } from './numeric-claims.js';
 import { COPY_MODEL, TEMPLATE_HINTS, TEMPLATE_IDS, schema as cardSchema, validateImage, validateOutput } from './copy.js';
 import { ANYMODEL_MODELS } from './anymodel.js';
+import { FREE_CHAT_MODELS } from './free-chat-models.js';
 
 export const MAX_CHAT_REQUEST_BYTES = 830000;
 const controls = /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/;
@@ -47,13 +48,15 @@ export function validateChatInput(value) {
     input.fallbackProvider = value.fallbackProvider;
   }
   if (value.selectedProvider !== undefined) {
-    if (value.selectedProvider !== 'anymodel' || value.fallbackProvider || value.groqFallbackConsent === true || value.imageDataUrl !== undefined) {
+    if (!['anymodel', 'sai_free'].includes(value.selectedProvider) || value.fallbackProvider || value.groqFallbackConsent === true || value.imageDataUrl !== undefined) {
       throw new Error('Invalid selected provider');
     }
     input.selectedProvider = value.selectedProvider;
   }
   if (value.selectedModel !== undefined) {
-    if (value.selectedProvider !== 'anymodel' || !ANYMODEL_MODELS.includes(value.selectedModel)) throw new Error('Invalid selected model');
+    const validAny = value.selectedProvider === 'anymodel' && ANYMODEL_MODELS.includes(value.selectedModel);
+    const validFree = value.selectedProvider === 'sai_free' && FREE_CHAT_MODELS.includes(value.selectedModel);
+    if (!validAny && !validFree) throw new Error('Invalid selected model');
     input.selectedModel = value.selectedModel;
   }
   if (value.imageDataUrl !== undefined) {
@@ -97,9 +100,21 @@ export async function generateChat(rawInput, { key, accountId, model = COPY_MODE
   const taskInstructions = [replyStyle, instructions, modeInstructions[input.mode]].filter(Boolean).join('\n');
   if (provider === 'gemini') return validateChatOutput(await generateGemini({ input, imageDataUrl, instructions: taskInstructions, schema }, { key, timeoutMs, fetcher }), input);
   const adapter = textProviderAdapter(provider);
-  if (adapter) return validateChatOutput(await adapter({ input, instructions: taskInstructions, schema }, {
-    key, accountId, timeoutMs, fetcher, ...(provider === 'anymodel' ? { model: providerModel, beforeRequest, onUsage } : {})
-  }), input);
+  if (adapter) {
+    const raw = await adapter({ input, instructions: taskInstructions, schema }, {
+      key, accountId, timeoutMs, fetcher,
+      ...(provider === 'anymodel' ? { model: providerModel, beforeRequest, onUsage } : {}),
+      ...(provider === 'sai_free' ? { model: providerModel } : {})
+    });
+    try {
+      return validateChatOutput(raw, input);
+    } catch (error) {
+      if (provider === 'sai_free' && !input.mode && raw && raw.proposal !== null && typeof raw.reply === 'string') {
+        return validateChatOutput({ reply: raw.reply, proposal: null }, input);
+      }
+      throw error;
+    }
+  }
   if (provider !== 'openai') throw new Error('Unsupported provider');
   const controller = new AbortController(); let timer;
   const timeout = new Promise((_, reject) => { timer = setTimeout(() => { controller.abort(); reject(new Error('Provider timeout')); }, timeoutMs); });
