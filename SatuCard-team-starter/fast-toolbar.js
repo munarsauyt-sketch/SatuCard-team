@@ -7,13 +7,15 @@
 // 0% idle GPU/CPU (self-sleeping RAF springs, pauses on document.hidden, strict CSP safe).
 (() => {
   const $ = id => document.getElementById(id);
-  // Defense-in-depth: Fast Toolbar belongs strictly in the Card Editor (editor.html)
-  // and must never mount or float on the homepage or any other page.
-  if (!$('product-canvas') || !$('editor-form')) return;
+  // Defense-in-depth: Fast Toolbar belongs strictly in Card Editor (editor.html)
+  // and Video Studio (video.html) — never on the homepage or any other page.
+  const isEditor = Boolean($('product-canvas') && $('editor-form'));
+  const isVideo = Boolean($('timeline-scroll') && $('play'));
+  if (!isEditor && !isVideo) return;
 
   const toggleBtn = $('fast-toolbar-toggle');
   const upsellBox = $('fast-toolbar-upsell');
-  const mode = 'editor';
+  const mode = isEditor ? 'editor' : 'video';
 
   const EDGE_GAP = 14;
   const TIP_DELAY = 380;
