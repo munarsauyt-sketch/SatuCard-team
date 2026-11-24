@@ -36,15 +36,16 @@ test('basic paid plan (ИИ Старт 1500 KZT) advertises Fast Toolbar and edi
   assert.match(html, /id="fast-toolbar-upsell"/);
   assert.match(html, /pricing\.html\?plan=basic#sai-plan-switch/);
 
-  // Site-wide floating Fast Toolbar assets wired across all primary pages
-  for (const page of ['index.html', 'video.html', 'examples.html', 'pricing.html', 'dashboard.html']) {
+  // Fast Toolbar must ONLY be mounted in editor.html — never on homepage or any other page
+  for (const page of ['index.html', 'video.html', 'examples.html', 'pricing.html', 'dashboard.html', 'auth.html', 'card.html', 'guide.html', 'profile.html', 'video-guide.html']) {
     const pageHtml = await readFile(new URL(`../${page}`, import.meta.url), 'utf8');
-    assert.match(pageHtml, /fast-toolbar\.css/, `${page} should load fast-toolbar.css`);
-    assert.match(pageHtml, /fast-toolbar\.js/, `${page} should load fast-toolbar.js`);
+    assert.doesNotMatch(pageHtml, /fast-toolbar\.css/, `${page} must not load fast-toolbar.css`);
+    assert.doesNotMatch(pageHtml, /fast-toolbar\.js/, `${page} must not load fast-toolbar.js`);
   }
 
-  // Dock must mount viewport-wide on document.body and stay fail-closed via api/billing
+  // Dock must mount viewport-wide on document.body (inside editor.html only) and stay fail-closed via api/billing
   const js = await readFile(new URL('../fast-toolbar.js', import.meta.url), 'utf8');
+  assert.match(js, /if \(!\$\('product-canvas'\) \|\| !\$\('editor-form'\)\) return;/);
   assert.match(js, /document\.body\.append\(/);
   assert.doesNotMatch(js, /stage\.append\(/);
   assert.match(js, /let unlocked = false;/);
