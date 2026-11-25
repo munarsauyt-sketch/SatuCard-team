@@ -66,4 +66,3 @@
 #billing-copy-status { margin: 6px 0; color: var(--brand-muted); font-size: 12px; }
 #billing-copy-status:empty { display: none; }
 #billing-transfer-note { padding: 12px; border: 1px solid var(--ui-edge, var(--line)); border-radius: 9px; color: var(--brand-ink); font-size: 12px; line-height: 1.6; }
-

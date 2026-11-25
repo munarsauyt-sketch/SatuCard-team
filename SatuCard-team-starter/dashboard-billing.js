@@ -314,4 +314,3 @@ if (accountId === undefined) {
   accountId = initialSession?.user?.id || null;
   refresh();
 }
-
