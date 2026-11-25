@@ -1,5 +1,6 @@
 import { SUPPORT } from './support.js';
-import { TRANSFER_CARD_DISPLAY } from './payment-requisites.js';
+import { TRANSFER_CARD, TRANSFER_CARD_DISPLAY } from './payment-requisites.js';
+import { ACCESS_DAYS, BILLING_PLANS, YEARLY_BILLING_PLANS } from './billing-plans.js';
 
 const $ = id => document.getElementById(id);
 const money = amount => new Intl.NumberFormat('ru-RU').format(amount) + ' ₸';
@@ -13,6 +14,24 @@ let pendingCreate = null;
 let generation = 0;
 let accountId;
 let availablePlans = [];
+let orderingAvailable = false;
+let transferState = 'loading';
+const catalogPlans = [...BILLING_PLANS, ...YEARLY_BILLING_PLANS];
+
+function renderTransfer() {
+  const planId = $('billing-plan').value;
+  const plan = availablePlans.find(item => item.id === planId) || catalogPlans.find(item => item.id === planId);
+  $('billing-transfer-amount').textContent = plan ? money(plan.priceKzt) : '—';
+  $('billing-transfer-period').textContent = plan ? (plan.months === 12 ? 'За год · новый лимит каждый месяц' : 'За ' + (plan.days || ACCESS_DAYS) + ' дней') : '';
+  const supported = availablePlans.some(item => item.id === planId);
+  $('billing-create').hidden = !orderingAvailable || !supported;
+  $('billing-transfer-note').textContent = transferState === 'loading'
+    ? 'Проверяем доступность оплаты. Пока не переводите деньги.'
+    : transferState === 'error' ? 'Не удалось проверить доступность оплаты. Пока не переводите деньги; повторите проверку.'
+    : !orderingAvailable ? 'Приём заявок пока закрыт. Не переводите деньги до открытия оплаты.'
+    : !supported ? 'Этот тариф пока недоступен для покупки. Выберите другой тариф. Пока не переводите деньги.'
+    : 'Сначала создайте заявку, затем переведите сумму, указанную в ней.';
+}
 
 function renderSelectedPlanBenefits(plans, planId) {
   const list = $('billing-plan-benefits');
@@ -158,6 +177,9 @@ async function refresh() {
   $('billing-refresh').disabled = true;
   if ($('billing-retry')) { $('billing-retry').hidden = true; $('billing-retry').disabled = true; }
   status.dataset.state = 'loading';
+  orderingAvailable = false;
+  transferState = 'loading';
+  renderTransfer();
   try {
     const data = await request();
     if (version !== generation) return;
@@ -183,7 +205,8 @@ async function refresh() {
     const modelItems = [...activeBenefits, ...data.models.map(model => element('li', model.label))];
     $('billing-models').hidden = !modelItems.length;
     $('billing-model-list').replaceChildren(...modelItems);
-    $('billing-create').hidden = !data.ordering;
+    orderingAvailable = data.ready === true && data.ordering === true;
+    transferState = 'ready';
     availablePlans = Array.isArray(data.plans) ? data.plans : [];
     const select = $('billing-plan');
     const selected = select.value || new URLSearchParams(location.search).get('plan');
@@ -198,6 +221,7 @@ async function refresh() {
       status.textContent = 'Годовая покупка пока не подключена. Выберите тариф на 30 дней или вернитесь позже.';
     }
     renderSelectedPlanBenefits(availablePlans, select.value);
+    renderTransfer();
     $('billing-orders').replaceChildren(...(data.orders.length
       ? data.orders.map(order => orderRow(order, data.payment, false)) : [element('p', 'Пока нет покупок.')]));
     $('billing-admin').hidden = !(data.isAdmin && data.ready);
@@ -213,6 +237,9 @@ async function refresh() {
     if (version === generation) {
       status.textContent = error.message;
       status.dataset.state = 'error';
+      orderingAvailable = false;
+      transferState = 'error';
+      renderTransfer();
       $('billing-usage').hidden = true;
       $('billing-next').hidden = true;
       $('billing-models').hidden = true;
@@ -233,6 +260,9 @@ document.addEventListener('satucard:authchange', event => {
   if (next === accountId) return;
   accountId = next;
   pendingCreate = null;
+  orderingAvailable = false;
+  transferState = 'loading';
+  renderTransfer();
   status.textContent = 'Проверяем доступ…';
   if ($('billing-plan-badge')) { $('billing-plan-badge').textContent = 'Проверяем доступ'; delete $('billing-plan-badge').dataset.state; }
   for (const id of ['billing-admin', 'billing-create', 'billing-usage', 'billing-next', 'billing-models', 'billing-plan-benefits']) {
@@ -250,18 +280,38 @@ $('billing-support').append(link(SUPPORT.phone, SUPPORT.phoneHref),
   ...SUPPORT.emails.map(email => link(email, 'mailto:' + email)));
 $('billing-plan').addEventListener('change', event => {
   renderSelectedPlanBenefits(availablePlans, event.target.value);
+  renderTransfer();
 });
 $('billing-refresh').addEventListener('click', refresh);
 $('billing-retry')?.addEventListener('click', refresh);
 $('billing-create').addEventListener('submit', event => {
   event.preventDefault();
   const planId = $('billing-plan').value;
-  if (busy || !planId || !availablePlans.some(plan => plan.id === planId)) return;
+  if (busy || !orderingAvailable || !planId || !availablePlans.some(plan => plan.id === planId)) return;
   if (pendingCreate?.planId !== planId) pendingCreate = { action: 'create', planId, requestId: crypto.randomUUID() };
   update(pendingCreate, () => { pendingCreate = null; });
 });
+$('billing-transfer-card').value = TRANSFER_CARD_DISPLAY;
+$('billing-copy-card').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(TRANSFER_CARD);
+    $('billing-copy-status').textContent = 'Номер карты скопирован.';
+  } catch {
+    $('billing-copy-status').textContent = 'Не удалось скопировать. Выделите номер карты и скопируйте вручную.';
+  }
+});
+const requestedPlan = new URLSearchParams(location.search).get('plan');
+const initialPlans = [...BILLING_PLANS, ...YEARLY_BILLING_PLANS.filter(plan => plan.id === requestedPlan)];
+$('billing-plan').replaceChildren(...initialPlans.map(plan => {
+  const option = element('option', plan.name + ' · ' + money(plan.priceKzt));
+  option.value = plan.id;
+  return option;
+}));
+if (initialPlans.some(plan => plan.id === requestedPlan)) $('billing-plan').value = requestedPlan;
+renderTransfer();
 const initialSession = await window.SATUCARD_AUTH?.getSession();
 if (accountId === undefined) {
   accountId = initialSession?.user?.id || null;
   refresh();
 }
+

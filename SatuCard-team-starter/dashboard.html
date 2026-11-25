@@ -41,13 +41,33 @@
       <progress id="billing-progress" max="100" value="0"></progress>
     </div>
     <p id="billing-next" hidden></p>
+    <section class="billing-transfer" aria-labelledby="billing-transfer-title">
+      <h3 id="billing-transfer-title">Оплата выбранного тарифа</h3>
+      <label class="billing-transfer-label" for="billing-plan">Тариф</label>
+      <select id="billing-plan" form="billing-create" required></select>
+      <div class="billing-transfer-total" aria-live="polite" aria-atomic="true">
+        <span>Сумма перевода</span><strong id="billing-transfer-amount">—</strong>
+        <span id="billing-transfer-period"></span>
+      </div>
+      <label class="billing-transfer-label" for="billing-transfer-card">Карта для перевода</label>
+      <div class="billing-transfer-card-row">
+        <input id="billing-transfer-card" type="text" readonly spellcheck="false">
+        <button id="billing-copy-card" type="button" class="button button-light">Скопировать</button>
+      </div>
+      <p id="billing-copy-status" role="status" aria-live="polite"></p>
+      <ol class="billing-transfer-steps">
+        <li>Создайте заявку на выбранный тариф, затем переведите указанную в ней сумму на эту карту.</li>
+        <li><strong>В сообщении к переводу обязательно напишите email вашего аккаунта SatuCard.</strong> По нему мы найдём аккаунт и подключим тариф.</li>
+        <li>После проверки поступления подключим доступ в течение 48 часов. Если в банке нет поля для сообщения, обратитесь в поддержку по оплате ниже.</li>
+      </ol>
+      <p id="billing-transfer-note" role="status">Проверяем доступность оплаты. Пока не переводите деньги.</p>
+      <form id="billing-create" class="billing-form" hidden>
+        <button class="button button-orange" type="submit">Создать заявку</button>
+      </form>
+      <details><summary>Что входит в тариф</summary><ul id="billing-plan-benefits" class="billing-plan-benefits" hidden></ul></details>
+    </section>
     <details id="billing-models" hidden><summary>Доступные модели</summary><ul id="billing-model-list"></ul></details>
     <details class="billing-management"><summary>Тарифы, покупки и заявки</summary><div class="billing-management-content">
-    <form id="billing-create" class="billing-form" hidden>
-      <label>Тариф <select id="billing-plan" required></select></label>
-      <button class="button button-orange" type="submit">Создать заявку</button>
-      <ul id="billing-plan-benefits" class="billing-plan-benefits" hidden></ul>
-    </form>
     <section aria-labelledby="billing-orders-title"><h3 id="billing-orders-title">Покупки и заявки</h3><div id="billing-orders"></div></section>
     <section id="billing-admin" aria-labelledby="billing-admin-title" hidden><h3 id="billing-admin-title">Заявки на проверку</h3><div id="billing-admin-orders"></div></section>
     <div class="billing-support"><strong>Поддержка по оплате</strong><div id="billing-support"></div></div>
@@ -71,3 +91,4 @@
 <footer class="site-footer container"><a class="brand" href="index.html"><img class="brand-logo-icon brand-full-logo" src="assets/satucard-wordmark.svg?v=2" alt="SatuCard" width="158" height="51"><img class="brand-logo-icon brand-full-logo brand-logo-light" src="assets/satucard-logo-universal-header.webp" alt="SatuCard" width="158" height="52"></a><a href="examples.html#about">О проекте ↗</a></footer>
 </body>
 </html>
+
